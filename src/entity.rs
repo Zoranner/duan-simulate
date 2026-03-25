@@ -31,12 +31,12 @@ impl EntityId {
 /// 描述实体从创建到销毁的状态变迁过程。
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Default)]
 pub enum Lifecycle {
-    /// 刚创建，等待初始化
+    /// 刚创建，正在执行域归属校验，尚未加入任何域
     #[default]
-    Spawned,
+    Initializing,
     /// 正常活动，参与仿真
     Active,
-    /// 正在销毁（播放动画等过渡阶段）
+    /// 正在销毁（过渡阶段），已从所有域完全脱离
     Destroying,
     /// 已销毁，等待清理
     Destroyed,
@@ -55,9 +55,9 @@ impl Lifecycle {
 
     /// 检查实体是否应该参与计算
     ///
-    /// 只有活跃状态和已创建状态的实体参与计算
+    /// 只有活跃状态的实体参与计算
     pub fn should_compute(&self) -> bool {
-        matches!(self, Lifecycle::Spawned | Lifecycle::Active)
+        matches!(self, Lifecycle::Active)
     }
 }
 
@@ -170,7 +170,7 @@ impl Entity {
         Self {
             id,
             entity_type: entity_type.into(),
-            lifecycle: Lifecycle::Spawned,
+            lifecycle: Lifecycle::Initializing,
             domains: HashSet::new(),
             components: ComponentBag::new(),
         }
@@ -366,7 +366,7 @@ mod tests {
         let entity = Entity::new(EntityId::new(1), "ship");
         assert_eq!(entity.id.raw(), 1);
         assert_eq!(entity.entity_type, "ship");
-        assert_eq!(entity.lifecycle, Lifecycle::Spawned);
+        assert_eq!(entity.lifecycle, Lifecycle::Initializing);
     }
 
     #[test]

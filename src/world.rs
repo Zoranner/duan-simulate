@@ -4,9 +4,10 @@
 //! 世界负责协调仿真循环的执行。
 
 use crate::{
-    DomainEvent, DomainRegistry, DomainRules, Entity, EntityId, EntityStore, EventChannel,
-    Lifecycle, TimeClock, Timer, TimerCallback, TimerManager,
+    DomainContext, DomainEvent, DomainRegistry, DomainRules, Entity, EntityId, EntityStore,
+    EventChannel, Lifecycle, TimeClock, Timer, TimerCallback, TimerManager,
 };
+use std::cell::RefCell;
 
 /// 世界构建器
 ///
@@ -138,17 +139,40 @@ impl World {
 
     /// 销毁实体
     ///
-    /// 将实体标记为销毁中状态，设置销毁动画定时器。
+    /// 将实体转入销毁中状态，框架自动执行：
+    /// 1. 从所有域中脱离（调用脱离接口）
+    /// 2. 取消该实体的所有现有定时器
+    /// 3. 调度过渡期定时器（到期后进入已销毁状态）
     pub fn destroy(&mut self, entity_id: EntityId, destroy_time: f64) {
+        let is_active = self
+            .entities
+            .get(entity_id)
+            .map_or(false, |e| e.lifecycle == Lifecycle::Active);
+
+        if !is_active {
+            return;
+        }
+
+        // 1. 设为销毁中状态
         if let Some(entity) = self.entities.get_mut(entity_id) {
             entity.lifecycle = Lifecycle::Destroying;
-
-            // 设置销毁动画定时器
-            self.timer_manager.schedule(
-                entity_id,
-                Timer::self_destruct(self.clock.sim_time + destroy_time),
-            );
         }
+
+        // 2. 从所有域中脱离
+        for domain in self.domains.iter_mut() {
+            if domain.contains(entity_id) {
+                domain.detach(entity_id);
+            }
+        }
+
+        // 3. 取消现有定时器
+        self.timer_manager.remove_entity(entity_id);
+
+        // 4. 调度过渡期定时器
+        self.timer_manager.schedule(
+            entity_id,
+            Timer::self_destruct(self.clock.sim_time + destroy_time),
+        );
     }
 
     /// 直接移除实体（不经过销毁动画）
@@ -175,12 +199,17 @@ impl World {
     /// 3. 定时器检查
     /// 4. 事件处理
     /// 5. 清理
-    pub fn step(&mut self, real_dt: f64) {
+    ///
+    /// `custom_handler` 在事件处理阶段被调用，用于处理自定义事件。
+    /// 传入 `None` 则自定义事件被忽略。
+    pub fn step<F>(&mut self, real_dt: f64, custom_handler: Option<&RefCell<F>>)
+    where
+        F: FnMut(&dyn crate::CustomEvent, &mut Self),
+    {
         // 阶段 1：时间推进
         let dt = self.clock.tick(real_dt);
         let sim_time = self.clock.sim_time;
 
-        // 如果暂停，跳过计算
         if dt == 0.0 {
             return;
         }
@@ -192,39 +221,40 @@ impl World {
         self.check_timers(sim_time);
 
         // 阶段 4：事件处理
-        self.process_events();
+        self.process_events(custom_handler);
 
         // 阶段 5：清理
         self.cleanup();
     }
 
     /// 域计算阶段
-    fn compute_domains(&mut self, _dt: f64) {
-        // 获取执行顺序
+    fn compute_domains(&mut self, dt: f64) {
         let order: Vec<String> = self.domains.execution_order().to_vec();
 
-        // 按顺序执行各域
         for domain_name in &order {
-            // 使用 unsafe 或分割借用（这里使用简化方案）
-            // 实际实现可能需要更复杂的借用管理
+            // 获取 rules 的裸指针，使可变借用提前结束
+            let rules_ptr = match self.domains.get_by_name_mut(domain_name) {
+                Some(domain) => &mut *domain.rules as *mut dyn DomainRules,
+                None => continue,
+            };
 
-            // 先收集该域要发出的所有事件
-            let mut domain_events = EventChannel::new();
+            // 构建域上下文（此时 domains 以不可变方式借用，用于服务查询）
+            let mut ctx = DomainContext {
+                entities: &self.entities,
+                registry: &self.domains,
+                events: &mut self.events,
+                clock: &self.clock,
+                dt,
+            };
 
-            // 执行计算
-            if let Some(domain) = self.domains.get_by_name_mut(domain_name) {
-                // 获取域中的实体 ID 列表
-                let _entity_ids: Vec<EntityId> = domain.entity_ids().collect();
-
-                // 为每个实体执行计算（简化版本）
-                // 实际实现中，这里会创建 DomainContext 并调用 rules.compute()
-
-                // 这里需要更复杂的实现来处理借用问题
-                // 当前为框架骨架
+            // SAFETY: rules_ptr 指向 domain.rules（Box<dyn DomainRules> 的堆分配）。
+            // DomainContext 持有 &DomainRegistry（不可变），用于查询其他域的服务。
+            // 两者不发生可变别名：裸指针只用于调用当前域的 compute()，
+            // 不修改注册表本身的结构（HashMap、执行顺序等）。
+            // 约束：域的 compute() 实现不得通过 ctx 查询自身，否则造成别名。
+            unsafe {
+                (*rules_ptr).compute(&mut ctx, dt);
             }
-
-            // 将域事件合并到主事件通道
-            self.events.append(&mut domain_events);
         }
     }
 
@@ -242,11 +272,19 @@ impl World {
     }
 
     /// 事件处理阶段
-    fn process_events(&mut self) {
-        // 取出所有事件
+    fn process_events<F>(&mut self, custom_handler: Option<&RefCell<F>>)
+    where
+        F: FnMut(&dyn crate::CustomEvent, &mut Self),
+    {
         let events = std::mem::take(&mut self.events);
 
         for event in events {
+            if let DomainEvent::Custom(event_box) = &event {
+                if let Some(handler_cell) = custom_handler {
+                    let mut handler = handler_cell.borrow_mut();
+                    handler(event_box.as_ref(), self);
+                }
+            }
             self.handle_event(event);
         }
     }
@@ -310,9 +348,19 @@ impl World {
         }
     }
 
+    /// 直接修改实体组件
+    ///
+    /// 此方法用于事件处理器在事件处理阶段修改实体状态。
+    /// 框架本身不使用此方法，由用户的事件处理器调用。
+    pub fn get_entity_mut(&mut self, entity_id: EntityId) -> Option<&mut Entity> {
+        self.entities.get_mut(entity_id)
+    }
+
     /// 清理阶段
+    ///
+    /// 实体在进入销毁中状态时已从所有域完全脱离，定时器也已全部取消，
+    /// 此阶段只需从实体存储中移除。
     fn cleanup(&mut self) {
-        // 收集所有已销毁状态的实体
         let destroyed_ids: Vec<EntityId> = self
             .entities
             .iter()
@@ -320,20 +368,14 @@ impl World {
             .map(|e| e.id)
             .collect();
 
-        // 移除这些实体
         for id in destroyed_ids {
-            self.remove_entity(id);
+            self.entities.remove(id);
         }
     }
 
     /// 获取实体
     pub fn get_entity(&self, id: EntityId) -> Option<&Entity> {
         self.entities.get(id)
-    }
-
-    /// 获取可变实体
-    pub fn get_entity_mut(&mut self, id: EntityId) -> Option<&mut Entity> {
-        self.entities.get_mut(id)
     }
 
     /// 获取域
@@ -422,7 +464,7 @@ mod tests {
     #[test]
     fn test_time_advancement() {
         let mut world = World::new();
-        world.step(0.1);
+        world.step::<fn(&dyn crate::CustomEvent, &mut World)>(0.1, None);
 
         assert_eq!(world.sim_time(), 0.1);
     }
