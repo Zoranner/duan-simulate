@@ -1,0 +1,21 @@
+[package]
+name = "duan"
+version = "0.1.0"
+edition = "2021"
+description = "DUAN 仿真体系核心框架"
+license = "MIT"
+repository = "https://github.com/zoranner/duan-simulate"
+keywords = ["simulation", "domain-driven", "ecs"]
+categories = ["simulation", "game-development"]
+
+[dependencies]
+log = { version = "0.4", optional = true }
+ordered-float = { version = "4.0", default-features = false }
+
+[dev-dependencies]
+# 测试依赖可在此添加
+
+[features]
+default = []
+# 可选功能
+debug-logs = []
