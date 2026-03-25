@@ -240,7 +240,7 @@ impl World {
 
             // 构建域上下文（此时 domains 以不可变方式借用，用于服务查询）
             let mut ctx = DomainContext {
-                entities: &self.entities,
+                entities: &mut self.entities,
                 registry: &self.domains,
                 events: &mut self.events,
                 clock: &self.clock,

@@ -81,13 +81,13 @@ pub trait DomainRules: Send + Sync + 'static {
 /// 域上下文
 ///
 /// 域访问仿真环境的唯一入口。提供：
-/// - 实体存储（只读）
+/// - 实体存储（可变，域可修改实体状态）
 /// - 域注册表（只读，用于查询其他域）
 /// - 事件通道（只写）
 /// - 仿真时钟（只读）
 pub struct DomainContext<'a> {
-    /// 实体存储（只读）
-    pub entities: &'a EntityStore,
+    /// 实体存储（可变，域规则是修改实体状态的权威）
+    pub entities: &'a mut EntityStore,
     /// 域注册表（只读）
     pub registry: &'a DomainRegistry,
     /// 事件通道（只写）
@@ -290,6 +290,10 @@ impl DomainRegistry {
     }
 
     /// 计算执行顺序（拓扑排序）
+    ///
+    /// 算法：先递归访问所有依赖，最后再将当前域加入顺序。
+    /// 这确保依赖总是在被依赖者之前执行。
+    /// 例如：collision depends on motion → order = [motion, collision]
     fn compute_execution_order(&self) {
         let mut order = Vec::new();
         let mut visited = HashSet::new();
@@ -319,6 +323,7 @@ impl DomainRegistry {
 
             temp_mark.remove(name);
             visited.insert(name.to_string());
+            // 依赖已全部在 order 中（如果有的话），现在加入当前域
             order.push(name.to_string());
         }
 

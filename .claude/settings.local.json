@@ -5,7 +5,9 @@
       "Bash(cargo test:*)",
       "Bash(cargo clippy:*)",
       "Bash(cargo run:*)",
-      "Bash(memo search:*)"
+      "Bash(memo search:*)",
+      "mcp__web-search-prime__web_search_prime",
+      "mcp__web-reader__webReader"
     ]
   }
 }
