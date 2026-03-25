@@ -1,6 +1,6 @@
 # DUAN 仿真体系文档
 
-DUAN 是一个通用的仿真体系框架，采用**域驱动设计（Domain-Driven Design）**，以域（Domain）为核心计算单元，构建可扩展的仿真平台。
+DUAN 是一个通用的仿真体系框架，采用**权威域架构（Domain-Authoritative Architecture）**，以域（Domain）为核心计算单元，构建可扩展的仿真平台。
 
 ## 文档目录
 
@@ -12,12 +12,14 @@ DUAN 是一个通用的仿真体系框架，采用**域驱动设计（Domain-Dri
 
 ### 核心概念
 
-- [设计哲学](./concepts/philosophy.md) - 域驱动设计的核心思想
+- [设计哲学](./concepts/philosophy.md) - 权威域架构的核心思想
 - [实体](./concepts/entity.md) - 仿真对象的基本单元
 - [组件](./concepts/component.md) - 实体的数据组成
 - [域](./concepts/domain.md) - 权威计算单元
 - [域注册表](./concepts/domain-registry.md) - 域的管理与调度
+- [域上下文](./concepts/domain-context.md) - 域与框架的交互入口
 - [事件](./concepts/event.md) - 域间通信机制
+- [事件处理器](./concepts/event-handler.md) - 状态更新的执行者
 - [时间](./concepts/time.md) - 仿真时间管理
 - [生命周期](./concepts/lifecycle.md) - 实体的状态变迁
 
@@ -51,9 +53,9 @@ DUAN 是一个通用的仿真体系框架，采用**域驱动设计（Domain-Dri
 
 DUAN 仿真体系的核心理念可以概括为：
 
-1. **域是权威** - 每个领域有一个权威的域来负责计算和判定
-2. **域运行时定义** - 框架不预设域类型，用户在运行时注册
-3. **实体自声明归属** - 实体声明自己要加入哪些域
-4. **事件驱动传播** - 域的计算结果通过事件系统传播
+1. **域是权威** - 每个领域有一个权威的域来负责计算和判定，不是实体自己裁决
+2. **域运行时定义** - 框架不预设域类型，用户在运行时注册，支持任意仿真场景
+3. **实体自声明归属** - 实体声明自己要加入哪些域，域根据准入规则决定是否接纳
+4. **事件驱动传播** - 域的计算结果通过事件系统传播，计算与状态更新分离
 
 更多信息请参阅 [设计哲学](./concepts/philosophy.md)。
