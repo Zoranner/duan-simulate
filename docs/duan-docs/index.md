@@ -27,11 +27,10 @@ DUAN 是一个通用仿真体系框架，采用**权威域架构（Domain-Author
 - [事件](./concepts/event.md) — 域间通信机制与状态更新
 - [时间](./concepts/time.md) — 仿真时间管理
 - [生命周期](./concepts/lifecycle.md) — 实体的状态变迁
-- [世界](./concepts/world.md) — 仿真世界的容器与初始化
 
 ### 架构
 
-- [架构概览](./architecture/overview.md) — 系统分层与数据流
+- [架构概览](./architecture/overview.md) — 职责分层、系统组成与数据流
 - [仿真循环](./architecture/simulation-loop.md) — 每帧的执行流程
 - [设计哲学](./architecture/philosophy.md) — 权威域架构的核心思想与设计权衡
 
