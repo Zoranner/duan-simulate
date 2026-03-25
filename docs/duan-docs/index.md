@@ -1,61 +1,47 @@
-# DUAN 仿真体系文档
+# DUAN 仿真体系
 
-DUAN 是一个通用的仿真体系框架，采用**权威域架构（Domain-Authoritative Architecture）**，以域（Domain）为核心计算单元，构建可扩展的仿真平台。
+DUAN 是一个通用仿真体系框架，采用**权威域架构（Domain-Authoritative Architecture）**。
+
+框架提供仿真计算的骨架：实体管理、域的注册与调度、事件收集与分发、时间推进、生命周期管理。具体的仿真逻辑由用户定义和实现。框架不预设任何具体的域类型、组件类型或事件类型。
+
+## 核心理念
+
+- **域是权威** — 每个领域有一个权威的域负责计算和判定，不是实体自己裁决
+- **运行时定义** — 域类型在运行时注册，框架核心不枚举，支持任意仿真场景
+- **实体自声明归属** — 实体声明自己要加入哪些域，域根据准入规则决定是否接纳
+- **事件驱动传播** — 域的计算结果通过事件系统传播，计算与状态更新分离
+
+## 框架边界
+
+**提供**：实体与组件管理、域的注册调度与执行排序、事件收集与分发、仿真时钟与定时器、生命周期管理。
+
+**适合**：多领域交叉仿真（军事、物理、游戏等）、需要持续扩展的仿真系统、需要可替换算法的场景、需要可追溯性（复盘、回放）的仿真。
 
 ## 文档目录
 
-### 介绍
-
-- [概览](./introduction/overview.md) - 什么是 DUAN 仿真体系
-- [设计目标](./introduction/goals.md) - 框架的设计目标和核心理念
-- [适用场景](./introduction/use-cases.md) - 典型应用场景
-
 ### 核心概念
 
-- [设计哲学](./concepts/philosophy.md) - 权威域架构的核心思想
-- [实体](./concepts/entity.md) - 仿真对象的基本单元
-- [组件](./concepts/component.md) - 实体的数据组成
-- [域](./concepts/domain.md) - 权威计算单元
-- [域注册表](./concepts/domain-registry.md) - 域的管理与调度
-- [域上下文](./concepts/domain-context.md) - 域与框架的交互入口
-- [事件](./concepts/event.md) - 域间通信机制
-- [事件处理器](./concepts/event-handler.md) - 状态更新的执行者
-- [时间](./concepts/time.md) - 仿真时间管理
-- [生命周期](./concepts/lifecycle.md) - 实体的状态变迁
+- [实体](./concepts/entity.md) — 仿真对象的基本单元
+- [组件](./concepts/component.md) — 实体的数据组成
+- [域](./concepts/domain.md) — 权威计算单元，含注册管理与上下文接口
+- [事件](./concepts/event.md) — 域间通信机制与状态更新
+- [时间](./concepts/time.md) — 仿真时间管理
+- [生命周期](./concepts/lifecycle.md) — 实体的状态变迁
+- [世界](./concepts/world.md) — 仿真世界的容器与初始化
 
 ### 架构
 
-- [架构概览](./architecture/overview.md) - 系统整体结构
-- [仿真循环](./architecture/simulation-loop.md) - 每帧的执行流程
-- [世界](./architecture/world.md) - 仿真世界的容器
+- [架构概览](./architecture/overview.md) — 系统分层与数据流
+- [仿真循环](./architecture/simulation-loop.md) — 每帧的执行流程
+- [设计哲学](./architecture/philosophy.md) — 权威域架构的核心思想与设计权衡
 
 ### 使用指南
 
-- [场景配置](./guides/scenario.md) - 如何配置仿真场景
-- [自定义域](./guides/custom-domain.md) - 如何实现自定义域
-- [自定义组件](./guides/custom-component.md) - 如何定义组件
-
-### 示例参考
-
-> **注意**：本节的域和组件仅为示例，展示如何使用框架。实际使用时，用户应根据具体仿真场景自行定义和实现。
-
-- [示例域](./examples/domains.md) - 常见域的参考实现
-- [示例组件](./examples/components.md) - 常见组件的参考设计
+- [场景配置](./guides/scenario.md) — 如何配置仿真场景
+- [自定义域](./guides/custom-domain.md) — 如何实现自定义域，含参考实现
+- [自定义组件](./guides/custom-component.md) — 如何定义组件，含参考设计
 
 ### 参考
 
-- [术语表](./reference/glossary.md) - 核心术语定义
-- [设计评审](./reference/design-review.md) - 已识别的设计问题和改进建议
-
----
-
-## 快速了解
-
-DUAN 仿真体系的核心理念可以概括为：
-
-1. **域是权威** - 每个领域有一个权威的域来负责计算和判定，不是实体自己裁决
-2. **域运行时定义** - 框架不预设域类型，用户在运行时注册，支持任意仿真场景
-3. **实体自声明归属** - 实体声明自己要加入哪些域，域根据准入规则决定是否接纳
-4. **事件驱动传播** - 域的计算结果通过事件系统传播，计算与状态更新分离
-
-更多信息请参阅 [设计哲学](./concepts/philosophy.md)。
+- [术语表](./reference/glossary.md) — 核心术语定义
+- [决策记录](./reference/decisions.md) — 设计决策与待观察的权衡点
