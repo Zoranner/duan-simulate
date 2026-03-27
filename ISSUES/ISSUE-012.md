@@ -3,7 +3,7 @@ id: ISSUE-012
 title: EntityStore 缺少 is_destroying() 查询——域无法感知实体销毁状态
 type: api-design
 priority: p2-medium
-status: open
+status: resolved
 reporter: framework-consumer
 created: 2026-03-27
 updated: 2026-03-27
@@ -69,12 +69,19 @@ if !ctx.entities.is_destroying(ship_id) {
 
 ## 维护者评估
 
-**结论**：
+**结论**：采纳。`is_destroying()` 是对已有 `Lifecycle::Destroying` 状态的简单查询包装，实现成本低，消除了域实现中的框架状态泄漏反模式。
 
 **分析**：
 
+问题成立。`Lifecycle::Destroying` 状态在框架内已存在（`world.destroy()` 触发），但 `EntityStore` 未暴露对应查询接口，迫使域实现者自行维护 `HashSet<EntityId>` 跟踪销毁状态——这是框架本应承担的状态被推给了域实现。
+
+`is_destroying()` 只是对 `entity.lifecycle` 字段的只读检查，完全不涉及架构变更。`Lifecycle` 枚举的 `Destroying` 变体语义已稳定（`Destroying` = 已调用 `world.destroy()`、实体已从所有域脱离、处于过渡期中），实现一致性无疑问。
+
+Reporter 提出的"更彻底方案"（`world.destroy()` 后自动过滤后续事件）不采纳：框架不应替用户过滤事件，事件处理器是用户代码，判断是否跳过是用户的职责，框架提供状态查询能力即可。
+
 **行动计划**：
 
-- [ ]
+- [x] 在 `src/entity.rs` 的 `EntityStore` 上新增 `is_destroying(id: EntityId) -> bool` 方法
+- [x] 在 `concepts/lifecycle.md` 的"销毁中（Destroying）"状态描述中补充：域可通过 `ctx.entities.is_destroying(id)` 感知此状态，常见用途是避免对同一实体重复发出销毁事件
 
 **关闭理由**（如拒绝或 wontfix）：

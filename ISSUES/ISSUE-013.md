@@ -3,7 +3,7 @@ id: ISSUE-013
 title: compute 中两相借用模式缺乏文档说明——新用户容易踩坑
 type: documentation
 priority: p2-medium
-status: open
+status: resolved
 reporter: framework-consumer
 created: 2026-03-27
 updated: 2026-03-27
@@ -71,12 +71,20 @@ for entity in ctx.own_entities() {  // 持有不可变引用
 
 ## 维护者评估
 
-**结论**：
+**结论**：已修复（文档已覆盖），无需额外操作。
 
 **分析**：
 
+经核查，`guides/custom-domain.md` 第 148–176 行已有"compute 中的借用模式"小节，完整包含：
+- 说明为何需要两阶段（Rust 不允许同时持有可变和不可变引用）
+- 标准写法模板（先 `collect` ID，再按 ID 操作）
+- 含注释的完整代码示例（Position/Velocity 读取后写回）
+- 说明这是框架惯用法而非框架额外限制
+
+Reporter 在提交 ISSUE 时文档已处于正确状态。
+
 **行动计划**：
 
-- [ ]
+无需额外操作。
 
-**关闭理由**（如拒绝或 wontfix）：
+**关闭理由**：文档已覆盖，Issue 提交时已修复。

@@ -3,7 +3,7 @@ id: ISSUE-015
 title: 事件 vs 服务调用的选择准则缺失——导致设计决策模糊
 type: concept-clarity
 priority: p2-medium
-status: open
+status: resolved
 reporter: framework-consumer
 created: 2026-03-27
 updated: 2026-03-27
@@ -64,12 +64,22 @@ updated: 2026-03-27
 
 ## 维护者评估
 
-**结论**：
+**结论**：采纳，且优先级提至 p1。事件 vs 服务调用的选择准则缺失是框架设计哲学层面的重要文档缺口，影响所有多域协作场景的设计决策。
 
 **分析**：
 
+问题高度成立。Reporter 在 `naval_combat` 中观察到的 `DetectionEvent` 从未被消费现象，是这种设计模糊导致的：既然可以通过服务调用同帧获取探测结果，事件就变成了"可选的通知"，其消费语义不清晰，开发者无从判断是否遗漏了什么。
+
+正确理解：两种机制不是竞争关系，而是互补——
+
+- `DetectionRules` 发出 `DetectionEvent`（通知事件，面向日志/回放/外部观察者）是正确的
+- `CombatRules` 在 `compute` 中调用 `get_detected(id)` 服务（同帧查询，驱动决策）也是正确的
+- 两件事职责不同，都应该存在，`DetectionEvent` 不是多余的
+
+Reporter 提出的对比表格框架正确，选择准则基本准确，采纳并在 `concepts/event.md` 中落地（该话题属于框架通信机制的核心概念，而非仅是使用指南）。
+
 **行动计划**：
 
-- [ ]
+- [x] 在 `concepts/event.md` 末尾新增"事件与服务调用的选择"章节，包含对比表格、两条选择准则、以探测→战斗链为例的并存说明
 
 **关闭理由**（如拒绝或 wontfix）：
