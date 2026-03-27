@@ -28,34 +28,34 @@ pub mod world;
 pub use component::Component;
 pub use domain::{Domain, DomainContext, DomainRegistry, DomainRules};
 pub use entity::{Entity, EntityId, EntityStore, Lifecycle};
-pub use events::{CustomEvent, DestroyCause, DomainEvent, Event, EventChannel, TimerCallback};
+pub use events::{CustomEvent, DestroyCause, DomainEvent, EventChannel, TimerCallback};
 pub use time::{TimeClock, Timer, TimerEvent, TimerManager};
 pub use world::{World, WorldBuilder};
 
-/// 为结构体自动实现 `Component` trait 所需的样板代码
+/// 为结构体自动实现 `Component` trait 的全部方法
 ///
-/// 生成 `as_any`、`as_any_mut`、`into_any_boxed` 三个方法，并指定组件类型名称。
+/// 生成完整的 `impl Component for $type` 块，包含：
+/// `component_type`、`as_any`、`as_any_mut`、`into_any_boxed` 四个方法。
 ///
 /// # 用法
 ///
 /// ```rust,ignore
-/// use duan::{Component, impl_component};
+/// use duan::impl_component;
 ///
 /// pub struct Position { pub x: f64, pub y: f64 }
 ///
 /// impl_component!(Position, "position");
-///
-/// impl Component for Position {
-///     // 只需实现业务方法，样板已由宏生成
-///     fn component_type(&self) -> &'static str { "position" }
-///     // as_any / as_any_mut / into_any_boxed 已由 impl_component! 生成
-/// }
 /// ```
 ///
-/// 完整用法（宏生成包括 `component_type` 在内的全部方法）：
+/// 宏展开后等价于：
 ///
 /// ```rust,ignore
-/// impl_component!(Position, "position");
+/// impl Component for Position {
+///     fn component_type(&self) -> &'static str { "position" }
+///     fn as_any(&self) -> &dyn Any { self }
+///     fn as_any_mut(&mut self) -> &mut dyn Any { self }
+///     fn into_any_boxed(self: Box<Self>) -> Box<dyn Any> { self }
+/// }
 /// ```
 #[macro_export]
 macro_rules! impl_component {

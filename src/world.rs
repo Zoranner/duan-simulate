@@ -11,10 +11,22 @@ use std::collections::HashSet;
 
 /// 世界构建器
 ///
-/// 用于逐步配置和创建世界实例。
+/// 用于链式配置并创建世界实例。
+///
+/// # 示例
+///
+/// ```rust,ignore
+/// let world = World::builder()
+///     .time_scale(1.0)
+///     .with_domain("motion", MotionRules::earth())
+///     .with_domain("collision", CollisionRules::new())
+///     .build();
+/// ```
 pub struct WorldBuilder {
     time_scale: f64,
     paused: bool,
+    /// 待注册的域队列（延迟到 build 时执行，保留完整类型信息）
+    domain_registrations: Vec<Box<dyn FnOnce(&mut DomainRegistry)>>,
 }
 
 impl WorldBuilder {
@@ -23,6 +35,7 @@ impl WorldBuilder {
         Self {
             time_scale: 1.0,
             paused: false,
+            domain_registrations: Vec::new(),
         }
     }
 
@@ -38,7 +51,19 @@ impl WorldBuilder {
         self
     }
 
+    /// 注册域（链式）
+    ///
+    /// 将域注册延迟到 `build()` 时统一执行。
+    /// 构建完成后会立即验证依赖关系，在配置阶段而非运行时暴露循环依赖问题。
+    pub fn with_domain<T: DomainRules>(mut self, name: &'static str, rules: T) -> Self {
+        self.domain_registrations
+            .push(Box::new(move |registry| registry.register::<T>(name, rules)));
+        self
+    }
+
     /// 构建世界
+    ///
+    /// 执行所有域注册，并立即验证依赖关系（存在循环依赖时 panic）。
     pub fn build(self) -> World {
         let clock = if self.paused {
             let mut c = TimeClock::paused();
@@ -48,9 +73,17 @@ impl WorldBuilder {
             TimeClock::with_scale(self.time_scale)
         };
 
+        let mut domains = DomainRegistry::new();
+        for register_fn in self.domain_registrations {
+            register_fn(&mut domains);
+        }
+
+        // 构建阶段立即验证依赖关系，使循环依赖在配置时暴露而非运行时
+        let _ = domains.execution_order();
+
         World {
             clock,
-            domains: DomainRegistry::new(),
+            domains,
             entities: EntityStore::new(),
             events: EventChannel::new(),
             timer_manager: TimerManager::new(),
@@ -124,9 +157,22 @@ impl World {
         self.entities.insert(entity);
 
         // 尝试附加到各域
-        for domain_name in declared_domains {
+        for domain_name in &declared_domains {
+            if !self.domains.contains(domain_name) {
+                debug_assert!(
+                    false,
+                    "实体 '{}' (id={}) 声明了未注册的域 '{}'",
+                    self.entities
+                        .get(id)
+                        .map(|e| e.entity_type.as_str())
+                        .unwrap_or("?"),
+                    id.raw(),
+                    domain_name
+                );
+                continue;
+            }
             if let Some(entity_ref) = self.entities.get(id) {
-                if let Some(domain) = self.domains.get_by_name_mut(&domain_name) {
+                if let Some(domain) = self.domains.get_by_name_mut(domain_name) {
                     domain.try_attach(entity_ref);
                 }
             }
@@ -293,7 +339,7 @@ impl World {
     where
         F: FnMut(&dyn CustomEvent, &mut Self),
     {
-        let events = std::mem::take(&mut self.events);
+        let events = self.events.drain();
 
         for event in events {
             // 自定义事件先交给用户处理器

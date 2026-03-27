@@ -1,12 +1,13 @@
 //! 事件（Event）是域之间通信的机制
 //!
-//! 事件是域的计算结果的表达方式。当域完成计算后，通过发出事件来通知仿真系统。
+//! 事件用于域向仿真系统其他部分（外部观察者、生命周期管理、跨域通知）传递信息。
+//! 域作为权威，直接修改自身管辖的实体状态；事件负责跨边界的通信与传播。
 //!
 //! # 设计原则
 //!
 //! - **解耦**：域不需要知道谁会处理它的事件
 //! - **可追溯**：所有事件都可以被记录和分析
-//! - **一致性**：计算和状态更新分离，确保一致性
+//! - **帧内缓冲**：计算阶段产生的事件在本帧所有域计算完成后统一处理
 
 use crate::EntityId;
 use std::any::Any;
@@ -15,24 +16,42 @@ use std::sync::Arc;
 
 /// 事件通道
 ///
-/// 收集和分发事件的容器。
-pub type EventChannel = Vec<DomainEvent>;
+/// 收集域计算阶段产生的事件，在帧末统一分发。
+/// 通过封装类型保留未来扩展能力（优先级、过滤等）。
+pub struct EventChannel {
+    events: Vec<DomainEvent>,
+}
 
-/// 事件 trait
-///
-/// 所有事件必须实现此 trait。
-pub trait Event: Send + Sync + 'static {
-    /// 事件类型名称
-    fn event_type(&self) -> &'static str;
-
-    /// 获取事件涉及的实体（可选）
-    fn entities(&self) -> Vec<EntityId> {
-        vec![]
+impl EventChannel {
+    /// 创建空事件通道
+    pub fn new() -> Self {
+        Self { events: Vec::new() }
     }
 
-    /// 获取事件时间戳（可选）
-    fn timestamp(&self) -> Option<f64> {
-        None
+    /// 追加事件
+    pub fn push(&mut self, event: DomainEvent) {
+        self.events.push(event);
+    }
+
+    /// 取出所有事件（清空通道）
+    pub fn drain(&mut self) -> Vec<DomainEvent> {
+        std::mem::take(&mut self.events)
+    }
+
+    /// 事件数量
+    pub fn len(&self) -> usize {
+        self.events.len()
+    }
+
+    /// 是否为空
+    pub fn is_empty(&self) -> bool {
+        self.events.is_empty()
+    }
+}
+
+impl Default for EventChannel {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -75,6 +94,26 @@ pub trait CustomEvent: Send + Sync {
 
     /// 事件名称（用于调试和日志）
     fn event_name(&self) -> &str;
+
+}
+
+impl dyn CustomEvent {
+    /// 将事件 downcast 到具体类型
+    ///
+    /// 等价于 `self.as_any().downcast_ref::<T>()`，消除重复的样板代码。
+    ///
+    /// # 示例
+    ///
+    /// ```rust,ignore
+    /// world.step_with(dt, |event, _world| {
+    ///     if let Some(c) = event.downcast::<GroundCollisionEvent>() {
+    ///         println!("碰撞速度: {}", c.impact_velocity);
+    ///     }
+    /// });
+    /// ```
+    pub fn downcast<T: 'static>(&self) -> Option<&T> {
+        self.as_any().downcast_ref::<T>()
+    }
 }
 
 impl Debug for dyn CustomEvent {
@@ -175,12 +214,14 @@ mod tests {
 
     #[test]
     fn test_event_channel() {
-        let channel: EventChannel = vec![
-            DomainEvent::spawned(EntityId::new(1), "ship"),
-            DomainEvent::destroyed(EntityId::new(2), DestroyCause::Timeout),
-        ];
+        let mut channel = EventChannel::new();
+        channel.push(DomainEvent::spawned(EntityId::new(1), "ship"));
+        channel.push(DomainEvent::destroyed(EntityId::new(2), DestroyCause::Timeout));
 
         assert_eq!(channel.len(), 2);
+        let drained = channel.drain();
+        assert_eq!(drained.len(), 2);
+        assert!(channel.is_empty());
     }
 
     #[test]
