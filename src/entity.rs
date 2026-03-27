@@ -344,6 +344,18 @@ impl EntityStore {
         self.entities.contains_key(&id)
     }
 
+    /// 检查实体是否正在销毁过渡中
+    ///
+    /// 返回 `true` 表示实体已触发销毁（`world.destroy()` 已被调用），正处于销毁过渡期。
+    /// 此时实体仍在实体存储中可被读取，但已从所有域完全脱离，不参与计算。
+    ///
+    /// 常见用途：在事件处理器中避免对同一实体重复发出销毁事件。
+    pub fn is_destroying(&self, id: EntityId) -> bool {
+        self.entities
+            .get(&id)
+            .map_or(false, |e| matches!(e.lifecycle, Lifecycle::Destroying))
+    }
+
     /// 清空所有实体
     pub fn clear(&mut self) {
         self.entities.clear();
