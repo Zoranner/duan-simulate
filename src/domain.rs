@@ -131,10 +131,23 @@ impl<'a> DomainContext<'a> {
         self.registry.get::<T>()
     }
 
-    /// 获取指定名称的域
+    /// 按名称查找域并转换为具体类型
     ///
-    /// 适用于动态场景或配置驱动的场景。
-    pub fn get_domain_by_name(&self, name: &str) -> Option<&Domain> {
+    /// 当同一类型被注册为多个具名实例时（如 `"red_command"` 和 `"blue_command"` 均为
+    /// `CommandRules`），`get_domain::<T>()` 只能返回最后注册的实例。此方法通过名称精确
+    /// 定位具体实例，再进行类型转换，解决此问题。
+    ///
+    /// 类型不匹配时返回 `None`。
+    pub fn get_domain_by_name<T: DomainRules>(&self, name: &str) -> Option<&T> {
+        let domain = self.registry.get_by_name(name)?;
+        domain.rules.as_any().downcast_ref::<T>()
+    }
+
+    /// 获取指定名称的域（裸引用）
+    ///
+    /// 适用于不关心具体类型、仅需访问域元数据（如名称、实体列表）的动态场景。
+    /// 若需访问具体类型，优先使用 [`get_domain_by_name`](Self::get_domain_by_name)。
+    pub fn get_domain_by_name_raw(&self, name: &str) -> Option<&Domain> {
         self.registry.get_by_name(name)
     }
 
