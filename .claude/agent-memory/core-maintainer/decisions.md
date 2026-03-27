@@ -169,3 +169,25 @@ type: project
 
 **决策先例**：`ctx.entities` 的"可变"访问权限不应被理解为"只操作管辖实体"——它是对 EntityStore 的完整访问；写入约束由开发者自律维护，框架不强制检查。
 
+---
+
+## ISSUE-016（2026-03-27）
+
+**类型**：api-design
+**优先级**：p2-medium
+**最终状态**：部分采纳（accept-doc + API 补全）
+
+**结论**：问题真实但表述有误差，API 已部分支持，需补文档警告 + 泛型便利方法。
+
+**关键技术发现**：
+- `DomainRegistry.type_index` 是 `HashMap<TypeId, String>`，同类型多次注册时后者**静默覆盖**前者（确定性错误，非不确定性）
+- `DomainContext::get_domain_by_name(name)` 已存在，返回 `Option<&Domain>`，泛型版 `get_domain_by_name::<T>(name)` 尚未提供
+- `dependencies()` 用名字 vs `get_domain()` 用类型：这是有意为之的两种维度，服务不同目的，不是设计错误，需补文档说明
+
+**行动计划**：
+1. `domain.md` 补充同类型多实例注册的警告说明
+2. `domain.md` 补充 dependencies/get_domain 两种标识符维度的解释
+3. `DomainContext` 增加 `get_domain_by_name::<T>(name)` 泛型便利方法
+4. 可选：`DomainRegistry::register` 增加同类型重复注册的 debug_assert 或 warn
+
+**不采纳**：统一为单一查找维度（既不统一为名字，也不统一为类型）。

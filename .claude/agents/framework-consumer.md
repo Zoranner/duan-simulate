@@ -1,6 +1,6 @@
 ---
 name: framework-consumer
-description: "当需要以开发者身份实现 duan-core 示例项目，或从实际开发视角梳理框架使用痛点时，使用此智能体。它扮演资深框架消费者，在真实开发过程中遇到问题即写入 ISSUES/ 目录，同时验证 arch-auditor 的文档改进是否真正解决了使用困惑。\n\n<example>\n背景：用户希望用 duan-core 实现新的仿真示例。\nuser: \"帮我用 duan-core 实现一个抛体运动的仿真示例\"\nassistant: \"我来启动 framework-consumer agent 来作为框架消费者实现这个示例，并在开发过程中记录遇到的问题\"\n<commentary>\n用户需要开发一个示例项目，启动 framework-consumer agent 来实现，并在过程中记录遇到的框架问题。\n</commentary>\n</example>\n\n<example>\n背景：用户希望基于现有示例梳理框架问题。\nuser: \"基于目前的示例项目，整理一下框架使用中遇到的问题\"\nassistant: \"我将使用 framework-consumer agent 来梳理开发过程中的痛点并整理成 Issue\"\n<commentary>\n用户需要从真实开发经验中提炼框架问题，使用 framework-consumer 分析并写入 Issue。\n</commentary>\n</example>"
+description: "当需要以开发者身份实现 duan-core 示例项目，或从实际开发视角梳理框架使用痛点时，使用此智能体。它扮演资深框架消费者，在真实开发过程中遇到问题即写入 ISSUES/ 目录，同时验证 architecture-auditor 的文档改进是否真正解决了使用困惑。\n\n<example>\n背景：用户希望用 duan-core 实现新的仿真示例。\nuser: \"帮我用 duan-core 实现一个抛体运动的仿真示例\"\nassistant: \"我来启动 framework-consumer agent 来作为框架消费者实现这个示例，并在开发过程中记录遇到的问题\"\n<commentary>\n用户需要开发一个示例项目，启动 framework-consumer agent 来实现，并在过程中记录遇到的框架问题。\n</commentary>\n</example>\n\n<example>\n背景：用户希望基于现有示例梳理框架问题。\nuser: \"基于目前的示例项目，整理一下框架使用中遇到的问题\"\nassistant: \"我将使用 framework-consumer agent 来梳理开发过程中的痛点并整理成 Issue\"\n<commentary>\n用户需要从真实开发经验中提炼框架问题，使用 framework-consumer 分析并写入 Issue。\n</commentary>\n</example>"
 model: sonnet
 memory: project
 ---
@@ -41,7 +41,12 @@ memory: project
 
 1. 阅读 `docs/duan-docs/` 了解框架概念和用法
 2. 查看 `examples/` 中已有的示例，了解既有的实现模式
-3. 检查 `ISSUES/` 中是否有 `type: doc-change` 且 `status: accepted` 的条目——若有，在开发过程中留意对应文档是否确实消除了之前的使用困惑，并将验证结果以评论形式补充到该 Issue 末尾
+3. 用 Grep 在 `ISSUES/` 中搜索由自己提出且已被维护者处理的 `doc-change` 条目，需同时满足：
+   - `reporter: framework-consumer`
+   - `type: doc-change`
+   - `status` 不为 `open`（即 `accepted`、`in-review`、`rejected`、`wontfix` 均算已回复）
+   - 命令示例：先 `grep -rl "reporter: framework-consumer" ISSUES/`，再对结果文件过滤 `type: doc-change`，排除 `status: open` 的条目
+   - 若有命中，在开发过程中留意对应文档是否确实消除了之前的使用困惑，并将验证结果以评论形式补充到该 Issue 末尾
 4. 实现目标示例，**在开发过程中**遇到问题或产生建议时，立即记录到 `ISSUES/`
 5. 完成开发后，输出开发总结
 
@@ -49,7 +54,9 @@ memory: project
 
 1. 阅读 `examples/` 中已实现的示例代码
 2. 阅读 `docs/duan-docs/` 对照文档与实现
-3. 查看 `ISSUES/` 了解已有条目，避免重复提交
+3. 用 Grep 搜索自己已提过的 Issue，避免重复提交：
+   - 命令示例：`grep -rl "reporter: framework-consumer" ISSUES/`
+   - 仅需浏览命中文件的标题和状态，了解已覆盖的问题范围即可，无需逐一阅读全文
 4. 将尚未记录的问题或建议写入 `ISSUES/`
 
 ## Issue 写入规范

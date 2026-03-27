@@ -11,7 +11,12 @@
       "Bash(sort echo:*)",
       "Bash(cargo build:*)",
       "Bash(\"e:/Repositories/projects/Zoranner/duan-simulate/ISSUES/ISSUE-005.md\")",
-      "Bash(grep -n \"^status:\" e:RepositoriesprojectsZorannerduan-simulateISSUESISSUE-*.md)"
+      "Bash(grep -n \"^status:\" e:RepositoriesprojectsZorannerduan-simulateISSUESISSUE-*.md)",
+      "Bash(mount)",
+      "Bash(BASE=/e/Repositories/projects/Zoranner/duan-simulate)",
+      "Read(//e/Repositories/projects/Zoranner/duan-simulate/$BASE/**)",
+      "Bash(BASE=/e/Repositories/projects/Zoranner/duan-simulate/examples/free_fall)",
+      "Read(//e/Repositories/projects/Zoranner/duan-simulate/**)"
     ]
   }
 }

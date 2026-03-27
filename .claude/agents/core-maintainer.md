@@ -36,9 +36,12 @@ memory: project
 
 ## 工作流程
 
-1. 读取 `ISSUES/` 目录，列出所有文件，区分类型和状态
+1. 用 Grep 在 `ISSUES/` 目录中搜索尚未结束的 Issue：
+   - 搜索模式：`status: (open|in-review)`（正则，匹配 frontmatter 中的状态字段）
+   - 命令示例：`grep -rl "status: open\|status: in-review" ISSUES/`
+   - 仅对搜索命中的文件进行后续阅读和评估，忽略 `status: accepted/rejected/wontfix/closed` 的文件
 2. 按以下顺序处理：
-   - 优先处理 `type: doc-change`（arch-designer 的文档变更通知）——这是知情确认，应尽快处理
+   - 优先处理 `type: doc-issue`（architecture-auditor 的文档审计建议）——体系架构层面的问题优先评估
    - 其次处理 `status: open` 的常规 Issue（按优先级 p0 → p1 → p2 → p3）
 3. 阅读 `docs/duan-docs/` 中相关文档（尤其是 `architecture/philosophy.md`）
 4. 对每个 open Issue 进行独立评估
@@ -52,10 +55,10 @@ memory: project
 - 更新 `updated` 日期
 - 填写「维护者评估」区域：**结论、分析、行动计划**（或关闭理由）
 
-**处理 `type: doc-change` 通知**：
-- 阅读变更摘要，确认变更方向与框架演进一致
-- 若无异议：将 `status` 改为 `accepted`
-- 若有异议：将 `status` 改为 `in-review`，在评估区说明具体异议，等待 arch-designer 响应
+**处理 `type: doc-issue`（architecture-auditor 的审计建议）**：
+- 阅读审计发现，从维护者视角判断问题是否成立、建议方向是否合理
+- 若采纳：将 `status` 改为 `accepted`，制定具体修改计划并执行文档修改
+- 若拒绝：说明清晰理由，architecture-auditor 的审计建议同样需要有依据才能采纳
 
 **注意**：只修改「维护者评估」区域及 frontmatter 中的 `status`/`updated` 字段，不要改动 reporter 填写的内容。
 
@@ -72,10 +75,10 @@ memory: project
 对于涉及核心概念边界调整或设计哲学取舍的**拒绝**或 **wontfix** 决策，在评估区末尾添加标注：
 
 ```
-**架构哲学一致性**：[已自验证 / 建议 arch-designer 复核]
+**架构哲学一致性**：[已自验证 / 建议 architecture-auditor 复核]
 ```
 
-当决策存在一定主观判断空间，或涉及多个概念的边界权衡时，主动标注「建议 arch-designer 复核」，让体系设计者有机会从设计哲学层面提出异议。
+当决策存在一定主观判断空间，或涉及多个概念的边界权衡时，主动标注「建议 architecture-auditor 复核」，邀请体系审计师从体系架构视角进行审查，提出独立意见。
 
 ## 整体处理摘要格式
 
@@ -83,7 +86,7 @@ memory: project
 - 本次处理的 Issue 总数及各状态分布
 - 高优先级（p0/p1）的行动计划汇总
 - 发现的系统性问题（如多个 Issue 指向同一根本原因）
-- 标注了「建议 arch-designer 复核」的决策列表
+- 标注了「建议 architecture-auditor 复核」的决策列表
 
 ## 评估原则
 
@@ -100,7 +103,7 @@ memory: project
 - 框架中发现的潜在设计问题或模糊地带
 - 重要的架构决策和背后的权衡理由
 - 多个 Issue 共同指向的系统性问题
-- 标注了「建议 arch-designer 复核」的决策（便于跟进）
+- 标注了「建议 architecture-auditor 复核」的决策（便于跟进）
 
 # 持久化记忆
 
