@@ -64,12 +64,14 @@ pub enum TimerCallback {
 ///
 /// 用户实现此 trait 来定义自己的事件类型。
 /// 不要求 Clone——框架通过 `Arc` 共享自定义事件数据，克隆 `DomainEvent` 时只增加引用计数。
+///
+/// # 不可变性
+///
+/// 事件描述"已发生的事实"，发出后不应被修改。因此 trait 仅提供只读访问，
+/// 不暴露 `as_any_mut`。
 pub trait CustomEvent: Send + Sync {
-    /// 类型转换（只读）
+    /// 类型转换（只读），用于 downcast 到具体事件类型
     fn as_any(&self) -> &dyn Any;
-
-    /// 类型转换（可变）
-    fn as_any_mut(&mut self) -> &mut dyn Any;
 
     /// 事件名称（用于调试和日志）
     fn event_name(&self) -> &str;
@@ -189,7 +191,6 @@ mod tests {
 
         impl CustomEvent for MyEvent {
             fn as_any(&self) -> &dyn Any { self }
-            fn as_any_mut(&mut self) -> &mut dyn Any { self }
             fn event_name(&self) -> &str { "my_event" }
         }
 

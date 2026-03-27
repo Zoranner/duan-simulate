@@ -146,7 +146,12 @@ impl World {
     /// 1. 从所有域中脱离（调用脱离接口）
     /// 2. 取消该实体的所有现有定时器
     /// 3. 调度过渡期定时器（到期后进入已销毁状态）
-    pub fn destroy(&mut self, entity_id: EntityId, destroy_time: f64) {
+    ///
+    /// # 参数
+    ///
+    /// - `transition_duration`: 过渡期时长（秒）。实体立即从所有域脱离，
+    ///   经过此时长后才从实体存储中移除。传 `0.0` 表示下一帧清理。
+    pub fn destroy(&mut self, entity_id: EntityId, transition_duration: f64) {
         let is_active = self
             .entities
             .get(entity_id)
@@ -174,7 +179,7 @@ impl World {
         // 4. 调度过渡期定时器
         self.timer_manager.schedule(
             entity_id,
-            Timer::self_destruct(self.clock.sim_time + destroy_time),
+            Timer::self_destruct(self.clock.sim_time + transition_duration),
         );
     }
 
@@ -265,7 +270,7 @@ impl World {
             };
 
             unsafe {
-                (*rules_ptr).compute(&mut ctx, dt);
+                (*rules_ptr).compute(&mut ctx);
             }
         }
     }

@@ -15,7 +15,7 @@ use std::collections::{HashMap, HashSet};
 /// # 生命周期
 ///
 /// 1. 域注册时，`dependencies()` 被调用来确定执行顺序
-/// 2. 实体创建时，`try_attach()` 被调用来决定是否接纳实体
+/// 2. 实体入世时，`try_attach()` 被调用判断是否接纳；接纳后调用 `on_attach()` 初始化域内状态
 /// 3. 每帧仿真时，`compute()` 被调用来执行计算
 /// 4. 实体销毁时，`on_detach()` 被调用来清理数据
 ///
@@ -25,29 +25,29 @@ use std::collections::{HashMap, HashSet};
 pub trait DomainRules: Send + Sync + 'static {
     /// 每帧计算
     ///
-    /// 执行域的计算逻辑，产生事件。
+    /// 执行域的计算逻辑。域作为其领域的权威，可以直接修改实体的组件状态，
+    /// 也可以通过 `ctx.emit()` 发出事件与其他部分通信。
     ///
-    /// # 约束
-    ///
-    /// - 此阶段只能读取实体数据
-    /// - 此阶段只能写入事件通道
-    /// - 此阶段不能修改实体状态
-    ///
-    /// # 参数
-    ///
-    /// - `ctx`: 域上下文，提供对仿真环境的访问
-    /// - `dt`: 帧时间（仿真时间步长）
-    fn compute(&mut self, ctx: &mut DomainContext, dt: f64);
+    /// 时间步长通过 `ctx.dt` 获取。
+    fn compute(&mut self, ctx: &mut DomainContext);
 
     /// 尝试附加实体
     ///
-    /// 检查实体是否满足该域的准入条件。
-    /// 返回 `true` 表示接纳，`false` 表示拒绝。
+    /// 检查实体是否满足该域的准入条件，返回 `true` 表示接纳。
+    /// 此方法是纯谓词，不应有副作用——接纳后的初始化逻辑请放在 `on_attach` 中。
     ///
     /// # 典型实现
     ///
     /// 检查实体是否具有必要的组件。
-    fn try_attach(&mut self, entity: &Entity) -> bool;
+    fn try_attach(&self, entity: &Entity) -> bool;
+
+    /// 实体加入该域后的初始化
+    ///
+    /// 在 `try_attach` 返回 `true` 后由框架调用，用于在域内初始化与该实体相关的状态。
+    /// 默认实现为空操作。
+    fn on_attach(&mut self, entity: &Entity) {
+        let _ = entity;
+    }
 
     /// 实体脱离该域
     ///
@@ -170,10 +170,11 @@ impl Domain {
 
     /// 尝试附加实体
     ///
-    /// 如果实体被接纳，将其添加到实体列表。
+    /// 如果实体被接纳，将其添加到实体列表并调用 `on_attach` 进行初始化。
     pub fn try_attach(&mut self, entity: &Entity) -> bool {
         if self.rules.try_attach(entity) {
             self.entities.insert(entity.id);
+            self.rules.on_attach(entity);
             true
         } else {
             false
@@ -243,19 +244,6 @@ impl DomainRegistry {
                 name: name.to_string(),
                 entities: HashSet::new(),
                 rules: Box::new(rules),
-            },
-        );
-        *self.order_dirty.borrow_mut() = true;
-    }
-
-    /// 注册域（带名称的 Box<dyn DomainRules>）
-    pub fn register_boxed(&mut self, name: &str, rules: Box<dyn DomainRules>) {
-        self.domains.insert(
-            name.to_string(),
-            Domain {
-                name: name.to_string(),
-                entities: HashSet::new(),
-                rules,
             },
         );
         *self.order_dirty.borrow_mut() = true;
@@ -394,8 +382,8 @@ mod tests {
     struct TestRules;
 
     impl DomainRules for TestRules {
-        fn compute(&mut self, _ctx: &mut DomainContext, _dt: f64) {}
-        fn try_attach(&mut self, _entity: &Entity) -> bool {
+        fn compute(&mut self, _ctx: &mut DomainContext) {}
+        fn try_attach(&self, _entity: &Entity) -> bool {
             true
         }
         fn on_detach(&mut self, _entity_id: EntityId) {}
