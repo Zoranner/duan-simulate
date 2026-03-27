@@ -10,14 +10,20 @@ pub struct Seeker {
     pub shooter_id: EntityId,
     /// 命中伤害
     pub damage: f64,
+    /// 最大飞行射程（超出后自毁）
+    pub max_range: f64,
+    /// 已飞行距离（由运动域每步累加）
+    pub traveled: f64,
 }
 
 impl Seeker {
-    pub fn new(target_id: EntityId, shooter_id: EntityId, damage: f64) -> Self {
+    pub fn new(target_id: EntityId, shooter_id: EntityId, damage: f64, max_range: f64) -> Self {
         Self {
             target_id,
             shooter_id,
             damage,
+            max_range,
+            traveled: 0.0,
         }
     }
 }

@@ -82,6 +82,11 @@ impl DomainRules for MotionRules {
                     vel.vx = new_vx;
                     vel.vy = new_vy;
                 }
+                // 若为导弹，累加本步飞行距离
+                if let Some(seeker) = entity.get_component_mut::<Seeker>() {
+                    let speed = (new_vx * new_vx + new_vy * new_vy).sqrt();
+                    seeker.traveled += speed * dt;
+                }
             }
         }
     }

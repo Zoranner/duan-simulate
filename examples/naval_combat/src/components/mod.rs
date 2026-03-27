@@ -1,5 +1,6 @@
 pub mod faction;
 pub mod health;
+pub mod helm;
 pub mod missile_body;
 pub mod position;
 pub mod radar;
@@ -9,6 +10,7 @@ pub mod weapon;
 
 pub use faction::Faction;
 pub use health::Health;
+pub use helm::Helm;
 pub use missile_body::MissileBody;
 pub use position::Position;
 pub use radar::Radar;

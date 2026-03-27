@@ -4,7 +4,7 @@
 //!
 //! # 域依赖链
 //!
-//! faction → space → motion → detection → combat → collision
+//! faction → space → motion → detection → steering → combat → collision
 
 pub mod components;
 pub mod domains;

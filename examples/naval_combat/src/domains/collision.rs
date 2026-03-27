@@ -8,7 +8,7 @@ use duan::{domain_rules_any, DomainContext, DomainEvent, DomainRules, Entity, En
 use std::collections::HashSet;
 
 use crate::components::{Faction, MissileBody, Position, Seeker};
-use crate::events::HitEvent;
+use crate::events::{HitEvent, MissileExpiredEvent};
 
 /// 命中半径（米）
 const HIT_RADIUS: f64 = 8.0;
@@ -56,6 +56,15 @@ impl DomainRules for CollisionRules {
                 let seeker = entity.get_component::<Seeker>().copied();
                 (pos.0, pos.1, seeker)
             };
+
+            // 超射程检查：导弹飞出最大射程后自毁
+            if let Some(s) = seeker {
+                if s.max_range > 0.0 && s.traveled >= s.max_range {
+                    self.hit_missiles.insert(missile_id);
+                    ctx.emit(DomainEvent::custom(MissileExpiredEvent { missile_id }));
+                    continue;
+                }
+            }
 
             // 读取导弹阵营（通过发射者）
             let missile_team = seeker.and_then(|s| {

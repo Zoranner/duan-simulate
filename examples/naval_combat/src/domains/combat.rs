@@ -6,8 +6,8 @@
 use duan::{domain_rules_any, DomainContext, DomainEvent, DomainRules, Entity, EntityId};
 use std::collections::HashMap;
 
-use crate::components::{Health, Weapon};
-use crate::domains::{DetectionRules, SpaceRules};
+use crate::components::{Faction, Health, Weapon};
+use crate::domains::{CommandRules, DetectionRules, SpaceRules};
 use crate::events::{FireEvent, ShipDestroyedEvent};
 
 pub struct CombatRules {
@@ -72,6 +72,8 @@ impl DomainRules for CombatRules {
                     None => continue,
                 }
             };
+            // 导弹射程 = 武器射程的 2.5 倍（保证能飞抵目标但不无限飞行）
+            let missile_range = weapon_range * 2.5;
 
             // 检查冷却
             let cooldown = self.fire_cooldowns.entry(entity_id).or_insert(0.0);
@@ -79,14 +81,47 @@ impl DomainRules for CombatRules {
                 continue;
             }
 
-            // 查询探测域的探测目标（方式一：按类型查找）
-            let detected_targets: Vec<EntityId> = match ctx.get_domain::<DetectionRules>() {
-                Some(detection) => detection.get_detected(entity_id).iter().copied().collect(),
+            // 读取本舰阵营
+            let my_team = match ctx
+                .entities
+                .get(entity_id)
+                .and_then(|e| e.get_component::<Faction>())
+                .map(|f| f.team)
+            {
+                Some(t) => t,
                 None => continue,
             };
 
+            // 优先使用指挥域的指派目标；无指派时退化为个舰探测
+            let assigned = ctx
+                .get_domain::<CommandRules>()
+                .and_then(|c| c.get_assignment(entity_id));
+
+            // 候选目标：指派目标优先，其次是舰队探测池，最后是个舰探测
+            let fleet_detected: Vec<EntityId> = ctx
+                .get_domain::<CommandRules>()
+                .map(|c| c.get_fleet_detected(my_team).iter().copied().collect())
+                .unwrap_or_else(|| {
+                    ctx.get_domain::<DetectionRules>()
+                        .map(|d| d.get_detected(entity_id).iter().copied().collect())
+                        .unwrap_or_default()
+                });
+
+            // 构建有序候选列表：指派目标排首位
+            let mut candidates: Vec<EntityId> = Vec::new();
+            if let Some(t) = assigned {
+                if fleet_detected.contains(&t) {
+                    candidates.push(t);
+                }
+            }
+            for t in &fleet_detected {
+                if !candidates.contains(t) {
+                    candidates.push(*t);
+                }
+            }
+
             // 对第一个在射程内的目标开火
-            for target_id in detected_targets {
+            for target_id in candidates {
                 let distance = match ctx.get_domain::<SpaceRules>() {
                     Some(space) => space.distance(entity_id, target_id, ctx.entities),
                     None => None,
@@ -135,6 +170,7 @@ impl DomainRules for CombatRules {
                     dir_x,
                     dir_y,
                     missile_speed,
+                    missile_range,
                     damage: weapon_damage,
                 }));
 
@@ -154,7 +190,7 @@ impl DomainRules for CombatRules {
     }
 
     fn dependencies(&self) -> Vec<&'static str> {
-        vec!["detection", "space"]
+        vec!["command", "detection", "space"]
     }
 
     domain_rules_any!(CombatRules);

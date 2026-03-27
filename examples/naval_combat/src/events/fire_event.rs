@@ -12,6 +12,8 @@ pub struct FireEvent {
     pub dir_x: f64,
     pub dir_y: f64,
     pub missile_speed: f64,
+    /// 导弹最大飞行距离（超出后自毁）
+    pub missile_range: f64,
     pub damage: f64,
 }
 
