@@ -2,8 +2,7 @@
 //!
 //! 描述实体在三维空间中的速度向量。
 
-use duan::Component;
-use std::any::Any;
+use duan::impl_component;
 
 /// 速度组件
 ///
@@ -21,20 +20,4 @@ impl Velocity {
     }
 }
 
-impl Component for Velocity {
-    fn component_type(&self) -> &'static str {
-        "velocity"
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
-
-    fn into_any_boxed(self: Box<Self>) -> Box<dyn Any> {
-        self
-    }
-}
+impl_component!(Velocity, "velocity");

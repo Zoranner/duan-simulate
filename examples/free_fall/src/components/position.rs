@@ -2,8 +2,7 @@
 //!
 //! 描述实体在三维空间中的位置。
 
-use duan::Component;
-use std::any::Any;
+use duan::impl_component;
 
 /// 位置组件
 ///
@@ -21,20 +20,4 @@ impl Position {
     }
 }
 
-impl Component for Position {
-    fn component_type(&self) -> &'static str {
-        "position"
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
-
-    fn into_any_boxed(self: Box<Self>) -> Box<dyn Any> {
-        self
-    }
-}
+impl_component!(Position, "position");

@@ -12,10 +12,7 @@
 //!
 //! 运动域无依赖，最先执行。其输出是碰撞域的输入。
 
-use duan::{
-    DomainContext, DomainRules, Entity, EntityId,
-};
-use std::any::Any;
+use duan::{domain_rules_any, DomainContext, DomainRules, Entity, EntityId};
 
 use crate::components::{Position, Velocity};
 
@@ -40,23 +37,11 @@ impl MotionRules {
 
 impl DomainRules for MotionRules {
     fn compute(&mut self, ctx: &mut DomainContext, dt: f64) {
-        // 先获取域名称，避免在迭代过程中持续借用 ctx
-        let domain_name = {
-            let domain = match ctx.get_domain_by_name("motion") {
-                Some(d) => d,
-                None => return,
-            };
-            domain.name.clone()
-        };
-
-        // 收集实体 ID（释放 domain 借用后再修改实体）
-        let entity_ids: Vec<EntityId> = {
-            let domain = ctx.get_domain_by_name(&domain_name).expect("domain must exist");
-            domain.entity_ids().collect()
-        };
+        // 收集实体 ID（释放不可变引用后再可变访问实体）
+        let entity_ids: Vec<EntityId> = ctx.own_entity_ids().collect();
 
         for entity_id in entity_ids {
-            // 获取当前位置（只读）
+            // 读取当前位置和速度（只读借用）
             let (x, y, z, vx_old, vy_old, vz_old) = {
                 let entity = match ctx.entities.get(entity_id) {
                     Some(e) => e,
@@ -79,14 +64,14 @@ impl DomainRules for MotionRules {
             let new_y = y + new_vy * dt;
             let new_z = z + vz_old * dt;
 
-            // 直接修改实体（借用已释放，可以可变访问）
+            // 可变访问：写回结果
             if let Some(entity) = ctx.entities.get_mut(entity_id) {
-                if let Some(pos) = entity.components.get_mut::<Position>() {
+                if let Some(pos) = entity.get_component_mut::<Position>() {
                     pos.x = new_x;
                     pos.y = new_y;
                     pos.z = new_z;
                 }
-                if let Some(vel) = entity.components.get_mut::<Velocity>() {
+                if let Some(vel) = entity.get_component_mut::<Velocity>() {
                     vel.vx = vx_old;
                     vel.vy = new_vy;
                     vel.vz = vz_old;
@@ -105,11 +90,5 @@ impl DomainRules for MotionRules {
         vec![]
     }
 
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
+    domain_rules_any!(MotionRules);
 }

@@ -2,8 +2,7 @@
 //!
 //! 展示 DUAN 双域架构的完整仿真流程。
 
-use duan::World;
-use std::cell::RefCell;
+use duan::{CustomEvent, Entity, World};
 
 use free_fall::components::{Collider, Mass, Position, Velocity};
 use free_fall::domains::{CollisionRules, MotionRules};
@@ -19,25 +18,24 @@ fn main() {
     world.register_domain("motion", MotionRules::earth());
     world.register_domain("collision", CollisionRules::new());
 
-    // 创建地面实体（静态碰撞体：Position + Collider）
-    let ground_id = world.generate_entity_id();
-    let ground = duan::Entity::new(ground_id, "ground")
-        .with_domain("collision")
-        // 地面有位置（y=0），但没有速度（不参与运动积分）
-        .with_component(Position::new(0.0, 0.0, 0.0))
-        .with_component(Collider::ground(0.8, 0.05));
-    world.spawn(ground);
+    // 创建地面实体（静态碰撞体：Position + Collider，无 Velocity）
+    world.spawn(
+        Entity::new("ground")
+            .with_domain("collision")
+            .with_component(Position::new(0.0, 0.0, 0.0))
+            .with_component(Collider::ground(0.8, 0.05)),
+    );
 
     // 创建小球实体（动态碰撞体：Position + Velocity + Collider）
-    let ball_id = world.generate_entity_id();
-    let ball = duan::Entity::new(ball_id, "ball")
-        .with_domain("motion") // 运动域处理积分
-        .with_domain("collision") // 碰撞域处理落地检测
-        .with_component(Position::new(0.0, 10.0, 0.0))
-        .with_component(Velocity::new(0.0, 0.0, 0.0))
-        .with_component(Collider::new("小球", 0.0, 0.8, 0.05))
-        .with_component(Mass::new(1.0));
-    world.spawn(ball);
+    let ball_id = world.spawn(
+        Entity::new("ball")
+            .with_domain("motion")
+            .with_domain("collision")
+            .with_component(Position::new(0.0, 10.0, 0.0))
+            .with_component(Velocity::new(0.0, 0.0, 0.0))
+            .with_component(Collider::new("小球", 0.0, 0.8, 0.05))
+            .with_component(Mass::new(1.0)),
+    );
 
     // 打印初始条件
     println!("初始条件：小球从 y=10m 处自由释放");
@@ -51,23 +49,17 @@ fn main() {
     let total_time = 20.0;
     let steps = (total_time / dt) as usize;
 
-    // 事件处理器（只负责日志，不修改世界状态）
-    // 世界状态由域规则直接修改，此处只读取碰撞信息用于打印
-    let handler = |event: &dyn duan::CustomEvent, _world: &mut World| {
-        if let Some(collision) = event.as_any().downcast_ref::<GroundCollisionEvent>() {
-            println!(
-                "  >> [碰撞] {} | 冲击速度：{:.2} m/s | 弹性：{:.2}",
-                collision.surface_name, collision.impact_velocity, collision.restitution
-            );
-        }
-    };
-    let handler_cell = RefCell::new(handler);
-    let handler_ref: &RefCell<_> = &handler_cell;
-
     // 仿真主循环
     for step in 0..steps {
-        // 执行一步仿真
-        world.step(dt, Some(handler_ref));
+        // 执行一步仿真，在闭包中处理自定义事件
+        world.step_with(dt, |event: &dyn CustomEvent, _world: &mut World| {
+            if let Some(collision) = event.as_any().downcast_ref::<GroundCollisionEvent>() {
+                println!(
+                    "  >> [碰撞] {} | 冲击速度：{:.2} m/s | 弹性：{:.2}",
+                    collision.surface_name, collision.impact_velocity, collision.restitution
+                );
+            }
+        });
 
         // 获取小球状态
         let (pos, vel) = match world.get_entity(ball_id) {

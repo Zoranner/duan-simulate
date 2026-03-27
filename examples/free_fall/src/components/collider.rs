@@ -3,8 +3,7 @@
 //! 描述实体的碰撞属性。与 Position 组件配合使用，
 //! 可同时挂载在动态物体（如小球）和静态表面（如地面）上。
 
-use duan::Component;
-use std::any::Any;
+use duan::impl_component;
 
 /// 碰撞体组件
 ///
@@ -41,20 +40,4 @@ impl Collider {
     }
 }
 
-impl Component for Collider {
-    fn component_type(&self) -> &'static str {
-        "collider"
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
-
-    fn into_any_boxed(self: Box<Self>) -> Box<dyn Any> {
-        self
-    }
-}
+impl_component!(Collider, "collider");

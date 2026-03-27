@@ -8,7 +8,8 @@ use std::any::Any;
 /// 地面碰撞事件
 ///
 /// 由碰撞域检测到实体触地时发出。
-#[derive(Debug, Clone)]
+/// 框架通过 Arc 共享此事件，无需实现 Clone。
+#[derive(Debug)]
 pub struct GroundCollisionEvent {
     pub entity_id: EntityId,
     pub surface_name: String,
@@ -45,10 +46,6 @@ impl CustomEvent for GroundCollisionEvent {
 
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
-    }
-
-    fn clone_event(&self) -> Box<dyn CustomEvent> {
-        Box::new(self.clone())
     }
 
     fn event_name(&self) -> &str {

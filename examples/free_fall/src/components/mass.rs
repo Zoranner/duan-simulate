@@ -2,8 +2,7 @@
 //!
 //! 描述实体的质量属性。
 
-use duan::Component;
-use std::any::Any;
+use duan::impl_component;
 
 /// 质量组件
 ///
@@ -19,20 +18,4 @@ impl Mass {
     }
 }
 
-impl Component for Mass {
-    fn component_type(&self) -> &'static str {
-        "mass"
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
-
-    fn into_any_boxed(self: Box<Self>) -> Box<dyn Any> {
-        self
-    }
-}
+impl_component!(Mass, "mass");
