@@ -137,9 +137,39 @@
 
 ## 实现注意事项
 
-### 计算阶段只读
+### 域的写入边界
 
-在计算阶段只能读取实体数据、写入事件通道，不能修改实体状态。
+在计算阶段，域可以直接修改**自身管辖实体**的组件状态（这是域权威性的直接体现），同时可以向事件通道追加事件。但不能发起生命周期操作（创建/销毁实体），生命周期操作通过事件系统在事件处理阶段完成。
+
+### compute 中的借用模式
+
+由于 Rust 借用检查器的约束，在同一作用域内不能同时持有同一数据的不可变引用和可变引用。在 `compute` 中读取实体数据后再写回时，需要先将需要的数据提取到局部变量，释放不可变借用后再进行可变访问：
+
+```rust
+fn compute(&mut self, ctx: &mut DomainContext) {
+    let entity_ids: Vec<EntityId> = ctx.own_entity_ids().collect();
+
+    for entity_id in entity_ids {
+        // 先只读借用，提取数据到局部变量
+        let (x, y, vx, vy) = {
+            let entity = ctx.entities.get(entity_id).unwrap();
+            let pos = entity.get_component::<Position>().unwrap();
+            let vel = entity.get_component::<Velocity>().unwrap();
+            (pos.x, pos.y, vel.vx, vel.vy)
+        }; // 只读借用在此释放
+
+        // 再可变借用写回
+        if let Some(entity) = ctx.entities.get_mut(entity_id) {
+            if let Some(pos) = entity.get_component_mut::<Position>() {
+                pos.x = x + vx * ctx.dt;
+                pos.y = y + vy * ctx.dt;
+            }
+        }
+    }
+}
+```
+
+先 `collect` entity_ids 同理——这样做是为了释放对 `ctx.own_entities` 的借用，以便后续可变访问 `ctx.entities`。这是处理 Rust 所有权的标准写法，不是框架的额外限制。
 
 ## 常见问题
 
