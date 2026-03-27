@@ -106,3 +106,66 @@ type: project
 
 **触发来源**：ISSUE-005 行动计划第4条明确要求，本 Issue 是该要求的文档履行通知。
 
+---
+
+## ISSUE-007（2026-03-27）
+
+**类型**：documentation
+**优先级**：p2-medium
+**最终状态**：fixed
+
+**结论**：部分采纳。问题成立——`step_with` 闭包中 `world` 参数的能力边界确实未在文档中说明。在 `event.md` 的"注册与执行上下文"章节补充说明，建议方案 2（overview.md 数据流）和方案 3（新增 idioms.md）均不采纳。
+
+**技术确认**：`process_events` 中先执行 `self.events.drain()` 将事件全部取出，之后传入闭包的 `&mut World` 无其他活跃借用，`world.spawn()` 可以合法调用。`register_domain()` 技术上不崩溃，但语义禁止（初始化后执行顺序已固化）。
+
+**修改位置**：`docs/duan-docs/concepts/event.md` 的"注册与执行上下文"章节。
+
+**决策先例**：API 能力边界说明应放在概念文档的执行上下文章节，而非架构概览的数据流图或新增的惯用法文件。操作能力列表（支持/不支持）是执行上下文语义的自然组成部分，不构成文档膨胀。
+
+---
+
+## ISSUE-008（2026-03-27）
+
+**类型**：documentation
+**优先级**：p1-high
+**最终状态**：fixed
+
+**结论**：采纳。跨域服务调用 API 已存在于实现，文档完全未展示，补充代码示例。
+
+**技术确认**：
+- `DomainContext.get_domain::<T>()` 存在，返回 `Option<&T>`，无需 downcast，是推荐用法
+- `DomainContext.get_domain_by_name(name)` 存在，返回 `Option<&Domain>`，获取具体类型需 `domain.rules.as_any().downcast_ref::<T>()`
+- `DomainRules` trait 强制要求 `as_any` 方法，downcast 路径可行
+
+**修改位置**：
+- `docs/duan-docs/guides/custom-domain.md` 探测域参考实现后新增"跨域服务调用示例"
+- `docs/duan-docs/concepts/domain.md` 域注册表章节补充具体方法名，域上下文表格 `registry` 行更新
+
+**决策先例**：两种服务查找方式（按类型 vs 按名称）均应在文档中有代码示例；方式一是常规场景推荐，方式二适用于动态配置场景。
+
+---
+
+## ISSUE-009（2026-03-27）
+
+**类型**：concept-clarity
+**优先级**：p1-high
+**最终状态**：fixed
+
+**结论**：采纳。框架已支持全量实体遍历，文档未说明，补充说明并明确设计立场。
+
+**架构决策**：全量只读遍历（`ctx.entities.active_entities()`）是合法的，不违反权威域架构。权威边界的核心约束是**写入**——域只能修改自己管辖的实体，**读取**全量实体不破坏任何域的权威。跨实体交叉计算（探测、战斗）是真实需求，框架应当支持。
+
+**技术确认**：
+- `EntityStore.iter()` 迭代全部实体，`EntityStore.active_entities()` 只返回活跃实体
+- `ctx.entities` 是完整的 `&mut EntityStore`，`active_entities()` 可直接调用
+
+**两种目标枚举方式**（均合法）：
+- 全量遍历 `ctx.entities.active_entities()`：简单直接，适合实体数量不大的场景
+- 通过空间域范围查询服务：避免 O(n²)，利用空间索引加速，推荐用于探测/战斗等范围敏感场景
+
+**修改位置**：
+- `docs/duan-docs/concepts/domain.md` 域上下文表格 `entities` 行补充全量遍历说明
+- `docs/duan-docs/guides/custom-domain.md` 探测域参考实现新增"遍历潜在目标"章节
+
+**决策先例**：`ctx.entities` 的"可变"访问权限不应被理解为"只操作管辖实体"——它是对 EntityStore 的完整访问；写入约束由开发者自律维护，框架不强制检查。
+

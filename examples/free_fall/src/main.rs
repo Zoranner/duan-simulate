@@ -72,6 +72,8 @@ fn main() {
     let mut frames: Vec<RenderFrame> = Vec::new();
     let mut bounce_count = 0u32;
     let mut last_collision: Option<CollisionSnapshot> = None;
+    // 碰撞后保持闪光效果约 80ms（8 帧 × 10ms）
+    let mut bounce_flash_remaining: u32 = 0;
 
     let sim_start = Instant::now();
 
@@ -82,6 +84,7 @@ fn main() {
         world.step_with(SIM_DT, |event, _world| {
             if let Some(c) = event.downcast::<GroundCollisionEvent>() {
                 bounce_count += 1;
+                bounce_flash_remaining = 8;
                 last_collision = Some(CollisionSnapshot {
                     impact_velocity: c.impact_velocity,
                     restitution: c.restitution,
@@ -97,12 +100,18 @@ fn main() {
         let vy = entity.get_component::<Velocity>().map_or(0.0, |v| v.vy);
         let sim_time = world.sim_time();
 
+        let just_bounced = bounce_flash_remaining > 0;
+        if bounce_flash_remaining > 0 {
+            bounce_flash_remaining -= 1;
+        }
+
         frames.push(RenderFrame {
             sim_time,
             y,
             vy,
             bounce_count,
             last_collision,
+            just_bounced,
         });
 
         // 终止条件：小球贴地且速度足够小（认为已静止），或仿真超过最大时长

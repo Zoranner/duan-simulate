@@ -23,6 +23,25 @@ type: project
 
 执行顺序由域注册表根据依赖关系自动推导，非手动配置。
 
+## 权威边界的读写非对称性（ISSUE-009 确认）
+
+权威域架构的核心约束是**写入边界**，而非读取边界：
+
+- 域只能**写入**自己管辖的实体组件状态（权威边界）
+- 域可以**读取**任意实体（包括非管辖实体），不违反权威边界
+- 域可以**查询**任意已注册域的服务接口（`ctx.get_domain::<T>()`）
+
+这一非对称性与 `ctx.registry` 只读查询其他域服务的设计逻辑一致——读取信息不破坏权威。跨实体交叉计算（探测、战斗）依赖全量只读遍历，是框架设计的合法用法。
+
+## 跨域服务调用的两种模式（ISSUE-008 确认）
+
+在 `compute` 中调用其他域的服务：
+
+- 方式一（推荐）：`ctx.get_domain::<T>()`，返回 `Option<&T>`，编译期类型安全，无需 downcast
+- 方式二（动态场景）：`ctx.get_domain_by_name(name)` 返回 `Option<&Domain>`，再经 `domain.rules.as_any().downcast_ref::<T>()` 获取具体类型
+
+`DomainRules` trait 强制要求所有实现类提供 `as_any` 方法，downcast 路径可行。方式二的使用场景：域名在运行时由配置决定，编译时不确定具体类型。
+
 ## Rust impl dyn Trait 与 FnMut 约束的 lifetime 交互陷阱（ISSUE-002、ISSUE-005 确认）
 
 **陷阱一：impl dyn Trait 的隐式 'static**

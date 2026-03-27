@@ -249,6 +249,64 @@ fn compute(&mut self, ctx: &mut DomainContext) {
 
 **产生事件**：探测事件（观察者、目标、距离、置信度、时间戳）。
 
+**跨域服务调用示例**：
+
+探测域依赖阵营域，在 `compute` 中通过 `ctx.get_domain::<T>()` 获取另一个域的只读引用，直接调用其服务方法：
+
+```rust
+fn compute(&mut self, ctx: &mut DomainContext) {
+    // 方式一：按实现类型查找（推荐，编译期类型安全，无需 downcast）
+    let faction = ctx
+        .get_domain::<FactionRules>()
+        .expect("探测域依赖阵营域，但阵营域未注册");
+
+    let observer_ids: Vec<EntityId> = ctx.own_entity_ids().collect();
+    for observer_id in observer_ids {
+        // ... 遍历目标，调用阵营域服务
+        if faction.is_hostile(observer_id, target_id) {
+            // 进行探测判定...
+        }
+    }
+}
+```
+
+若需按名称动态查找（适用于域名由配置决定的场景）：
+
+```rust
+// 方式二：按名称查找，需手动向下转型
+if let Some(domain) = ctx.get_domain_by_name("faction") {
+    if let Some(faction) = domain.rules.as_any().downcast_ref::<FactionRules>() {
+        // 调用服务方法...
+    }
+}
+```
+
+方式一是常规写法，在编译期就能确保类型正确；方式二适合域名由配置决定、编译时不确定具体类型的场景。
+
+**遍历潜在目标**：
+
+探测是跨实体的交叉计算：观察者在本域管辖范围内，目标则可能是任意活跃实体（包括未归属探测域的实体）。
+
+`ctx.entities` 提供了对全部实体的访问能力，全量只读遍历是合法的，不违反权威边界（写入权限仍限于自身管辖实体）：
+
+```rust
+// 遍历全部活跃实体作为候选目标
+for target in ctx.entities.active_entities() {
+    if target.id == observer_id { continue; }
+    // 候选目标判定...
+}
+```
+
+对于范围敏感的场景，更推荐通过空间域的范围查询服务获取候选目标，避免 O(n²) 的全量遍历：
+
+```rust
+// 通过空间域的范围查询获取候选目标（性能更优）
+let space = ctx.get_domain::<SpaceRules>().expect("探测域依赖空间域");
+let candidates = space.query_range(observer_pos, radar_range);
+```
+
+两种方式都是合法的，选择取决于场景需求和性能要求。
+
 ---
 
 ### 战斗域
