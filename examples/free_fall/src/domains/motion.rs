@@ -36,7 +36,8 @@ impl MotionRules {
 }
 
 impl DomainRules for MotionRules {
-    fn compute(&mut self, ctx: &mut DomainContext, dt: f64) {
+    fn compute(&mut self, ctx: &mut DomainContext) {
+        let dt = ctx.dt;
         // 收集实体 ID（释放不可变引用后再可变访问实体）
         let entity_ids: Vec<EntityId> = ctx.own_entity_ids().collect();
 
@@ -80,7 +81,7 @@ impl DomainRules for MotionRules {
         }
     }
 
-    fn try_attach(&mut self, entity: &Entity) -> bool {
+    fn try_attach(&self, entity: &Entity) -> bool {
         entity.has_component::<Position>() && entity.has_component::<Velocity>()
     }
 

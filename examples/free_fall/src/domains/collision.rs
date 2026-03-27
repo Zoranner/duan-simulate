@@ -17,7 +17,7 @@
 //!
 //! # 地面实体缓存
 //!
-//! 地面在 `try_attach` 时识别并缓存 ID，`compute` 直接使用缓存，
+//! 地面在 `on_attach` 时识别并缓存 ID，`compute` 直接使用缓存，
 //! 避免每帧遍历查询。
 //!
 //! # 执行顺序
@@ -54,7 +54,7 @@ impl Default for CollisionRules {
 }
 
 impl DomainRules for CollisionRules {
-    fn compute(&mut self, ctx: &mut DomainContext, _dt: f64) {
+    fn compute(&mut self, ctx: &mut DomainContext) {
         // 从缓存读取地面参数
         let (ground_name, ground_height, restitution, friction) = {
             let ground_id = match self.ground_id {
@@ -147,19 +147,25 @@ impl DomainRules for CollisionRules {
         }
     }
 
-    fn try_attach(&mut self, entity: &Entity) -> bool {
+    fn try_attach(&self, entity: &Entity) -> bool {
         let has_pos = entity.has_component::<Position>();
         let has_collider = entity.has_component::<Collider>();
         let has_vel = entity.has_component::<Velocity>();
 
+        // 静态碰撞体（地面）：Position + Collider，无 Velocity
+        // 动态碰撞体（小球）：Position + Velocity + Collider
+        (has_pos && has_collider && !has_vel) || (has_pos && has_vel && has_collider)
+    }
+
+    fn on_attach(&mut self, entity: &Entity) {
+        let has_vel = entity.has_component::<Velocity>();
+        let has_pos = entity.has_component::<Position>();
+        let has_collider = entity.has_component::<Collider>();
+
         if has_pos && has_collider && !has_vel {
             // 静态碰撞体识别为地面，缓存 ID
             self.ground_id = Some(entity.id);
-            return true;
         }
-
-        // 动态碰撞体：Position + Velocity + Collider
-        has_pos && has_vel && has_collider
     }
 
     fn on_detach(&mut self, entity_id: EntityId) {

@@ -1,24 +1,29 @@
 //! 自由落体小球仿真 — 主程序
 //!
-//! 展示 DUAN 双域架构的完整仿真流程。
+//! Phase 1：仿真全速推进，每步记录 RenderFrame 到缓冲区。
+//! Phase 2：按帧的 sim_time 时间戳以真实时钟回放，精确还原物理时间序列。
+
+mod display;
+
+use std::time::{Duration, Instant};
 
 use duan::{CustomEvent, Entity, World};
-
 use free_fall::components::{Collider, Mass, Position, Velocity};
 use free_fall::domains::{CollisionRules, MotionRules};
 use free_fall::events::GroundCollisionEvent;
 
+use display::{FreeFallDisplay, RenderFrame};
+
 fn main() {
-    println!("=== DUAN 自由落体小球示例（双域架构）===\n");
+    // ── 参数 ────────────────────────────────────────────────
+    let dt = 0.01;      // 仿真时间步（秒）
+    let total_time = 20.0;
 
-    // 创建仿真世界
+    // ── 仿真世界 ───────────────────────────────────────────
     let mut world = World::builder().time_scale(1.0).build();
-
-    // 注册两个域（碰撞域依赖运动域，框架自动保证执行顺序）
     world.register_domain("motion", MotionRules::earth());
     world.register_domain("collision", CollisionRules::new());
 
-    // 创建地面实体（静态碰撞体：Position + Collider，无 Velocity）
     world.spawn(
         Entity::new("ground")
             .with_domain("collision")
@@ -26,7 +31,6 @@ fn main() {
             .with_component(Collider::ground(0.8, 0.05)),
     );
 
-    // 创建小球实体（动态碰撞体：Position + Velocity + Collider）
     let ball_id = world.spawn(
         Entity::new("ball")
             .with_domain("motion")
@@ -37,68 +41,71 @@ fn main() {
             .with_component(Mass::new(1.0)),
     );
 
-    // 打印初始条件
-    println!("初始条件：小球从 y=10m 处自由释放");
-    println!("重力加速度：9.8 m/s²（向下）");
-    println!("弹性系数：0.8（每次反弹保留 80% 能量）");
-    println!("时间步长：0.01s（100 步/秒）\n");
-    println!("{SEP}\n");
+    // ── Phase 1：全速仿真，缓存帧序列 ─────────────────────
+    let mut frames: Vec<RenderFrame> = Vec::new();
+    let mut bounce_count = 0u32;
+    let mut last_collision: Option<(f64, f64)> = None;
 
-    // 仿真参数
-    let dt = 0.01;
-    let total_time = 20.0;
-    let steps = (total_time / dt) as usize;
+    let sim_start = Instant::now();
 
-    // 仿真主循环
-    for step in 0..steps {
-        // 执行一步仿真，在闭包中处理自定义事件
+    loop {
         world.step_with(dt, |event: &dyn CustomEvent, _world: &mut World| {
-            if let Some(collision) = event.as_any().downcast_ref::<GroundCollisionEvent>() {
-                println!(
-                    "  >> [碰撞] {} | 冲击速度：{:.2} m/s | 弹性：{:.2}",
-                    collision.surface_name, collision.impact_velocity, collision.restitution
-                );
+            if let Some(c) = event.as_any().downcast_ref::<GroundCollisionEvent>() {
+                bounce_count += 1;
+                last_collision = Some((c.impact_velocity, c.restitution));
             }
         });
 
-        // 获取小球状态
-        let (pos, vel) = match world.get_entity(ball_id) {
-            Some(e) => (e.get_component::<Position>(), e.get_component::<Velocity>()),
-            None => continue,
+        let entity = match world.get_entity(ball_id) {
+            Some(e) => e,
+            None => break,
         };
-
+        let y = entity.get_component::<Position>().map(|p| p.y).unwrap_or(0.0);
+        let vy = entity.get_component::<Velocity>().map(|v| v.vy).unwrap_or(0.0);
         let sim_time = world.sim_time();
-        println!(
-            "t={:6.2}s | 位置：({:7.2}, {:7.2}, {:7.2}) | 速度：({:7.2}, {:7.2}, {:7.2})",
-            sim_time,
-            pos.map(|p| p.x).unwrap_or(0.0),
-            pos.map(|p| p.y).unwrap_or(0.0),
-            pos.map(|p| p.z).unwrap_or(0.0),
-            vel.map(|v| v.vx).unwrap_or(0.0),
-            vel.map(|v| v.vy).unwrap_or(0.0),
-            vel.map(|v| v.vz).unwrap_or(0.0),
-        );
 
-        // 检测静止条件
-        let is_stationary = pos.map(|p| p.y <= 0.01).unwrap_or(false)
-            && vel.map(|v| v.vy.abs() < 0.1).unwrap_or(false);
+        frames.push(RenderFrame { sim_time, y, vy, bounce_count, last_collision });
 
-        if is_stationary {
-            println!("\n  >> 小球已静止（速度 < 0.1 m/s），仿真结束。\n{SEP}");
+        if y <= 0.01 && vy.abs() < 0.1 {
             break;
         }
-
-        // 每 100 帧打印分隔线
-        if step > 0 && step % 100 == 0 {
-            println!("\n{SEP}\n");
+        if sim_time >= total_time {
+            break;
         }
     }
 
-    // 打印统计
-    println!("\n仿真统计：");
-    println!("  仿真时间：{:.2}s", world.sim_time());
-    println!("  总步数：{}", world.clock.step_count);
-    println!("\n=== 仿真完成 ===");
-}
+    let sim_elapsed = sim_start.elapsed();
 
-const SEP: &str = "----------------------------------------";
+    // ── Phase 2：按 sim_time 时间戳回放 ───────────────────
+    let display = match FreeFallDisplay::new(10.0) {
+        Ok(d) => d,
+        Err(e) => {
+            eprintln!("无法初始化终端显示: {}", e);
+            return;
+        }
+    };
+
+    let playback_start = Instant::now();
+
+    for frame in &frames {
+        // 等到该帧对应的真实时刻
+        let target = playback_start + Duration::from_secs_f64(frame.sim_time);
+        let now = Instant::now();
+        if target > now {
+            std::thread::sleep(target - now);
+        }
+
+        display.render(frame).ok();
+    }
+
+    // 最终帧停留 2 秒
+    std::thread::sleep(Duration::from_secs(2));
+    drop(display);
+
+    // ── 统计 ───────────────────────────────────────────────
+    println!("=== 仿真统计 ===");
+    println!("  仿真时间：{:.2} s", world.sim_time());
+    println!("  总帧数：{}", frames.len());
+    println!("  仿真耗时：{:.2} ms", sim_elapsed.as_secs_f64() * 1000.0);
+    println!("=== 仿真完成 ===");
+}
