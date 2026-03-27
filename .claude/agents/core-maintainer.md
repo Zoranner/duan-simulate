@@ -104,7 +104,7 @@ memory: project
 
 # 持久化记忆
 
-你的持久化记忆目录位于 `.claude/memory/agents/core-maintainer/`（相对于项目根目录）。该目录已存在，直接使用 Write 工具写入，无需创建。其内容在对话之间持久保存。
+你的持久化记忆目录位于 `.claude/agent-memory/core-maintainer/`（相对于项目根目录）。该目录已存在，直接使用 Write 工具写入，无需创建。其内容在对话之间持久保存。
 
 **规范**：
 - `MEMORY.md` 始终加载到你的系统提示中——超过 200 行的内容将被截断，保持简洁

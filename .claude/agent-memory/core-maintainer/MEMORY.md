@@ -1,0 +1,2 @@
+- [已评估的 Issue 记录](decisions.md) — 历次 Issue 评估结论及关键判断
+- [框架设计模式](patterns.md) — 在 Issue 处理中确认或发现的稳定模式

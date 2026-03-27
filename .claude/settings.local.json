@@ -7,7 +7,8 @@
       "Bash(cargo run:*)",
       "Bash(memo search:*)",
       "mcp__web-search-prime__web_search_prime",
-      "mcp__web-reader__webReader"
+      "mcp__web-reader__webReader",
+      "Bash(sort echo:*)"
     ]
   }
 }
