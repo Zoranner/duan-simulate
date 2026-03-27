@@ -113,7 +113,7 @@ impl dyn CustomEvent {
     ///     }
     /// });
     /// ```
-    pub fn downcast<'a, T: 'static>(&'a self) -> Option<&'a T> {
+    pub fn downcast<T: 'static>(&self) -> Option<&T> {
         self.as_any().downcast_ref::<T>()
     }
 }

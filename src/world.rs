@@ -22,11 +22,13 @@ use std::collections::HashSet;
 ///     .with_domain("collision", CollisionRules::new())
 ///     .build();
 /// ```
+type DomainRegistrationFn = Box<dyn FnOnce(&mut DomainRegistry)>;
+
 pub struct WorldBuilder {
     time_scale: f64,
     paused: bool,
     /// 待注册的域队列（延迟到 build 时执行，保留完整类型信息）
-    domain_registrations: Vec<Box<dyn FnOnce(&mut DomainRegistry)>>,
+    domain_registrations: Vec<DomainRegistrationFn>,
 }
 
 impl WorldBuilder {
@@ -202,7 +204,7 @@ impl World {
         let is_active = self
             .entities
             .get(entity_id)
-            .map_or(false, |e| e.lifecycle == Lifecycle::Active);
+            .is_some_and(|e| e.lifecycle == Lifecycle::Active);
 
         if !is_active {
             return;

@@ -353,7 +353,7 @@ impl EntityStore {
     pub fn is_destroying(&self, id: EntityId) -> bool {
         self.entities
             .get(&id)
-            .map_or(false, |e| matches!(e.lifecycle, Lifecycle::Destroying))
+            .is_some_and(|e| matches!(e.lifecycle, Lifecycle::Destroying))
     }
 
     /// 清空所有实体
