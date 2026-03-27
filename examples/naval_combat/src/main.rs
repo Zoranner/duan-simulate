@@ -152,8 +152,17 @@ fn main() {
                             .unwrap_or(99),
                     });
                 let missile_id = world.spawn(missile);
-                log.register_name(missile_id, format!("导弹({}→{})", shooter_name, target_name));
-                log.log(t, LogEntry::Fire { shooter: shooter_name, target: target_name });
+                log.register_name(
+                    missile_id,
+                    format!("导弹({}→{})", shooter_name, target_name),
+                );
+                log.log(
+                    t,
+                    LogEntry::Fire {
+                        shooter: shooter_name,
+                        target: target_name,
+                    },
+                );
             } else if let Some(e) = event.downcast::<HitEvent>() {
                 total_hits += 1;
                 let target_name = log.get_name(e.target_id);
@@ -173,11 +182,14 @@ fn main() {
                     0.0
                 };
 
-                log.log(t, LogEntry::Hit {
-                    target: target_name,
-                    damage: e.damage,
-                    health_after,
-                });
+                log.log(
+                    t,
+                    LogEntry::Hit {
+                        target: target_name,
+                        damage: e.damage,
+                        health_after,
+                    },
+                );
             } else if let Some(e) = event.downcast::<ShipDestroyedEvent>() {
                 let name = log.get_name(e.ship_id);
                 world.destroy(e.ship_id, 0.5);
@@ -199,7 +211,10 @@ fn main() {
                     let entity = world.get_entity(id)?;
                     let pos = entity.get_component::<Position>()?;
                     let health = entity.get_component::<Health>()?;
-                    let team = entity.get_component::<Faction>().map(|f| f.team).unwrap_or(0);
+                    let team = entity
+                        .get_component::<Faction>()
+                        .map(|f| f.team)
+                        .unwrap_or(0);
                     Some(ShipStatus {
                         name: name.to_string(),
                         team,

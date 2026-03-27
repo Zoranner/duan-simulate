@@ -57,7 +57,10 @@ impl CombatLog {
     }
 
     pub fn get_name(&self, id: EntityId) -> String {
-        self.names.get(&id).cloned().unwrap_or_else(|| format!("#{}", id.raw()))
+        self.names
+            .get(&id)
+            .cloned()
+            .unwrap_or_else(|| format!("#{}", id.raw()))
     }
 
     pub fn log(&mut self, sim_time: f64, entry: LogEntry) {
@@ -68,13 +71,21 @@ impl CombatLog {
     pub fn flush(&mut self) {
         for (t, entry) in self.entries.drain(..) {
             match entry {
-                LogEntry::Detection { observer, target, distance } => {
+                LogEntry::Detection {
+                    observer,
+                    target,
+                    distance,
+                } => {
                     println!("[{t:6.1}s] 探测  {observer} 发现 {target}（距离 {distance:.0}m）");
                 }
                 LogEntry::Fire { shooter, target } => {
                     println!("[{t:6.1}s] 开火  {shooter} → {target}");
                 }
-                LogEntry::Hit { target, damage, health_after } => {
+                LogEntry::Hit {
+                    target,
+                    damage,
+                    health_after,
+                } => {
                     println!("[{t:6.1}s] 命中  {target} 受到 {damage:.0} 点伤害，剩余 HP {health_after:.0}");
                 }
                 LogEntry::ShipDestroyed { name } => {

@@ -82,10 +82,9 @@ impl DomainRules for CollisionRules {
                         return false;
                     }
                     // 不命中同阵营目标
-                    if let (Some(mt), Some(et)) = (
-                        missile_team,
-                        e.get_component::<Faction>().map(|f| f.team),
-                    ) {
+                    if let (Some(mt), Some(et)) =
+                        (missile_team, e.get_component::<Faction>().map(|f| f.team))
+                    {
                         if mt == et {
                             return false;
                         }

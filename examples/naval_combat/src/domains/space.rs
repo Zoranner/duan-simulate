@@ -30,7 +30,9 @@ impl SpaceRules {
         radius: f64,
         entities: &EntityStore,
     ) -> Vec<EntityId> {
-        let center_pos = match entities.get(center_id).and_then(|e| e.get_component::<Position>())
+        let center_pos = match entities
+            .get(center_id)
+            .and_then(|e| e.get_component::<Position>())
         {
             Some(p) => (p.x, p.y),
             None => return vec![],
