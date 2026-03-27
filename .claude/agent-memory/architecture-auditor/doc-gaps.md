@@ -36,7 +36,7 @@ type: project
 **decisions.md 缺少 step_with 闭包签名 / CustomEvent object lifetime 决策记录**
 - ISSUE-005 维护者行动计划第4条要求补充，本批次完成
 - 记录了 ISSUE-002（downcast 返回值生命周期）到 ISSUE-005（step_with 约束明确化）的完整根因链
-- 关联 ISSUE-006（arch-designer doc-change 通知）
+- 关联 ISSUE-006（architecture-auditor doc-issue 通知）
 
 ## 持续盲区观察
 

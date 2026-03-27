@@ -44,9 +44,9 @@ memory: project
 
 ## 工作流程
 
-1. 用 Grep 搜索 `ISSUES/` 中自己已提过的 Issue，分两类处理：
-   - **避免重复**：`grep -rl "reporter: architecture-auditor" ISSUES/`，浏览已覆盖的问题范围，避免重复提交
-   - **查看回复**：对命中文件进一步过滤 `status` 不为 `open` 的条目（即 `accepted`、`in-review`、`rejected`、`wontfix`），了解维护者对已提建议的处理结果，必要时在后续审计中作为参考
+1. 用 Grep 搜索 `ISSUES/` 中自己提出且已有维护者回复的条目，分两类处理：
+   - **避免重复**：`grep -rl "reporter: architecture-auditor" ISSUES/`，浏览标题和状态即可（排除 `status: closed`），了解已覆盖的问题范围，避免重复提交
+   - **查看回复**：对命中文件中 `status` 为 `accepted`、`rejected`、`wontfix` 或 `resolved` 的条目，阅读维护者评估，确认处理结果。若该 Issue 已得到充分响应且无需进一步关注：将 `status` 改为 `closed`，`updated` 改为当天日期（标记为已归档，不再在日常搜索中出现）
 2. 通读 `docs/duan-docs/` 中的全部文档，建立整体认知
 3. 按审计维度逐一检查，记录发现的问题
 4. 评估文档的整体组织结构是否合理，必要时提出结构调整建议

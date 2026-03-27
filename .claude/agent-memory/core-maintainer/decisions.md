@@ -6,13 +6,13 @@ type: project
 
 ## ISSUE-001（2026-03-27）
 
-**类型**：doc-change
+**类型**：doc-issue
 **优先级**：p3-low
 **最终状态**：accepted
 
 **结论**：文档在提交 Issue 时已是正确状态，两项建议（修正运动域依赖声明 + 补充产生事件说明）均已落实，变更方向与框架演进一致，无异议。
 
-**Why**：arch-designer 自行修复后提交通知，核查确认文档与实现代码一致。
+**Why**：architecture-auditor 自行修复后提交，核查确认文档与实现代码一致。
 
 **验证路径**：
 - `docs/duan-docs/guides/custom-domain.md` 第 228–230 行
@@ -24,7 +24,7 @@ type: project
 
 **类型**：api-design
 **优先级**：p2-medium
-**最终状态**：fixed
+**最终状态**：resolved
 
 **结论**：采纳 reporter 方向 1，直接修复实现。
 
@@ -41,7 +41,7 @@ type: project
 
 ## ISSUE-003（2026-03-27）
 
-**类型**：doc-change
+**类型**：doc-issue
 **优先级**：p2-medium
 **最终状态**：accepted
 
@@ -58,7 +58,7 @@ type: project
 
 ## ISSUE-004（2026-03-27）
 
-**类型**：doc-change
+**类型**：doc-issue
 **优先级**：p3-low
 **最终状态**：accepted
 
@@ -92,7 +92,7 @@ type: project
 
 ## ISSUE-006（2026-03-27）
 
-**类型**：doc-change（arch-designer 提交）
+**类型**：doc-issue（architecture-auditor 提交）
 **优先级**：p3-low
 **最终状态**：accepted
 
@@ -112,7 +112,7 @@ type: project
 
 **类型**：documentation
 **优先级**：p2-medium
-**最终状态**：fixed
+**最终状态**：resolved
 
 **结论**：部分采纳。问题成立——`step_with` 闭包中 `world` 参数的能力边界确实未在文档中说明。在 `event.md` 的"注册与执行上下文"章节补充说明，建议方案 2（overview.md 数据流）和方案 3（新增 idioms.md）均不采纳。
 
@@ -128,7 +128,7 @@ type: project
 
 **类型**：documentation
 **优先级**：p1-high
-**最终状态**：fixed
+**最终状态**：resolved
 
 **结论**：采纳。跨域服务调用 API 已存在于实现，文档完全未展示，补充代码示例。
 
@@ -149,7 +149,7 @@ type: project
 
 **类型**：concept-clarity
 **优先级**：p1-high
-**最终状态**：fixed
+**最终状态**：resolved
 
 **结论**：采纳。框架已支持全量实体遍历，文档未说明，补充说明并明确设计立场。
 

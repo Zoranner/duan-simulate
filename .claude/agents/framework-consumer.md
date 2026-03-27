@@ -41,12 +41,12 @@ memory: project
 
 1. 阅读 `docs/duan-docs/` 了解框架概念和用法
 2. 查看 `examples/` 中已有的示例，了解既有的实现模式
-3. 用 Grep 在 `ISSUES/` 中搜索由自己提出且已被维护者处理的 `doc-change` 条目，需同时满足：
-   - `reporter: framework-consumer`
-   - `type: doc-change`
-   - `status` 不为 `open`（即 `accepted`、`in-review`、`rejected`、`wontfix` 均算已回复）
-   - 命令示例：先 `grep -rl "reporter: framework-consumer" ISSUES/`，再对结果文件过滤 `type: doc-change`，排除 `status: open` 的条目
-   - 若有命中，在开发过程中留意对应文档是否确实消除了之前的使用困惑，并将验证结果以评论形式补充到该 Issue 末尾
+3. 用 Grep 在 `ISSUES/` 中搜索自己提出且已有维护者回复的条目：
+   - `status` 为 `accepted`、`rejected`、`wontfix` 或 `resolved`（排除 `open` 和 `in-review`）
+   - 命令示例：先 `grep -rl "reporter: framework-consumer" ISSUES/`，再对结果文件过滤出 `status: accepted/rejected/wontfix/resolved`
+   - 阅读维护者评估，确认处理结果
+   - 若该 Issue 已得到充分响应且无需进一步关注：将 `status` 改为 `closed`，`updated` 改为当天日期（标记为已归档，不再在日常搜索中出现）
+   - 对 `doc-issue` 条目：在开发过程中留意对应文档是否确实消除了之前的使用困惑，并将验证结果以评论形式补充到该 Issue 末尾
 4. 实现目标示例，**在开发过程中**遇到问题或产生建议时，立即记录到 `ISSUES/`
 5. 完成开发后，输出开发总结
 
@@ -54,8 +54,9 @@ memory: project
 
 1. 阅读 `examples/` 中已实现的示例代码
 2. 阅读 `docs/duan-docs/` 对照文档与实现
-3. 用 Grep 搜索自己已提过的 Issue，避免重复提交：
-   - 命令示例：`grep -rl "reporter: framework-consumer" ISSUES/`
+3. 用 Grep 搜索自己已提过的未归档 Issue，避免重复提交：
+   - `status` 不为 `closed`
+   - 命令示例：`grep -rl "reporter: framework-consumer" ISSUES/`，再对结果文件排除 `status: closed`
    - 仅需浏览命中文件的标题和状态，了解已覆盖的问题范围即可，无需逐一阅读全文
 4. 将尚未记录的问题或建议写入 `ISSUES/`
 

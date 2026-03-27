@@ -9,10 +9,10 @@
 | ID | 状态 | 摘要 |
 |---|---|---|
 | ISSUE-001 | resolved | custom-domain.md 运动域依赖描述错误（已修复，文档已验证） |
-| ISSUE-002 | fixed | downcast 便捷方法生命周期签名（修复不完整，见 ISSUE-005） |
+| ISSUE-002 | resolved | downcast 便捷方法生命周期签名（修复不完整，见 ISSUE-005） |
 | ISSUE-003 | resolved | event.md 等文档"计算阶段只读"矛盾（已修复，文档已验证） |
 | ISSUE-004 | resolved | overview.md 初始化顺序和 lifecycle.md Initializing 说明（已修复，文档已验证） |
-| ISSUE-005 | fixed | step_with 闭包隐式 'static 是 E0521 真正根源（维护者采纳，修复为明确 'static） |
+| ISSUE-005 | resolved | step_with 闭包隐式 'static 是 E0521 真正根源（维护者采纳，修复为明确 'static） |
 | ISSUE-006 | resolved | decisions.md 补充 step_with 闭包签名决策记录 |
 | ISSUE-007 | open | step_with 闭包中 world 参数的能力边界未文档化（事件处理阶段 spawn） |
 | ISSUE-008 | open | 域服务接口定义与跨域调用方式无完整代码示范（registry 查询语法未知） |
