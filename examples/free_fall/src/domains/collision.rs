@@ -69,7 +69,10 @@ impl DomainRules for CollisionRules {
                 Some(c) => c,
                 None => return,
             };
-            let pos_y = entity.get_component::<Position>().map(|p| p.y).unwrap_or(0.0);
+            let pos_y = entity
+                .get_component::<Position>()
+                .map(|p| p.y)
+                .unwrap_or(0.0);
             (
                 collider.name.clone(),
                 pos_y + collider.offset_y,
@@ -150,11 +153,9 @@ impl DomainRules for CollisionRules {
     fn try_attach(&self, entity: &Entity) -> bool {
         let has_pos = entity.has_component::<Position>();
         let has_collider = entity.has_component::<Collider>();
-        let has_vel = entity.has_component::<Velocity>();
-
         // 静态碰撞体（地面）：Position + Collider，无 Velocity
         // 动态碰撞体（小球）：Position + Velocity + Collider
-        (has_pos && has_collider && !has_vel) || (has_pos && has_vel && has_collider)
+        has_pos && has_collider
     }
 
     fn on_attach(&mut self, entity: &Entity) {

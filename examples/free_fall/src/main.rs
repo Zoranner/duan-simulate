@@ -16,7 +16,7 @@ use display::{FreeFallDisplay, RenderFrame};
 
 fn main() {
     // ── 参数 ────────────────────────────────────────────────
-    let dt = 0.01;      // 仿真时间步（秒）
+    let dt = 0.01; // 仿真时间步（秒）
     let total_time = 20.0;
 
     // ── 仿真世界 ───────────────────────────────────────────
@@ -60,11 +60,23 @@ fn main() {
             Some(e) => e,
             None => break,
         };
-        let y = entity.get_component::<Position>().map(|p| p.y).unwrap_or(0.0);
-        let vy = entity.get_component::<Velocity>().map(|v| v.vy).unwrap_or(0.0);
+        let y = entity
+            .get_component::<Position>()
+            .map(|p| p.y)
+            .unwrap_or(0.0);
+        let vy = entity
+            .get_component::<Velocity>()
+            .map(|v| v.vy)
+            .unwrap_or(0.0);
         let sim_time = world.sim_time();
 
-        frames.push(RenderFrame { sim_time, y, vy, bounce_count, last_collision });
+        frames.push(RenderFrame {
+            sim_time,
+            y,
+            vy,
+            bounce_count,
+            last_collision,
+        });
 
         if y <= 0.01 && vy.abs() < 0.1 {
             break;

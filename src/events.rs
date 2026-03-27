@@ -190,8 +190,12 @@ mod tests {
         }
 
         impl CustomEvent for MyEvent {
-            fn as_any(&self) -> &dyn Any { self }
-            fn event_name(&self) -> &str { "my_event" }
+            fn as_any(&self) -> &dyn Any {
+                self
+            }
+            fn event_name(&self) -> &str {
+                "my_event"
+            }
         }
 
         let event = DomainEvent::custom(MyEvent { value: 42 });

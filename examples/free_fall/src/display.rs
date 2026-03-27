@@ -81,7 +81,11 @@ impl FreeFallDisplay {
             for col in 0..TRACK_WIDTH {
                 if col == ball_col && row == ball_row {
                     // 下落时黄色，上升时绿色
-                    let color = if frame.vy <= 0.0 { Color::Yellow } else { Color::Green };
+                    let color = if frame.vy <= 0.0 {
+                        Color::Yellow
+                    } else {
+                        Color::Green
+                    };
                     queue!(out, SetForegroundColor(color), Print("●"), ResetColor)?;
                 } else {
                     queue!(out, Print(" "))?;
@@ -94,7 +98,11 @@ impl FreeFallDisplay {
         queue!(
             out,
             SetForegroundColor(Color::DarkGreen),
-            Print(format!("    0.0 ╘{:═<width$}╛\n", "", width = TRACK_WIDTH + 1)),
+            Print(format!(
+                "    0.0 ╘{:═<width$}╛\n",
+                "",
+                width = TRACK_WIDTH + 1
+            )),
             ResetColor,
         )?;
 

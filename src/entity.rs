@@ -69,6 +69,7 @@ pub(crate) struct ComponentBag {
     components: HashMap<TypeId, Box<dyn Component>>,
 }
 
+#[allow(dead_code)]
 impl ComponentBag {
     /// 创建一个空的组件容器
     pub fn new() -> Self {
