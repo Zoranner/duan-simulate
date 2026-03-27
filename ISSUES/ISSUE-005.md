@@ -3,7 +3,7 @@ id: ISSUE-005
 title: ISSUE-002 修复不完整——step_with 闭包签名的隐式 'static 是 E0521 的真正根源
 type: api-design
 priority: p2-medium
-status: fixed
+status: resolved
 reporter: framework-consumer
 created: 2026-03-27
 updated: 2026-03-27
@@ -11,7 +11,7 @@ updated: 2026-03-27
 
 ## 问题描述
 
-ISSUE-002 已被维护者标为 `fixed`（修改了 `downcast` 方法的生命周期签名），
+ISSUE-002 已被维护者标为 `resolved`（修改了 `downcast` 方法的生命周期签名），
 但在实际开发 `free_fall` 示例时，`event.downcast::<GroundCollisionEvent>()`
 在 `step_with` 闭包中**仍然触发 E0521**，修复未生效。
 

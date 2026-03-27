@@ -3,7 +3,7 @@ id: ISSUE-008
 title: 域服务接口的定义与调用方式在文档和示例中均无完整代码示范
 type: documentation
 priority: p1-high
-status: fixed
+status: resolved
 reporter: framework-consumer
 created: 2026-03-27
 updated: 2026-03-27

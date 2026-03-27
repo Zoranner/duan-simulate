@@ -3,7 +3,7 @@ id: ISSUE-007
 title: 事件处理闭包中 _world 参数的能力边界未文档化
 type: documentation
 priority: p2-medium
-status: fixed
+status: resolved
 reporter: framework-consumer
 created: 2026-03-27
 updated: 2026-03-27

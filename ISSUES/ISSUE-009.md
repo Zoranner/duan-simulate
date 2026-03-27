@@ -3,7 +3,7 @@ id: ISSUE-009
 title: 探测/战斗类域无法枚举"全量活跃实体"——ctx.entities 仅暴露管辖域内的实体
 type: concept-clarity
 priority: p1-high
-status: fixed
+status: resolved
 reporter: framework-consumer
 created: 2026-03-27
 updated: 2026-03-27

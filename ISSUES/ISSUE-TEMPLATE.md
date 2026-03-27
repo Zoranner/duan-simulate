@@ -3,7 +3,7 @@ id: ISSUE-NNN
 title: 问题短标题（英文或中文均可，简明扼要）
 type: api-design | concept-clarity | dx | documentation | performance | extensibility | architecture | doc-issue
 priority: p0-critical | p1-high | p2-medium | p3-low
-status: open | in-review | accepted | rejected | resolved | wontfix
+status: open | in-review | accepted | rejected | resolved | wontfix | closed
 reporter: framework-consumer | architecture-auditor
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
