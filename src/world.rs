@@ -4,10 +4,10 @@
 //! 世界负责协调仿真循环的执行。
 
 use crate::{
-    DomainContext, DomainEvent, DomainRegistry, DomainRules, Entity, EntityId, EntityStore,
-    EventChannel, Lifecycle, TimeClock, Timer, TimerCallback, TimerManager,
+    CustomEvent, DomainContext, DomainEvent, DomainRegistry, DomainRules, Entity, EntityId,
+    EntityStore, EventChannel, Lifecycle, TimeClock, Timer, TimerCallback, TimerManager,
 };
-use std::cell::RefCell;
+use std::collections::HashSet;
 
 /// 世界构建器
 ///
@@ -94,7 +94,10 @@ impl World {
         WorldBuilder::new()
     }
 
-    /// 生成新的实体 ID
+    /// 生成新的实体 ID（高级用法）
+    ///
+    /// 通常不需要显式调用，`spawn` 会自动分配 ID。
+    /// 仅在需要跨实体相互引用、必须在 spawn 前预知 ID 时使用。
     pub fn generate_entity_id(&mut self) -> EntityId {
         let id = EntityId::new(self.next_entity_id);
         self.next_entity_id += 1;
@@ -106,12 +109,15 @@ impl World {
         self.domains.register(name, rules);
     }
 
-    /// 创建实体
+    /// 创建实体并加入仿真
     ///
-    /// 创建实体后，尝试将其附加到声明的域。
-    /// 返回实体 ID。
-    pub fn spawn(&mut self, entity: Entity) -> EntityId {
-        let id = entity.id;
+    /// ID 由框架自动分配（覆写 entity.id）。返回分配到的 `EntityId`。
+    /// 实体入世后尝试附加到其声明的各个域，随后进入 `Active` 状态。
+    pub fn spawn(&mut self, mut entity: Entity) -> EntityId {
+        // 分配 ID（覆写构造阶段的占位符）
+        let id = self.generate_entity_id();
+        entity.id = id;
+
         let declared_domains: Vec<String> = entity.domains.iter().cloned().collect();
 
         // 存储实体
@@ -121,10 +127,7 @@ impl World {
         for domain_name in declared_domains {
             if let Some(entity_ref) = self.entities.get(id) {
                 if let Some(domain) = self.domains.get_by_name_mut(&domain_name) {
-                    if domain.try_attach(entity_ref) {
-                        // 附加成功
-                    }
-                    // 附加失败时域会拒绝实体
+                    domain.try_attach(entity_ref);
                 }
             }
         }
@@ -191,37 +194,45 @@ impl World {
         self.entities.remove(entity_id)
     }
 
-    /// 执行一步仿真
+    /// 执行一步仿真（无自定义事件处理）
     ///
-    /// 执行完整的仿真循环：
-    /// 1. 时间推进
-    /// 2. 域计算
-    /// 3. 定时器检查
-    /// 4. 事件处理
-    /// 5. 清理
+    /// 执行完整的仿真循环：时间推进 → 域计算 → 定时器检查 → 事件处理 → 清理。
+    /// 自定义事件在此版本中被忽略。若需处理自定义事件，使用 `step_with`。
+    pub fn step(&mut self, dt: f64) {
+        self.do_step(dt, &mut |_: &dyn CustomEvent, _: &mut World| {});
+    }
+
+    /// 执行一步仿真（带自定义事件处理器）
     ///
-    /// `custom_handler` 在事件处理阶段被调用，用于处理自定义事件。
-    /// 传入 `None` 则自定义事件被忽略。
-    pub fn step<F>(&mut self, real_dt: f64, custom_handler: Option<&RefCell<F>>)
+    /// 与 `step` 相同，额外接受一个闭包用于处理自定义事件。
+    /// 闭包签名：`|event: &dyn CustomEvent, world: &mut World|`
+    pub fn step_with<F>(&mut self, dt: f64, mut handler: F)
     where
-        F: FnMut(&dyn crate::CustomEvent, &mut Self),
+        F: FnMut(&dyn CustomEvent, &mut Self),
+    {
+        self.do_step(dt, &mut handler);
+    }
+
+    /// 仿真步内部实现
+    fn do_step<F>(&mut self, dt: f64, handler: &mut F)
+    where
+        F: FnMut(&dyn CustomEvent, &mut Self),
     {
         // 阶段 1：时间推进
-        let dt = self.clock.tick(real_dt);
-        let sim_time = self.clock.sim_time;
-
-        if dt == 0.0 {
+        let sim_dt = self.clock.tick(dt);
+        if sim_dt == 0.0 {
             return;
         }
 
         // 阶段 2：域计算
-        self.compute_domains(dt);
+        self.compute_domains(sim_dt);
 
         // 阶段 3：定时器检查
+        let sim_time = self.clock.sim_time;
         self.check_timers(sim_time);
 
         // 阶段 4：事件处理
-        self.process_events(custom_handler);
+        self.process_events(handler);
 
         // 阶段 5：清理
         self.cleanup();
@@ -232,14 +243,20 @@ impl World {
         let order: Vec<String> = self.domains.execution_order().to_vec();
 
         for domain_name in &order {
-            // 获取 rules 的裸指针，使可变借用提前结束
-            let rules_ptr = match self.domains.get_by_name_mut(domain_name) {
-                Some(domain) => &mut *domain.rules as *mut dyn DomainRules,
+            // 从 domain 中同时取出 rules 指针和 own_entities 指针
+            // SAFETY：两个指针指向 Domain 结构体的不同字段（rules 和 entities），不存在别名。
+            // compute_domains 期间注册表结构不变（无 insert/remove），
+            // 域自身的实体集合通过 ctx.registry（不可变引用）也不会被修改。
+            let (rules_ptr, own_entities_ptr) = match self.domains.get_by_name_mut(domain_name) {
+                Some(domain) => (
+                    &mut *domain.rules as *mut dyn DomainRules,
+                    &domain.entities as *const HashSet<EntityId>,
+                ),
                 None => continue,
             };
 
-            // 构建域上下文（此时 domains 以不可变方式借用，用于服务查询）
             let mut ctx = DomainContext {
+                own_entities: unsafe { &*own_entities_ptr },
                 entities: &mut self.entities,
                 registry: &self.domains,
                 events: &mut self.events,
@@ -247,11 +264,6 @@ impl World {
                 dt,
             };
 
-            // SAFETY: rules_ptr 指向 domain.rules（Box<dyn DomainRules> 的堆分配）。
-            // DomainContext 持有 &DomainRegistry（不可变），用于查询其他域的服务。
-            // 两者不发生可变别名：裸指针只用于调用当前域的 compute()，
-            // 不修改注册表本身的结构（HashMap、执行顺序等）。
-            // 约束：域的 compute() 实现不得通过 ctx 查询自身，否则造成别名。
             unsafe {
                 (*rules_ptr).compute(&mut ctx, dt);
             }
@@ -272,18 +284,16 @@ impl World {
     }
 
     /// 事件处理阶段
-    fn process_events<F>(&mut self, custom_handler: Option<&RefCell<F>>)
+    fn process_events<F>(&mut self, handler: &mut F)
     where
-        F: FnMut(&dyn crate::CustomEvent, &mut Self),
+        F: FnMut(&dyn CustomEvent, &mut Self),
     {
         let events = std::mem::take(&mut self.events);
 
         for event in events {
-            if let DomainEvent::Custom(event_box) = &event {
-                if let Some(handler_cell) = custom_handler {
-                    let mut handler = handler_cell.borrow_mut();
-                    handler(event_box.as_ref(), self);
-                }
+            // 自定义事件先交给用户处理器
+            if let DomainEvent::Custom(event_arc) = &event {
+                handler(event_arc.as_ref(), self);
             }
             self.handle_event(event);
         }
@@ -303,7 +313,6 @@ impl World {
                 entity_id,
                 cause: _,
             } => {
-                // 实体销毁事件
                 if let Some(entity) = self.entities.get_mut(entity_id) {
                     entity.lifecycle = Lifecycle::Destroyed;
                 }
@@ -318,8 +327,7 @@ impl World {
             }
 
             DomainEvent::Custom(_) => {
-                // 自定义事件由用户处理器处理
-                // 用户可以实现自己的事件处理器
+                // 已由 process_events 中的用户处理器处理
             }
         }
     }
@@ -333,27 +341,17 @@ impl World {
     ) {
         match callback {
             TimerCallback::SelfDestruct => {
-                // 自毁：将实体标记为已销毁
                 if let Some(entity) = self.entities.get_mut(entity_id) {
                     entity.lifecycle = Lifecycle::Destroyed;
                 }
             }
             TimerCallback::Event(domain_event) => {
-                // 发送事件：重新投递事件
                 self.handle_event(*domain_event);
             }
             TimerCallback::Custom(_callback_id) => {
                 // 自定义回调：由用户处理
             }
         }
-    }
-
-    /// 直接修改实体组件
-    ///
-    /// 此方法用于事件处理器在事件处理阶段修改实体状态。
-    /// 框架本身不使用此方法，由用户的事件处理器调用。
-    pub fn get_entity_mut(&mut self, entity_id: EntityId) -> Option<&mut Entity> {
-        self.entities.get_mut(entity_id)
     }
 
     /// 清理阶段
@@ -373,17 +371,24 @@ impl World {
         }
     }
 
-    /// 获取实体
+    /// 获取实体（只读）
     pub fn get_entity(&self, id: EntityId) -> Option<&Entity> {
         self.entities.get(id)
     }
 
-    /// 获取域
+    /// 获取实体（可变）
+    ///
+    /// 用于事件处理阶段修改实体状态。
+    pub fn get_entity_mut(&mut self, entity_id: EntityId) -> Option<&mut Entity> {
+        self.entities.get_mut(entity_id)
+    }
+
+    /// 获取域（只读）
     pub fn get_domain<T: DomainRules>(&self) -> Option<&T> {
         self.domains.get::<T>()
     }
 
-    /// 获取可变域
+    /// 获取域（可变）
     pub fn get_domain_mut<T: DomainRules>(&mut self) -> Option<&mut T> {
         self.domains.get_mut::<T>()
     }
@@ -452,20 +457,33 @@ mod tests {
     #[test]
     fn test_entity_spawn() {
         let mut world = World::new();
-        let id = world.generate_entity_id();
-
-        let entity = Entity::new(id, "ship");
-        world.spawn(entity);
+        let id = world.spawn(Entity::new("ship"));
 
         assert_eq!(world.entity_count(), 1);
         assert!(world.get_entity(id).is_some());
+        // ID 从 1 开始，由框架分配
+        assert_eq!(id.raw(), 1);
     }
 
     #[test]
     fn test_time_advancement() {
         let mut world = World::new();
-        world.step::<fn(&dyn crate::CustomEvent, &mut World)>(0.1, None);
+        world.step(0.1);
 
+        assert_eq!(world.sim_time(), 0.1);
+    }
+
+    #[test]
+    fn test_step_with_handler() {
+        let mut world = World::new();
+        let mut received = false;
+
+        world.step_with(0.1, |_event, _world| {
+            received = true;
+        });
+
+        // 没有自定义事件，handler 不会被调用
+        assert!(!received);
         assert_eq!(world.sim_time(), 0.1);
     }
 }

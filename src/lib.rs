@@ -27,10 +27,84 @@ pub mod world;
 // 重导出核心类型
 pub use component::Component;
 pub use domain::{Domain, DomainContext, DomainRegistry, DomainRules};
-pub use entity::{ComponentBag, Entity, EntityId, EntityStore, Lifecycle};
+pub use entity::{Entity, EntityId, EntityStore, Lifecycle};
 pub use events::{CustomEvent, DestroyCause, DomainEvent, Event, EventChannel, TimerCallback};
 pub use time::{TimeClock, Timer, TimerEvent, TimerManager};
 pub use world::{World, WorldBuilder};
+
+/// 为结构体自动实现 `Component` trait 所需的样板代码
+///
+/// 生成 `as_any`、`as_any_mut`、`into_any_boxed` 三个方法，并指定组件类型名称。
+///
+/// # 用法
+///
+/// ```rust,ignore
+/// use duan::{Component, impl_component};
+///
+/// pub struct Position { pub x: f64, pub y: f64 }
+///
+/// impl_component!(Position, "position");
+///
+/// impl Component for Position {
+///     // 只需实现业务方法，样板已由宏生成
+///     fn component_type(&self) -> &'static str { "position" }
+///     // as_any / as_any_mut / into_any_boxed 已由 impl_component! 生成
+/// }
+/// ```
+///
+/// 完整用法（宏生成包括 `component_type` 在内的全部方法）：
+///
+/// ```rust,ignore
+/// impl_component!(Position, "position");
+/// ```
+#[macro_export]
+macro_rules! impl_component {
+    ($type:ty, $name:expr) => {
+        impl $crate::Component for $type {
+            fn component_type(&self) -> &'static str {
+                $name
+            }
+            fn as_any(&self) -> &dyn ::std::any::Any {
+                self
+            }
+            fn as_any_mut(&mut self) -> &mut dyn ::std::any::Any {
+                self
+            }
+            fn into_any_boxed(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn ::std::any::Any> {
+                self
+            }
+        }
+    };
+}
+
+/// 为 `DomainRules` 实现类型转换样板（`as_any` / `as_any_mut`）
+///
+/// 在 `impl DomainRules for MyRules { ... }` 块内调用，
+/// 替代手写 `as_any` 和 `as_any_mut` 两个方法。
+///
+/// # 用法
+///
+/// ```rust,ignore
+/// use duan::{DomainRules, domain_rules_any};
+///
+/// impl DomainRules for MotionRules {
+///     fn compute(&mut self, ctx: &mut DomainContext, dt: f64) { ... }
+///     fn try_attach(&mut self, entity: &Entity) -> bool { ... }
+///     fn on_detach(&mut self, _entity_id: EntityId) {}
+///     domain_rules_any!(MotionRules);
+/// }
+/// ```
+#[macro_export]
+macro_rules! domain_rules_any {
+    ($type:ty) => {
+        fn as_any(&self) -> &dyn ::std::any::Any {
+            self
+        }
+        fn as_any_mut(&mut self) -> &mut dyn ::std::any::Any {
+            self
+        }
+    };
+}
 
 /// 仿真体系的版本信息
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

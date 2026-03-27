@@ -81,14 +81,17 @@ pub trait DomainRules: Send + Sync + 'static {
 /// 域上下文
 ///
 /// 域访问仿真环境的唯一入口。提供：
+/// - 当前域的实体集合（直接引用，无需通过注册表二次查询）
 /// - 实体存储（可变，域可修改实体状态）
-/// - 域注册表（只读，用于查询其他域）
+/// - 域注册表（只读，用于查询其他域的服务）
 /// - 事件通道（只写）
 /// - 仿真时钟（只读）
 pub struct DomainContext<'a> {
+    /// 当前域所管辖的实体集合（直接引用，避免硬编码域名）
+    pub own_entities: &'a HashSet<EntityId>,
     /// 实体存储（可变，域规则是修改实体状态的权威）
     pub entities: &'a mut EntityStore,
-    /// 域注册表（只读）
+    /// 域注册表（只读，用于查询其他域）
     pub registry: &'a DomainRegistry,
     /// 事件通道（只写）
     pub events: &'a mut EventChannel,
@@ -99,6 +102,13 @@ pub struct DomainContext<'a> {
 }
 
 impl<'a> DomainContext<'a> {
+    /// 迭代当前域管辖的实体 ID
+    ///
+    /// 等价于 `self.own_entities.iter().copied()`，是域内实体遍历的标准入口。
+    pub fn own_entity_ids(&self) -> impl Iterator<Item = EntityId> + '_ {
+        self.own_entities.iter().copied()
+    }
+
     /// 获取当前仿真时间
     pub fn sim_time(&self) -> f64 {
         self.clock.sim_time

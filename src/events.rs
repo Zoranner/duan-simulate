@@ -11,6 +11,7 @@
 use crate::EntityId;
 use std::any::Any;
 use std::fmt::Debug;
+use std::sync::Arc;
 
 /// 事件通道
 ///
@@ -53,7 +54,7 @@ pub enum DestroyCause {
 pub enum TimerCallback {
     /// 自毁
     SelfDestruct,
-    /// 发送事件
+    /// 发送事件（DomainEvent 通过 Box 持有，可 Clone 因为 DomainEvent: Clone）
     Event(Box<DomainEvent>),
     /// 自定义回调（通过 ID 识别）
     Custom(String),
@@ -61,25 +62,17 @@ pub enum TimerCallback {
 
 /// 自定义事件 trait
 ///
-/// 用户可以实现此 trait 来定义自己的事件类型。
+/// 用户实现此 trait 来定义自己的事件类型。
+/// 不要求 Clone——框架通过 `Arc` 共享自定义事件数据，克隆 `DomainEvent` 时只增加引用计数。
 pub trait CustomEvent: Send + Sync {
-    /// 类型转换
+    /// 类型转换（只读）
     fn as_any(&self) -> &dyn Any;
 
     /// 类型转换（可变）
     fn as_any_mut(&mut self) -> &mut dyn Any;
 
-    /// 克隆事件
-    fn clone_event(&self) -> Box<dyn CustomEvent>;
-
-    /// 事件名称
+    /// 事件名称（用于调试和日志）
     fn event_name(&self) -> &str;
-}
-
-impl Clone for Box<dyn CustomEvent> {
-    fn clone(&self) -> Self {
-        self.clone_event()
-    }
 }
 
 impl Debug for dyn CustomEvent {
@@ -90,7 +83,14 @@ impl Debug for dyn CustomEvent {
 
 /// 域事件
 ///
-/// 框架核心的事件类型。用户可以扩展或使用自定义事件。
+/// 框架核心的事件类型。用户可以通过 `Custom` 变体扩展自己的事件。
+///
+/// # 克隆语义
+///
+/// `DomainEvent` 实现了 `Clone`：
+/// - 框架内置变体（`EntitySpawned`、`EntityDestroyed`、`Timer`）的克隆是数据深拷贝，开销极低。
+/// - `Custom` 变体持有 `Arc<dyn CustomEvent>`，克隆只增加引用计数，不复制事件数据。
+///   因此 `CustomEvent` 本身**不要求**实现 `Clone`。
 #[derive(Clone, Debug)]
 pub enum DomainEvent {
     /// 实体创建事件
@@ -112,11 +112,10 @@ pub enum DomainEvent {
         callback: TimerCallback,
     },
 
-    /// 自定义事件（用户扩展）
-    Custom(Box<dyn CustomEvent>),
+    /// 自定义事件（Arc 共享，克隆廉价）
+    Custom(Arc<dyn CustomEvent>),
 }
 
-// 实现一些便捷方法
 impl DomainEvent {
     /// 创建实体创建事件
     pub fn spawned(entity_id: EntityId, entity_type: impl Into<String>) -> Self {
@@ -145,8 +144,10 @@ impl DomainEvent {
     }
 
     /// 创建自定义事件
+    ///
+    /// 事件数据由 `Arc` 持有，多次克隆 `DomainEvent` 时不会复制事件数据。
     pub fn custom<E: CustomEvent + 'static>(event: E) -> Self {
-        Self::Custom(Box::new(event))
+        Self::Custom(Arc::new(event))
     }
 
     /// 获取事件涉及的实体
@@ -178,5 +179,30 @@ mod tests {
         ];
 
         assert_eq!(channel.len(), 2);
+    }
+
+    #[test]
+    fn test_custom_event_no_clone_required() {
+        struct MyEvent {
+            value: i32,
+        }
+
+        impl CustomEvent for MyEvent {
+            fn as_any(&self) -> &dyn Any { self }
+            fn as_any_mut(&mut self) -> &mut dyn Any { self }
+            fn event_name(&self) -> &str { "my_event" }
+        }
+
+        let event = DomainEvent::custom(MyEvent { value: 42 });
+        // Clone 只增加 Arc 引用计数，不复制 MyEvent 数据
+        let cloned = event.clone();
+
+        if let DomainEvent::Custom(arc) = &cloned {
+            assert_eq!(arc.event_name(), "my_event");
+            let inner = arc.as_any().downcast_ref::<MyEvent>().unwrap();
+            assert_eq!(inner.value, 42);
+        } else {
+            panic!("expected Custom event");
+        }
     }
 }

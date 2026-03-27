@@ -64,7 +64,8 @@ impl Lifecycle {
 /// 组件容器
 ///
 /// 存储实体的所有组件，支持 O(1) 时间复杂度的组件查询。
-pub struct ComponentBag {
+/// 通过 `Entity` 上的方法访问；不直接暴露给外部使用者。
+pub(crate) struct ComponentBag {
     components: HashMap<TypeId, Box<dyn Component>>,
 }
 
@@ -152,7 +153,7 @@ impl Default for ComponentBag {
 ///
 /// 仿真中的基本对象单元，是组件的容器。
 pub struct Entity {
-    /// 唯一标识
+    /// 唯一标识（由 `World::spawn` 分配，构造前为占位符 `EntityId(0)`）
     pub id: EntityId,
     /// 实体类型（字符串，用于分类和展示）
     pub entity_type: String,
@@ -160,13 +161,31 @@ pub struct Entity {
     pub lifecycle: Lifecycle,
     /// 自声明的域归属列表
     pub domains: HashSet<String>,
-    /// 组件容器
-    pub components: ComponentBag,
+    /// 组件容器（通过 Entity 方法访问）
+    pub(crate) components: ComponentBag,
 }
 
 impl Entity {
     /// 创建一个新实体
-    pub fn new(id: EntityId, entity_type: impl Into<String>) -> Self {
+    ///
+    /// ID 由 `World::spawn` 在入世时自动分配，构造阶段无需提供。
+    /// 若需在 spawn 前预知 ID（如跨实体引用），可通过 `World::generate_entity_id` 显式生成
+    /// 并用 `Entity::with_id` 构造。
+    pub fn new(entity_type: impl Into<String>) -> Self {
+        Self {
+            id: EntityId::default(), // 占位，spawn 时覆写
+            entity_type: entity_type.into(),
+            lifecycle: Lifecycle::Initializing,
+            domains: HashSet::new(),
+            components: ComponentBag::new(),
+        }
+    }
+
+    /// 创建指定 ID 的实体（高级用法）
+    ///
+    /// 用于需要在 spawn 前就持有 ID 的场景，例如跨实体相互引用。
+    /// 通常情况下应使用 `Entity::new`，由框架自动分配 ID。
+    pub fn with_id(id: EntityId, entity_type: impl Into<String>) -> Self {
         Self {
             id,
             entity_type: entity_type.into(),
@@ -363,10 +382,13 @@ mod tests {
 
     #[test]
     fn test_entity_creation() {
-        let entity = Entity::new(EntityId::new(1), "ship");
-        assert_eq!(entity.id.raw(), 1);
+        let entity = Entity::new("ship");
         assert_eq!(entity.entity_type, "ship");
         assert_eq!(entity.lifecycle, Lifecycle::Initializing);
+
+        // with_id 用于需要预知 ID 的场景
+        let entity_with_id = Entity::with_id(EntityId::new(42), "ship");
+        assert_eq!(entity_with_id.id.raw(), 42);
     }
 
     #[test]
@@ -386,7 +408,7 @@ mod tests {
         let mut store = EntityStore::new();
         let id = EntityId::new(1);
 
-        let entity = Entity::new(id, "ship").with_domain("space");
+        let entity = Entity::with_id(id, "ship").with_domain("space");
         store.insert(entity);
 
         assert!(store.contains(id));
