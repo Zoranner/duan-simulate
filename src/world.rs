@@ -56,8 +56,9 @@ impl WorldBuilder {
     /// 将域注册延迟到 `build()` 时统一执行。
     /// 构建完成后会立即验证依赖关系，在配置阶段而非运行时暴露循环依赖问题。
     pub fn with_domain<T: DomainRules>(mut self, name: &'static str, rules: T) -> Self {
-        self.domain_registrations
-            .push(Box::new(move |registry| registry.register::<T>(name, rules)));
+        self.domain_registrations.push(Box::new(move |registry| {
+            registry.register::<T>(name, rules)
+        }));
         self
     }
 
@@ -250,7 +251,7 @@ impl World {
     /// 执行完整的仿真循环：时间推进 → 域计算 → 定时器检查 → 事件处理 → 清理。
     /// 自定义事件在此版本中被忽略。若需处理自定义事件，使用 `step_with`。
     pub fn step(&mut self, dt: f64) {
-        self.do_step(dt, &mut |_: &dyn CustomEvent, _: &mut World| {});
+        self.do_step(dt, &mut |_: &(dyn CustomEvent + 'static), _: &mut World| {});
     }
 
     /// 执行一步仿真（带自定义事件处理器）
@@ -259,7 +260,7 @@ impl World {
     /// 闭包签名：`|event: &dyn CustomEvent, world: &mut World|`
     pub fn step_with<F>(&mut self, dt: f64, mut handler: F)
     where
-        F: FnMut(&dyn CustomEvent, &mut Self),
+        F: FnMut(&(dyn CustomEvent + 'static), &mut Self),
     {
         self.do_step(dt, &mut handler);
     }
@@ -267,7 +268,7 @@ impl World {
     /// 仿真步内部实现
     fn do_step<F>(&mut self, dt: f64, handler: &mut F)
     where
-        F: FnMut(&dyn CustomEvent, &mut Self),
+        F: FnMut(&(dyn CustomEvent + 'static), &mut Self),
     {
         // 阶段 1：时间推进
         let sim_dt = self.clock.tick(dt);
@@ -337,7 +338,7 @@ impl World {
     /// 事件处理阶段
     fn process_events<F>(&mut self, handler: &mut F)
     where
-        F: FnMut(&dyn CustomEvent, &mut Self),
+        F: FnMut(&(dyn CustomEvent + 'static), &mut Self),
     {
         let events = self.events.drain();
 

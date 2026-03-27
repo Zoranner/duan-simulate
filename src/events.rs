@@ -94,13 +94,15 @@ pub trait CustomEvent: Send + Sync {
 
     /// 事件名称（用于调试和日志）
     fn event_name(&self) -> &str;
-
 }
 
 impl dyn CustomEvent {
     /// 将事件 downcast 到具体类型
     ///
     /// 等价于 `self.as_any().downcast_ref::<T>()`，消除重复的样板代码。
+    ///
+    /// 显式生命周期 `'a` 确保返回引用的生命周期与 `self` 绑定，
+    /// 避免 `impl dyn Trait` 的隐式 `'static` 约束，使此方法可在闭包中正常使用。
     ///
     /// # 示例
     ///
@@ -111,7 +113,7 @@ impl dyn CustomEvent {
     ///     }
     /// });
     /// ```
-    pub fn downcast<T: 'static>(&self) -> Option<&T> {
+    pub fn downcast<'a, T: 'static>(&'a self) -> Option<&'a T> {
         self.as_any().downcast_ref::<T>()
     }
 }
@@ -216,7 +218,10 @@ mod tests {
     fn test_event_channel() {
         let mut channel = EventChannel::new();
         channel.push(DomainEvent::spawned(EntityId::new(1), "ship"));
-        channel.push(DomainEvent::destroyed(EntityId::new(2), DestroyCause::Timeout));
+        channel.push(DomainEvent::destroyed(
+            EntityId::new(2),
+            DestroyCause::Timeout,
+        ));
 
         assert_eq!(channel.len(), 2);
         let drained = channel.drain();

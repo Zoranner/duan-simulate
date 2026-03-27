@@ -8,7 +8,10 @@
       "Bash(memo search:*)",
       "mcp__web-search-prime__web_search_prime",
       "mcp__web-reader__webReader",
-      "Bash(sort echo:*)"
+      "Bash(sort echo:*)",
+      "Bash(cargo build:*)",
+      "Bash(\"e:/Repositories/projects/Zoranner/duan-simulate/ISSUES/ISSUE-005.md\")",
+      "Bash(grep -n \"^status:\" e:RepositoriesprojectsZorannerduan-simulateISSUESISSUE-*.md)"
     ]
   }
 }

@@ -46,6 +46,19 @@
 
 ---
 
+### step_with 闭包签名与 CustomEvent 的 object lifetime
+
+**问题**：框架在 `impl dyn CustomEvent` 上提供的 `downcast<T>()` 便捷方法，在 `step_with` 闭包内无法编译（E0521）。根因分析经历了两个阶段：
+
+- **第一阶段分析（ISSUE-002）**：认为问题在于 `downcast` 方法签名缺少显式生命周期参数，修复为 `pub fn downcast<'a, T: 'static>(&'a self) -> Option<&'a T>`。修复后编译仍然失败。
+- **第二阶段分析（ISSUE-005）**：发现真正根因在 `step_with` 的闭包约束。`impl dyn CustomEvent` 在 Rust 中隐式等价于 `impl (dyn CustomEvent + 'static)`，因此 `downcast` 要求 `self` 的 object lifetime 满足 `'static`。而 `step_with` 原有约束 `F: FnMut(&dyn CustomEvent, &mut Self)` 并未明确 object lifetime，导致 Rust 将闭包参数推断为短生命周期引用，无法调用 `impl (dyn CustomEvent + 'static)` 上的方法。
+
+**决策**：将 `step_with`、`do_step`、`process_events` 的闭包约束由 `F: FnMut(&dyn CustomEvent, &mut Self)` 改为 `F: FnMut(&(dyn CustomEvent + 'static), &mut Self)`，明确要求传入的事件对象满足 `'static` object lifetime。这与框架内部实际传入的类型一致（`DomainEvent::custom<E: CustomEvent + 'static>` 存储 `'static` object），是语义明确化而非行为变更。
+
+**注意**：使用 HRTB（`for<'e> FnMut(&'e (dyn CustomEvent + 'e), ...)`）无法解决此问题，因为它只改变生命周期的展开方式，闭包参数的 object lifetime 仍不确定，`impl (dyn CustomEvent + 'static)` 上的方法仍不可调用。
+
+---
+
 ## 待观察的设计点
 
 以下问题没有最优解，需要在实践中验证：
@@ -86,5 +99,5 @@
 
 ---
 
-**文档版本**：v1.2
-**最后更新**：2026-03-25
+**文档版本**：v1.3
+**最后更新**：2026-03-27

@@ -31,7 +31,7 @@ updated: YYYY-MM-DD
 
 ---
 
-<!-- 以下由 duan-core-maintainer 填写，reporter 不要修改 -->
+<!-- 以下由 core-maintainer 填写，reporter 不要修改 -->
 
 ## 维护者评估
 

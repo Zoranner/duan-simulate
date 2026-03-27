@@ -1,8 +1,14 @@
 //! 终端可视化显示模块
 //!
 //! 使用 crossterm 在终端备用屏幕中回放仿真帧序列。
-//! `FreeFallDisplay` 是无状态渲染器，所有帧数据由 `RenderFrame` 携带。
-//! 创建时自动进入备用屏幕，Drop 时自动恢复原始终端状态。
+//!
+//! # 设计说明
+//!
+//! `FreeFallDisplay` 是**无状态渲染器**：它不持有仿真状态，所有渲染所需的数据
+//! 都由 `RenderFrame` 携带。这使得 Phase 1（仿真）和 Phase 2（回放）完全解耦。
+//!
+//! 创建时自动进入备用屏幕（`EnterAlternateScreen`），Drop 时自动恢复原始终端状态，
+//! 无论是正常退出还是 panic 都能正确清理。
 
 use crossterm::{
     cursor, execute, queue,
@@ -11,21 +17,37 @@ use crossterm::{
 };
 use std::io::{self, Write};
 
-/// 轨道行数（每行对应 max_height / (TRACK_ROWS-1) 米）
+/// 轨道行数（每行代表 max_height / (TRACK_ROWS-1) 米高度）
 const TRACK_ROWS: usize = 20;
 /// 轨道内部宽度（字符数）
 const TRACK_WIDTH: usize = 42;
+/// 速度计宽度（字符数，用于显示速度大小比例条）
+const SPEEDOMETER_WIDTH: usize = 30;
+/// 速度计最大量程（m/s），超过此值截断显示
+const SPEEDOMETER_MAX: f64 = 15.0;
+
+/// 最近一次碰撞的快照数据
+#[derive(Clone, Copy)]
+pub struct CollisionSnapshot {
+    /// 碰撞时的冲击速度大小（m/s，始终为正）
+    pub impact_velocity: f64,
+    /// 本次碰撞采用的弹性系数
+    pub restitution: f64,
+}
 
 /// 单帧渲染数据快照，由仿真阶段填充，回放阶段消费
 #[derive(Clone)]
 pub struct RenderFrame {
     /// 该帧对应的仿真时间（秒），用于回放定时
     pub sim_time: f64,
+    /// 小球当前高度（m）
     pub y: f64,
+    /// 小球当前垂直速度（m/s，负值表示下落）
     pub vy: f64,
+    /// 截至本帧的累计弹跳次数
     pub bounce_count: u32,
-    /// 截至本帧最近一次碰撞的 (冲击速度, 弹性系数)
-    pub last_collision: Option<(f64, f64)>,
+    /// 截至本帧最近一次碰撞的快照；尚未发生碰撞时为 None
+    pub last_collision: Option<CollisionSnapshot>,
 }
 
 /// 自由落体仿真的终端显示器（无状态渲染器）
@@ -67,7 +89,7 @@ impl FreeFallDisplay {
         )?;
 
         // ── 竖向高度轨道 ─────────────────────────────────
-        // row 0 = max_height，row TRACK_ROWS-1 = 0（贴近地面）
+        // row 0 对应最大高度，row TRACK_ROWS-1 对应地面（y=0）
         let ball_row = {
             let ratio = 1.0 - frame.y.clamp(0.0, self.max_height) / self.max_height;
             (ratio * (TRACK_ROWS - 1) as f64).round() as usize
@@ -80,7 +102,7 @@ impl FreeFallDisplay {
 
             for col in 0..TRACK_WIDTH {
                 if col == ball_col && row == ball_row {
-                    // 下落时黄色，上升时绿色
+                    // 下落时黄色（●），弹起时绿色（●）
                     let color = if frame.vy <= 0.0 {
                         Color::Yellow
                     } else {
@@ -108,21 +130,45 @@ impl FreeFallDisplay {
 
         // ── 数值读数 ─────────────────────────────────────
         let dir = if frame.vy >= 0.0 { '↑' } else { '↓' };
+        let speed = frame.vy.abs();
         queue!(
             out,
             Print(format!("\n  高度  {:8.4} m\n", frame.y)),
-            Print(format!("  速度  {}  {:8.4} m/s\n", dir, frame.vy.abs())),
+            Print(format!("  速度  {}  {:8.4} m/s\n", dir, speed)),
+        )?;
+
+        // 速度大小比例条（直观显示弹跳衰减趋势）
+        let filled = ((speed / SPEEDOMETER_MAX).min(1.0) * SPEEDOMETER_WIDTH as f64) as usize;
+        let empty = SPEEDOMETER_WIDTH - filled;
+        let bar_color = if frame.vy <= 0.0 {
+            Color::Yellow
+        } else {
+            Color::Green
+        };
+        queue!(
+            out,
+            Print("  速度计 ["),
+            SetForegroundColor(bar_color),
+            Print(format!("{:█<filled$}", "", filled = filled)),
+            ResetColor,
+            Print(format!(
+                "{dots:·<empty$}] {speed:.0}/{max:.0} m/s\n",
+                dots = "",
+                empty = empty,
+                speed = speed,
+                max = SPEEDOMETER_MAX
+            )),
         )?;
 
         // ── 碰撞状态行 ───────────────────────────────────
         queue!(out, Print("\n  "))?;
         match frame.last_collision {
-            Some((impact, restitution)) => queue!(
+            Some(c) => queue!(
                 out,
                 SetForegroundColor(Color::Red),
                 Print(format!(
                     "▶ 碰撞  冲击速度 {:6.3} m/s   弹性系数 {:.2}  ",
-                    impact, restitution
+                    c.impact_velocity, c.restitution
                 )),
                 ResetColor,
                 Print("\n"),
