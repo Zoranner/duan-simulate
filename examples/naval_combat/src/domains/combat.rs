@@ -13,15 +13,12 @@ use crate::events::{FireEvent, ShipDestroyedEvent};
 pub struct CombatRules {
     /// 各实体的开火冷却剩余时间（秒）
     fire_cooldowns: HashMap<EntityId, f64>,
-    /// 已触发销毁的实体集合（避免同帧重复触发）
-    destroying: std::collections::HashSet<EntityId>,
 }
 
 impl CombatRules {
     pub fn new() -> Self {
         Self {
             fire_cooldowns: HashMap::new(),
-            destroying: std::collections::HashSet::new(),
         }
     }
 }
@@ -51,8 +48,7 @@ impl DomainRules for CombatRules {
                 .map(|h| h.is_dead())
                 .unwrap_or(false);
 
-            if is_dead && !self.destroying.contains(&entity_id) {
-                self.destroying.insert(entity_id);
+            if is_dead && !ctx.entities.is_destroying(entity_id) {
                 // 暂时没有 killer 信息，使用 entity_id 自身占位（HitEvent 已记录 killer）
                 ctx.emit(DomainEvent::custom(ShipDestroyedEvent {
                     ship_id: entity_id,
@@ -155,7 +151,6 @@ impl DomainRules for CombatRules {
 
     fn on_detach(&mut self, entity_id: EntityId) {
         self.fire_cooldowns.remove(&entity_id);
-        self.destroying.remove(&entity_id);
     }
 
     fn dependencies(&self) -> Vec<&'static str> {

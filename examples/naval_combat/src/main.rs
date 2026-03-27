@@ -15,7 +15,7 @@
 
 mod display;
 
-use duan::{Entity, EntityId, World};
+use duan::{Entity, World};
 use naval_combat::components::{
     Faction, Health, MissileBody, Position, Radar, Seeker, Velocity, Weapon,
 };
@@ -191,7 +191,7 @@ fn main() {
         frame_count += 1;
 
         // 定期打印态势
-        if frame_count % STATUS_INTERVAL == 0 {
+        if frame_count.is_multiple_of(STATUS_INTERVAL) {
             let ships: Vec<ShipStatus> = ship_ids
                 .iter()
                 .zip(ship_names.iter())

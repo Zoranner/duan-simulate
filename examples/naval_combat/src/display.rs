@@ -17,6 +17,7 @@ pub struct ShipStatus {
 
 /// 一帧内收集的战斗日志条目
 pub enum LogEntry {
+    #[allow(dead_code)]
     Detection {
         observer: String,
         target: String,
