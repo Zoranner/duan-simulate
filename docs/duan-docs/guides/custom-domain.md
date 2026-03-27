@@ -141,6 +141,40 @@
 
 ## 实现注意事项
 
+### 服务方法签名约定
+
+域的服务方法（供其他域在 `compute` 中查询的只读方法）需要由调用方显式传入 `&EntityStore`：
+
+```rust
+// 服务方法的标准签名
+pub fn is_hostile(&self, id_a: EntityId, id_b: EntityId, entities: &EntityStore) -> bool
+pub fn distance(&self, id_a: EntityId, id_b: EntityId, entities: &EntityStore) -> Option<f64>
+```
+
+调用侧写法：
+
+```rust
+let faction = ctx.get_domain::<FactionRules>().expect("阵营域未注册");
+let hostile = faction.is_hostile(a, b, &ctx.entities);
+```
+
+原因：域服务方法只持有 `&self`，不持有 `DomainContext`，因此无法自行访问实体存储。由调用方传入 `&ctx.entities` 是唯一合法的模式——服务方法只负责"怎么算"，不负责"从哪里取数据"。这是当前架构下明确的职责分工，不是框架的额外限制。
+
+### domain_rules_any! 宏
+
+每个 `DomainRules` 实现的末尾都必须包含：
+
+```rust
+impl DomainRules for MyRules {
+    // ... 其他方法 ...
+    domain_rules_any!(MyRules);
+}
+```
+
+该宏的展开结果是为具体类型实现 `as_any(&self) -> &dyn Any` 和 `as_any_mut(&mut self) -> &mut dyn Any` 两个方法，用于运行时向下转型（`ctx.get_domain::<T>()` 的内部实现依赖此机制）。
+
+Rust 不允许在 trait 定义中为所有实现类提供这两个方法的默认实现（会引入歧义），因此每个实现类必须手动提供，宏消除了这一机械重复。这是每个 `DomainRules` 实现的固定样板行，缺少它会导致编译错误。
+
 ### 域的写入边界
 
 在计算阶段，域可以直接修改**自身管辖实体**的组件状态（这是域权威性的直接体现），同时可以向事件通道追加事件。但不能发起生命周期操作（创建/销毁实体），生命周期操作通过事件系统在事件处理阶段完成。
@@ -267,7 +301,8 @@ fn compute(&mut self, ctx: &mut DomainContext) {
     let observer_ids: Vec<EntityId> = ctx.own_entity_ids().collect();
     for observer_id in observer_ids {
         // ... 遍历目标，调用阵营域服务
-        if faction.is_hostile(observer_id, target_id) {
+        // 注意：服务方法需要由调用方传入 &ctx.entities，见下方"服务方法签名约定"
+        if faction.is_hostile(observer_id, target_id, &ctx.entities) {
             // 进行探测判定...
         }
     }
