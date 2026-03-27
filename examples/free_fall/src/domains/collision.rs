@@ -27,7 +27,7 @@
 use duan::{domain_rules_any, DomainContext, DomainEvent, DomainRules, Entity, EntityId};
 use std::collections::HashMap;
 
-use crate::components::{Collider, Position, Velocity};
+use crate::components::{Collider, Position, StaticBody, Velocity};
 
 /// 碰撞域规则
 pub struct CollisionRules {
@@ -151,20 +151,14 @@ impl DomainRules for CollisionRules {
     }
 
     fn try_attach(&self, entity: &Entity) -> bool {
-        let has_pos = entity.has_component::<Position>();
-        let has_collider = entity.has_component::<Collider>();
-        // 静态碰撞体（地面）：Position + Collider，无 Velocity
+        // 静态碰撞体（地面）：StaticBody + Position + Collider
         // 动态碰撞体（小球）：Position + Velocity + Collider
-        has_pos && has_collider
+        entity.has_component::<Position>() && entity.has_component::<Collider>()
     }
 
     fn on_attach(&mut self, entity: &Entity) {
-        let has_vel = entity.has_component::<Velocity>();
-        let has_pos = entity.has_component::<Position>();
-        let has_collider = entity.has_component::<Collider>();
-
-        if has_pos && has_collider && !has_vel {
-            // 静态碰撞体识别为地面，缓存 ID
+        // 通过 StaticBody 标记组件显式识别静态表面，不依赖"缺少某个组件"的隐式推断
+        if entity.has_component::<StaticBody>() {
             self.ground_id = Some(entity.id);
         }
     }

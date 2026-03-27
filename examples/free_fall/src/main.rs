@@ -8,7 +8,7 @@ mod display;
 use std::time::{Duration, Instant};
 
 use duan::{CustomEvent, Entity, World};
-use free_fall::components::{Collider, Mass, Position, Velocity};
+use free_fall::components::{Collider, Mass, Position, StaticBody, Velocity};
 use free_fall::domains::{CollisionRules, MotionRules};
 use free_fall::events::GroundCollisionEvent;
 
@@ -20,15 +20,18 @@ fn main() {
     let total_time = 20.0;
 
     // ── 仿真世界 ───────────────────────────────────────────
-    let mut world = World::builder().time_scale(1.0).build();
-    world.register_domain("motion", MotionRules::earth());
-    world.register_domain("collision", CollisionRules::new());
+    let mut world = World::builder()
+        .time_scale(1.0)
+        .with_domain("motion", MotionRules::earth())
+        .with_domain("collision", CollisionRules::new())
+        .build();
 
     world.spawn(
         Entity::new("ground")
             .with_domain("collision")
             .with_component(Position::new(0.0, 0.0, 0.0))
-            .with_component(Collider::ground(0.8, 0.05)),
+            .with_component(Collider::ground(0.8, 0.05))
+            .with_component(StaticBody), // 显式声明为静态碰撞体
     );
 
     let ball_id = world.spawn(
