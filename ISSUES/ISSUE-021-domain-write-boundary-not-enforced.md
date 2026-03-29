@@ -3,7 +3,7 @@ id: ISSUE-021
 title: 域写入边界仅靠文档约定，框架无技术机制阻止越权修改
 type: architecture
 priority: p1-high
-status: open
+status: resolved
 reporter: framework-consumer
 created: 2026-03-30
 updated: 2026-03-30
@@ -101,12 +101,31 @@ impl DomainRules for MotionRules {
 
 ## 维护者评估
 
-**结论**：
+**结论**：采纳（方向二）。这是核心架构问题，已彻底修复，为破坏性变更（breaking change）。
 
 **分析**：
 
+Reporter 的判断准确：`pub entities: &'a mut EntityStore` 使任何域都可以无成本地越权修改其他域的管辖实体，与"域即权威"的核心哲学构成根本性矛盾。ISSUE-009 将此问题归入"合法设计"是不恰当的——只读遍历确实合法，但"写入只靠自律"这一更深层的漏洞不应被同等对待。
+
+**对三个方向的评估**：
+
+- 方向一（运行时检测）：只在 debug 模式保护，release 模式仍可越权，是补丁而非根治。
+- 方向二（收窄接口）：从类型系统层面消除越权写入的可能性，与"域即权威"的哲学完全对齐，是彻底的解决方案。
+- 方向三（诚实文档）：不解决问题，只是承认问题，不符合"不打临时补丁"的原则。
+
+选择方向二，具体实现：
+
+1. `DomainContext.entities: &'a mut EntityStore` 改为 `pub(crate)`——外部代码无法直接访问可变引用
+2. 新增 `pub fn entities(&self) -> &EntityStore`——保留全量只读遍历能力
+3. 新增 `pub fn get_own_entity_mut(&mut self, entity_id: EntityId) -> Option<&mut Entity>`——框架在返回可变引用前校验 `own_entities.contains(entity_id)`，越权访问返回 `None`
+
+这是 breaking change：所有使用 `ctx.entities.get()` 的代码改为 `ctx.entities().get()`，所有使用 `ctx.entities.get_mut()` 的代码改为 `ctx.get_own_entity_mut()`。代价合理，因为这强制开发者在写入时明确意图，且从调用点即可看出是否符合权威边界。
+
 **行动计划**：
 
-- [ ] 
-
-**关闭理由**（如拒绝或 wontfix）：
+- [x] `DomainContext.entities` 字段从 `pub` 改为 `pub(crate)`
+- [x] 新增 `entities() -> &EntityStore` 只读访问方法
+- [x] 新增 `get_own_entity_mut(entity_id) -> Option<&mut Entity>` 受限写入方法（含归属校验）
+- [x] 更新 `docs/duan-docs/guides/custom-domain.md` 中所有示例代码
+- [x] 更新 `docs/duan-docs/concepts/domain.md` 域上下文表格
+- [x] 运行 `cargo clippy --all-targets --all-features -- -D warnings` 验证无新增警告

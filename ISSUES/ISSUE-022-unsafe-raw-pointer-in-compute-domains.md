@@ -3,7 +3,7 @@ id: ISSUE-022
 title: compute_domains() 使用 unsafe 裸指针绕过借用检查，安全性依赖未记录的内存布局不变量
 type: architecture
 priority: p2-medium
-status: open
+status: resolved
 reporter: framework-consumer
 created: 2026-03-30
 updated: 2026-03-30
@@ -97,12 +97,24 @@ unsafe {
 
 ## 维护者评估
 
-**结论**：
+**结论**：部分采纳。unsafe 本身保留，以完整 INVARIANT 文档替代结构重构。
 
 **分析**：
 
+经评估，`compute_domains()` 中的 unsafe 是**声音的（sound）**：`rules_ptr` 和 `own_entities_ptr` 分别指向同一 `Domain` 结构体的不同堆分配字段，不存在别名；`Box<dyn DomainRules>` 和 `HashSet<EntityId>` 的堆地址在 compute 期间稳定（无 HashMap 重分配）；`ctx.registry` 只读路径不产生可变别名。
+
+**评估消除 unsafe 的可行性**：
+
+- `RefCell<Box<dyn DomainRules>>` 方案：可消除 `compute_domains` 中的 unsafe，但 `get_domain<T>()` / `get_domain_by_name<T>()` 无法返回 `Option<&T>`（`Ref<>` 守卫不能跨函数返回），需要引入 unsafe 转移或改变 API 签名，问题转移而非消除。
+- `Option<Box<dyn DomainRules>>` take/restore 方案：技术可行，但会让 `Domain.rules` 的类型变为 `Option<...>`，所有访问路径都需要处理 `None`，API 污染代价大于实际收益。
+- 分离 rules 到独立容器方案：需要大规模重构 `DomainRegistry` 和 `DomainContext`，成本不符合 p2-medium 级别问题的投入比。
+
+**最终决策**：保留 unsafe，但以系统性文档填补"贡献者盲区"——这才是 Issue 的核心诉求。
+
 **行动计划**：
 
-- [ ] 
+- [x] 在 `Domain` 结构体文档中添加 `# INVARIANT` 区块，明确列出三条安全约束（字段无别名、结构稳定、只读路径不写入）及其与 `compute_domains` unsafe 的关联
+- [x] 将 `compute_domains()` 中的 SAFETY 注释扩展为完整的三条分项说明，并添加"未来并行化前必须重评估"的警示
+- [x] 运行 `cargo clippy --all-targets --all-features -- -D warnings` 验证无新增警告
 
-**关闭理由**（如拒绝或 wontfix）：
+**架构哲学一致性**：已自验证

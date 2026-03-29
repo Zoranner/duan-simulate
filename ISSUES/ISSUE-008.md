@@ -3,7 +3,7 @@ id: ISSUE-008
 title: 域服务接口的定义与调用方式在文档和示例中均无完整代码示范
 type: documentation
 priority: p1-high
-status: open
+status: resolved
 reporter: framework-consumer
 created: 2026-03-27
 updated: 2026-03-30
@@ -81,33 +81,11 @@ let faction = ctx.registry
 
 <!-- 以下由 core-maintainer 填写，reporter 不要修改 -->
 
-## 维护者评估
+## 维护者评估（初次，2026-03-27）
 
 **结论**：采纳。问题成立，代码中已有完整实现，但文档完全未展示调用语法，是显著的文档缺失。
 
-**分析**：
-
-经核查实现代码（`src/domain.rs`），`DomainContext` 上已存在两个便捷方法：
-
-- `ctx.get_domain::<T>()` —— 按实现类型查找，返回 `Option<&T>`，直接得到具体类型，无需 downcast（第 130–132 行）
-- `ctx.get_domain_by_name(name)` —— 按名称查找，返回 `Option<&Domain>`（第 137–139 行）；若要从 `&Domain` 获取具体类型，需经 `domain.rules.as_any().downcast_ref::<T>()`
-
-Reporter 猜测的 `ctx.registry.get_domain_as::<T>()` 不存在，但 `ctx.get_domain::<T>()` 已实现相同效果。`DomainRules` trait 要求所有实现类提供 `as_any` 方法（第 73–78 行），名称查找路径的向下转型因此是可行的。
-
-文档问题：
-1. `domain.md` 的"域注册表"章节只提到"支持两种查找方式"，但没有说明具体是 `ctx.get_domain::<T>()` 和 `ctx.get_domain_by_name()`，也没有代码示例
-2. `custom-domain.md` 的探测域参考实现完全没有展示跨域服务查询的写法
-
-这是 reporter 困惑的直接来源，不是 API 设计问题。
-
-**行动计划**：
-
-1. 在 `guides/custom-domain.md` 的探测域参考实现后补充"跨域服务调用"代码片段，展示：
-   - `ctx.get_domain::<T>()` 的标准用法（方式一，推荐）
-   - `ctx.get_domain_by_name()` + `as_any().downcast_ref::<T>()` 的用法（方式二，动态场景）
-2. 在 `concepts/domain.md` 的"域上下文"章节，在 `registry` 行的描述中补充具体方法名
-
-**关闭理由**（如拒绝或 wontfix）：
+（初次评估的行动计划已执行，但因方式二示例存在错误，Issue 被重新打开。）
 
 ---
 
@@ -141,3 +119,27 @@ if let Some(domain) = ctx.get_domain_by_name_raw("faction") {
 此外，既然 `get_domain_by_name<T>()` 本身已完成类型转换，实际上方式二和方式一的使用场景描述也需要重新澄清——两者的区别在于"按类型查找（有多实例时取最后注册的）"与"按名称精确定位特定实例"，而非"有无手动 downcast"。
 
 **请求维护者修正文档示例，并重新校对两种方式的使用场景说明。**
+
+---
+
+## 维护者评估（再次，2026-03-30）
+
+**结论**：采纳。Reporter 的追加说明完全正确，初次修复引入了错误示例，本次彻底修正。
+
+**分析**：
+
+Reporter 的技术指摘准确无误：
+
+- `ctx.get_domain_by_name<T>(name)` 是泛型方法，返回 `Option<&T>`（已完成 downcast），不存在 `.rules` 字段——初次写入的示例用该方法返回值访问 `.rules.as_any()` 无法编译
+- `ctx.get_domain_by_name_raw(name)` 才是返回 `Option<&Domain>` 的方法，用于需要访问原始域对象的场景
+
+此外，初次修复对"两种方式"的场景说明存在误导——两者的本质区别是**按实现类型查找 vs 按名称精确定位**（后者用于同一类型多实例场景），而非"有无 downcast"。
+
+本次修正一并处理 ISSUE-021 引起的 API 变更（`&ctx.entities` → `ctx.entities()`）。
+
+**行动计划**：
+
+- [x] 修正 `custom-domain.md` 探测域示例：方式二改为正确的 `ctx.get_domain_by_name::<T>(name)` 使用场景，`get_domain_by_name_raw` 作为独立的"元数据访问"用法单独说明
+- [x] 重新澄清两种方式的使用场景：方式一（按类型）vs 方式二（按名称+类型，多实例时必用）
+- [x] 更新 `concepts/domain.md` 域注册表章节，列出三种查找方式的方法名、返回类型和适用场景
+- [x] 同步更新 `&ctx.entities` → `ctx.entities()` 的服务调用写法（ISSUE-021 联动）

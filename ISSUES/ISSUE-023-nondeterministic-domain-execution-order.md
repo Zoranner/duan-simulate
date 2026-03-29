@@ -3,7 +3,7 @@ id: ISSUE-023
 title: 同层无依赖域的执行顺序不确定，影响仿真可复现性
 type: architecture
 priority: p1-high
-status: open
+status: resolved
 reporter: framework-consumer
 created: 2026-03-30
 updated: 2026-03-30
@@ -70,12 +70,15 @@ for name in names {
 
 ## 维护者评估
 
-**结论**：
+**结论**：采纳。问题成立，影响仿真可复现性，已修复。
 
 **分析**：
 
+`compute_execution_order()` 的外层循环直接迭代 `HashMap::keys()`，Rust 默认启用哈希随机化防范 Hash DoS，导致迭代顺序在不同运行中随机变化。对于无显式依赖关系的同层域，拓扑排序的访问起点不确定，最终执行顺序随机，破坏"给定相同输入得到相同输出"的仿真复现性基本保证。
+
+Reporter 提出的字典序排序方案是正确且成本极低的修复——仅在初始化阶段执行一次排序，运行时无额外开销。拓扑排序本身的依赖顺序（通过 `dependencies()` 声明的顺序约束）不受影响。
+
 **行动计划**：
 
-- [ ] 
-
-**关闭理由**（如拒绝或 wontfix）：
+- [x] 在 `compute_execution_order()` 外层循环前收集 keys 为 `Vec<&str>` 并 `sort_unstable()`，固定遍历起点
+- [x] 运行 `cargo clippy --all-targets --all-features -- -D warnings` 验证无新增警告

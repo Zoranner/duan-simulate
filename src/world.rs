@@ -342,10 +342,27 @@ impl World {
         let order: Vec<String> = self.domains.execution_order().to_vec();
 
         for domain_name in &order {
-            // 从 domain 中同时取出 rules 指针和 own_entities 指针
-            // SAFETY：两个指针指向 Domain 结构体的不同字段（rules 和 entities），不存在别名。
-            // compute_domains 期间注册表结构不变（无 insert/remove），
-            // 域自身的实体集合通过 ctx.registry（不可变引用）也不会被修改。
+            // 同时持有 `&mut domain.rules`（执行 compute）和 `&domain.entities`（只读），
+            // 以及 `&self.domains`（ctx.registry），在安全 Rust 中存在借用冲突：
+            // `get_by_name_mut` 需要 `&mut self.domains`，而 `ctx.registry` 需要 `&self.domains`。
+            //
+            // 解决方案：使用裸指针提前固定两个地址，释放可变借用后再构造 ctx。
+            //
+            // SAFETY（依赖 Domain 结构体的三个不变量，见 domain.rs 中 Domain 的文档）：
+            //
+            // 1. **无别名**：`rules_ptr` 和 `own_entities_ptr` 分别指向同一 `Domain` 的不同字段
+            //    （`rules` 和 `entities`），二者无重叠，不存在可变别名。
+            //
+            // 2. **地址稳定**：`Box<dyn DomainRules>` 将规则分配在堆上；`HashSet` 内部数据
+            //    同样在堆上。整个 `compute_domains` 调用期间不向 `DomainRegistry` 插入或删除域，
+            //    HashMap 不会重新分配，裸指针指向的堆内存地址保持不变。
+            //
+            // 3. **只读路径不写入**：`ctx.registry`（`&self.domains`）是不可变引用，
+            //    `DomainRules::compute` 通过 `ctx.registry` 访问其他域时只能读取，
+            //    不会经由此路径修改任何 `Domain` 字段，`own_entities_ptr` 指向的数据不会被修改。
+            //
+            // 若未来需要并行化 `compute_domains` 或修改 `DomainRegistry` 的内存模型，
+            // 必须先重新评估此处的 unsafe 代码。
             let (rules_ptr, own_entities_ptr) = match self.domains.get_by_name_mut(domain_name) {
                 Some(domain) => (
                     &mut *domain.rules as *mut dyn DomainRules,

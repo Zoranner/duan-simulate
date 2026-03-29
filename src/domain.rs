@@ -82,15 +82,16 @@ pub trait DomainRules: Send + Sync + 'static {
 ///
 /// 域访问仿真环境的唯一入口。提供：
 /// - 当前域的实体集合（直接引用，无需通过注册表二次查询）
-/// - 实体存储（可变，域可修改实体状态）
+/// - 实体存储只读视图（全量遍历候选目标）
+/// - 管辖实体写入入口（框架校验权威边界后才开放可变引用）
 /// - 域注册表（只读，用于查询其他域的服务）
 /// - 事件通道（只写）
 /// - 仿真时钟（只读）
 pub struct DomainContext<'a> {
     /// 当前域所管辖的实体集合（直接引用，避免硬编码域名）
     pub own_entities: &'a HashSet<EntityId>,
-    /// 实体存储（可变，域规则是修改实体状态的权威）
-    pub entities: &'a mut EntityStore,
+    /// 实体存储（框架内部构造用；外部代码使用 `entities()` 只读访问，`get_own_entity_mut()` 受限写入）
+    pub(crate) entities: &'a mut EntityStore,
     /// 域注册表（只读，用于查询其他域）
     pub registry: &'a DomainRegistry,
     /// 事件通道（只写）
@@ -107,6 +108,29 @@ impl<'a> DomainContext<'a> {
     /// 等价于 `self.own_entities.iter().copied()`，是域内实体遍历的标准入口。
     pub fn own_entity_ids(&self) -> impl Iterator<Item = EntityId> + '_ {
         self.own_entities.iter().copied()
+    }
+
+    /// 获取实体存储（只读）
+    ///
+    /// 提供对所有实体的只读访问，用于遍历候选目标、查询跨域实体状态等只读场景。
+    ///
+    /// 对自身管辖实体的写入请使用 [`get_own_entity_mut`](Self::get_own_entity_mut)。
+    pub fn entities(&self) -> &EntityStore {
+        self.entities
+    }
+
+    /// 获取管辖实体的可变引用（框架权威边界检查）
+    ///
+    /// 返回当前域管辖实体的可变引用。若 `entity_id` 不属于本域管辖范围，返回 `None`。
+    ///
+    /// 这是域写入实体状态的唯一合法入口：框架在写入前校验归属，在编译期强制执行
+    /// 「域只能修改自身管辖实体」的权威边界约束。
+    pub fn get_own_entity_mut(&mut self, entity_id: EntityId) -> Option<&mut Entity> {
+        if self.own_entities.contains(&entity_id) {
+            self.entities.get_mut(entity_id)
+        } else {
+            None
+        }
     }
 
     /// 获取当前仿真时间
@@ -162,6 +186,19 @@ impl<'a> DomainContext<'a> {
 /// 域
 ///
 /// 域的运行时表示，包含名称、实体列表和规则实现。
+///
+/// # INVARIANT（`compute_domains` 的 unsafe 安全依赖）
+///
+/// `World::compute_domains()` 中存在 unsafe 裸指针代码，其正确性依赖以下不变量：
+///
+/// 1. **字段无别名**：`rules` 与 `entities` 是独立字段，不共享内存。裸指针分别
+///    指向二者，不存在别名关系。若将来引入 `Arc` 等共享结构，必须重新评估。
+/// 2. **结构稳定**：`compute_domains` 执行期间不向 `DomainRegistry` 增删域，
+///    `HashMap` 不会重新分配，`Box<dyn DomainRules>` 的堆地址保持稳定。
+/// 3. **只读路径不写入**：`DomainContext.registry`（不可变引用）路径下不修改任何
+///    `Domain` 字段，保证通过 `ctx.registry` 访问域数据时不产生可变别名。
+///
+/// 修改此结构体或 `DomainRegistry` 时，请阅读 `World::compute_domains()` 的 SAFETY 注释。
 pub struct Domain {
     /// 域的唯一标识（字符串）
     pub name: String,
@@ -341,7 +378,10 @@ impl DomainRegistry {
             order.push(name.to_string());
         }
 
-        for name in self.domains.keys() {
+        // 字典序固定遍历起点，保证同层无依赖域的执行顺序在不同运行中一致（可复现性）
+        let mut names: Vec<&str> = self.domains.keys().map(String::as_str).collect();
+        names.sort_unstable();
+        for name in names {
             visit(
                 name,
                 &self.domains,
