@@ -3,10 +3,10 @@ id: ISSUE-019
 title: 框架缺乏独立测试与调试支持，仿真逻辑只能通过完整应用集成才能验证
 type: dx
 priority: p1-high
-status: open
+status: resolved
 reporter: framework-consumer
 created: 2026-03-29
-updated: 2026-03-29
+updated: 2026-03-30
 ---
 
 ## 问题描述
@@ -122,10 +122,27 @@ assert!(harness.is_destroyed(ship));
 
 ## 维护者评估
 
-**结论**：
+**结论**：部分采纳——API 补全（`step_collect`）和测试文档采纳；独立 `SimulationTestHarness` 类型不采纳（过度设计）
 
 **分析**：
 
+问题真实且严重。`philosophy.md` 的"设计收益"一节明确承诺"域可以独立测试，不需要搭建完整的仿真环境"。这不是说说而已——它是框架的设计目标之一，当前不可达等于设计承诺落空。
+
+**当前实际情况**：
+
+`World` 已经可以在 `#[test]` 中直接构建和使用——`World::builder().with_domain(...).build()`、`world.spawn()`、`world.step(dt)` 在测试环境中均可调用，不依赖任何 Tauri 或前端。reporter 描述的"唯一方式是启动完整应用"并不完全准确，但 reporter 的核心诉求有效：**缺少事件观察接口**，使得 `world.step(dt)` 执行后无法在测试代码中断言任何事件相关的行为。
+
+`step_with` 已提供事件观察能力，但其回调形式不适合 `#[test]` 中的结构化断言——无法将事件收集为列表后再统一 assert。这是一个有价值的 API 缺口。
+
+**不采纳 `SimulationTestHarness`**：
+
+`World` 本身已具备构建测试场景所需的所有能力。引入 `SimulationTestHarness` 作为独立类型会产生 API 表面积膨胀和文档维护负担，且不增加新能力，只是 `World` 的薄封装。保持 `World` 单一入口更符合"如无必要，勿增实体"原则。
+
 **行动计划**：
 
-**关闭理由**（如拒绝或 wontfix）：
+- [x] 为 `World` 增加 `step_collect(dt)` 方法，返回当帧产生的事件列表（`Vec<Arc<dyn CustomEvent>>`），供测试代码断言
+  - 实现位置：`src/world.rs`，新增 `step_collect` 公开方法和 `drain_and_process_events_collect` 私有辅助方法
+  - 同步新增 `test_step_collect_returns_custom_events` 单元测试，验证基本功能
+- [x] 在 `guides/` 中新增"测试域逻辑"章节（`docs/duan-docs/guides/testing.md`），展示 `step_collect`、事件断言、组件状态读取和单步执行的完整示例
+  - 同步更新 `docs/duan-docs/index.md`，将新指南纳入文档导航
+- [ ] 可选：为 `World` 增加 `get_component::<T>(entity_id)` 便利方法，降低测试中的组件读取成本（延后，当前通过 `get_entity` → `get_component` 两步操作已足够）

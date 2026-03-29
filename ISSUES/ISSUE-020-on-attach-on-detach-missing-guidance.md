@@ -3,10 +3,10 @@ id: ISSUE-020
 title: on_attach/on_detach 生命周期钩子缺少使用场景指导，导致开发者绕过或误用
 type: documentation
 priority: p3-low
-status: open
+status: resolved
 reporter: framework-consumer
 created: 2026-03-29
-updated: 2026-03-29
+updated: 2026-03-30
 ---
 
 ## 问题描述
@@ -101,10 +101,27 @@ impl DomainRules for TrackingRules {
 
 ## 维护者评估
 
-**结论**：
+**结论**：采纳——纯文档补充，API 实现本身无需变更
 
 **分析**：
 
+reporter 描述的问题成立。`on_attach`/`on_detach` 的实现是完整且正确的，但文档缺失导致开发者不敢使用，退而在 `compute()` 中做懒初始化，这是可避免的设计退化。
+
+通过阅读源码（`src/domain.rs` 第 186-190 行、`src/world.rs` 第 177-179 行），可以确认以下 **API 语义**：
+
+1. **`on_attach` 调用时机**：在 `world.spawn()` 执行期间，实体已插入实体存储（组件完整可用），`try_attach()` 返回 `true` 后**同步调用**，先于实体状态被设为 `Active`
+2. **`entity: &Entity` 参数**：包含 spawn 时传入的所有组件数据，可以通过 `entity.get_component::<T>()` 读取任意组件初始值
+3. **合法操作**：修改域内自有状态（`self.xxx`）、读取实体组件初始值、记录实体 ID；典型场景是初始化"每实体缓存"（如历史轨迹容器）
+4. **不适合的操作**：依赖其他域的数据（其他域可能尚未对该实体执行 `on_attach`，执行顺序不确定）；发出事件（当前无事件通道访问权）；修改实体组件（参数为 `&Entity`，只读）
+5. **`on_detach` 调用时机**：实体销毁流程开始时同步调用，参数仅为 `EntityId`，实体已从实体存储中脱离，用于清理域内与该实体关联的缓存，避免内存泄漏
+
+reporter 的建议示例代码（用 `on_attach` 初始化追踪缓存）完全合法且符合设计意图。
+
 **行动计划**：
 
-**关闭理由**（如拒绝或 wontfix）：
+- [x] 在 `guides/custom-domain.md` 的"实现注意事项"末尾新增"on_attach / on_detach 生命周期钩子"小节，内容涵盖：
+  - `on_attach` 调用时机（`try_attach` 返回 `true` 后同步调用，实体尚未激活）
+  - `entity: &Entity` 参数语义（完整组件可读取，`entity.id` 已分配）
+  - 合法操作（初始化缓存、读取组件初始值）与不适合操作（依赖其他域、发出事件、修改组件）
+  - `on_detach` 语义（清理缓存，防止内存泄漏）
+  - 追踪历史缓存完整示例，演示 `on_attach`/`on_detach` 与 `compute` 协作的标准模式

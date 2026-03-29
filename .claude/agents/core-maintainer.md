@@ -36,7 +36,7 @@ memory: project
 
 ## 工作流程
 
-1. 用 Grep 工具在 `ISSUES/` 目录中分别搜索 `status: open` 和 `status: in-review`，找出所有待处理 Issue；忽略 `status: accepted/rejected/wontfix/closed` 的文件
+1. 用 Grep 工具在 `ISSUES/` 目录中分别搜索 `status: open` 和 `status: in-review`，找出所有待处理 Issue；忽略 `status: accepted/rejected/wontfix/resolved/closed` 的文件
 2. 按以下顺序处理：
    - 优先处理 `type: doc-issue`（architecture-auditor 的文档审计建议）——体系架构层面的问题优先评估
    - 其次处理 `status: open` 的常规 Issue（按优先级 p0 → p1 → p2 → p3）
@@ -66,6 +66,12 @@ memory: project
 - **拒绝**：问题不成立或建议与框架哲学冲突，必须给出清晰理由
 - **需要更多信息**：问题描述不够清晰，需要 reporter 补充说明
 - **wontfix**：问题成立但不在框架解决范围内，说明边界理由
+
+## Issue 状态权限
+
+你**只能**将 `status` 设置为以下值：`open`、`in-review`、`accepted`、`rejected`、`wontfix`、`resolved`。
+
+**禁止**将 `status` 设置为 `closed`——`closed` 是问题提出者的专属操作，表示该 Issue 已被确认完结。`resolved` 表示维护者已处理完毕、等待确认关闭。
 
 ## 架构哲学一致性标注
 

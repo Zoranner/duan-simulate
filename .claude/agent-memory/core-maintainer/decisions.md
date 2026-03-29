@@ -171,6 +171,20 @@ type: project
 
 ---
 
+## ISSUE-010（2026-03-27 评估 / 2026-03-29 关闭）
+
+**类型**：concept-clarity
+**优先级**：p1-high
+**最终状态**：closed
+
+**结论**：评估完整，文档已补充，本次仅更新状态为 closed。
+
+**核心确认**：事件处理阶段（阶段四）在域计算阶段（阶段二）之后；`world.spawn()` 虽立即完成并设为 Active，但当帧 compute 已执行完毕，当帧 spawn 的实体只在下一帧才被域首次计算。这是有意设计，保证帧内一致性。
+
+**文档落地**：`docs/duan-docs/concepts/event.md` 第 131 行"实体生效时序"章节。
+
+---
+
 ## ISSUE-016（2026-03-27）
 
 **类型**：api-design
@@ -191,3 +205,119 @@ type: project
 4. 可选：`DomainRegistry::register` 增加同类型重复注册的 debug_assert 或 warn
 
 **不采纳**：统一为单一查找维度（既不统一为名字，也不统一为类型）。
+
+---
+
+## ISSUE-017（2026-03-29）
+
+**类型**：architecture
+**优先级**：p1-high
+**最终状态**：in-review（部分采纳 + architecture-auditor 复核标注）
+
+**结论**：问题成立（逻辑泄漏到应用层），但 compute() 阶段禁止生命周期操作的架构约束有效，维持。短期补充文档说明；ctx.spawn() API 提案暂缓，建议探索 SpawnCommand 事件模式。
+
+**架构约束依据**：`simulation-loop.md` 的"计算阶段的写入边界"明确：域在 compute() 中不能发起生命周期操作（创建/销毁实体），理由是可追溯性（事件记录）和未来并行化安全。
+
+**拒绝 ctx.spawn() 缓冲队列方案的原因**：spawn 行为会脱离事件通道，成为无事件记录的隐式世界状态变更，违反可追溯性原则。
+
+**替代方向**：SpawnCommand 事件模式——域发出携带完整初始化数据的命令事件，框架在事件处理阶段执行，保留可追溯性。
+
+**标注**：建议 architecture-auditor 复核——涉及"域即权威"与"事件驱动传播"两原则在生命周期边界上的取舍。
+
+---
+
+## ISSUE-018（2026-03-29）
+
+**类型**：api-design
+**优先级**：p2-medium
+**最终状态**：accepted（短期运行时校验）
+
+**结论**：问题确认（代码层验证：`compute_execution_order()` 的 `domains.get(dep)` 返回 None 时静默跳过，依赖失效无任何提示）。采纳运行时校验修复；类型安全方案（TypeId/宏）不采纳。
+
+**不采纳类型安全方案的原因**：框架设计原则"域标识使用字符串"支持多实例场景；TypeId 无法区分同类型多实例，引入会破坏多实例支持。
+
+**修复方向**：在 `compute_execution_order()` 中对每个依赖名称校验是否已注册，未注册则 `panic!`。
+
+---
+
+## ISSUE-019（2026-03-29）
+
+**类型**：dx
+**优先级**：p1-high
+**最终状态**：accepted（部分）
+
+**结论**：采纳 `step_collect()` API 和测试文档；拒绝独立 `SimulationTestHarness` 类型。
+
+**关键发现**：`World` 本身已可在 `#[test]` 中使用；缺失的只是事件观察接口（步进后无法收集事件列表）。philosophy.md 承诺"域可以独立测试"，当前不可达等于设计承诺落空，必须修复。
+
+**不采纳 SimulationTestHarness**：World 是单一入口，薄封装只增加 API 表面积，不增加能力。
+
+**修复方向**：`World::step_collect(dt)` 返回 `Vec<Arc<dyn CustomEvent>>`；补充测试章节文档。
+
+---
+
+## ISSUE-020（2026-03-29）
+
+**类型**：documentation
+**优先级**：p3-low
+**最终状态**：resolved（2026-03-30 文档已补充）
+
+**结论**：API 实现完整正确；文档缺失导致开发者不敢使用，退而用 compute() 懒初始化绕过。
+
+**API 语义确认**（来自源码 `src/world.rs:177-190`、`src/domain.rs:48-56`）：
+- `on_attach` 在 `world.spawn()` 期间同步调用，先于实体状态设为 Active
+- `entity: &Entity` 参数包含所有 spawn 时传入的组件，只读
+- 合法操作：初始化域内每实体缓存、读取组件初始值
+- 不适合：依赖其他域数据（顺序不确定）、发出事件（无通道访问权）、修改组件（只读引用）
+- `on_detach` 仅收到 `EntityId`，用于清理缓存
+
+**修复内容**：在 `guides/custom-domain.md` 新增"on_attach / on_detach 生命周期钩子"小节，含完整追踪缓存示例。
+
+---
+
+## ISSUE-017（2026-03-29 评估，2026-03-30 修复）
+
+**类型**：architecture
+**优先级**：p1-high
+**最终状态**：resolved（2026-03-30 文档已补充）
+
+**结论**：部分采纳——问题成立（`ctx.spawn()` API 暂不实现），文档补充采纳。
+
+**核心架构决策**：`compute()` 阶段禁止 spawn/destroy 有两条理由：1）可追溯性：事件通道是所有跨边界影响的唯一可见记录；2）并行化安全：compute 阶段未来可并行化，直接 spawn 需要额外同步。
+
+**修复内容**：扩充 `guides/custom-domain.md` 的"域的写入边界"节，增加两条理由解释和"事件 + step_with 回调"完整代码示例。
+
+**待跟进**：SpawnCommand 事件模式作为架构讨论议题保留；architecture-auditor 标注待复核（"域即权威"与"事件驱动传播"之间的边界权衡）。
+
+---
+
+## ISSUE-018（2026-03-29 评估，2026-03-30 修复）
+
+**类型**：api-design
+**优先级**：p2-medium
+**最终状态**：resolved（2026-03-30 源码已修复）
+
+**结论**：采纳短期运行时校验；TypeId/宏方案不采纳（多实例场景下 TypeId 无法区分同类型域）。
+
+**修复位置**：`src/domain.rs`，`compute_execution_order` 的 `visit` 函数内增加 `!domains.contains_key(dep)` 检查，不存在则 `panic!`。
+
+**关键点**：校验在 `World::build()` 时已触发（通过 `execution_order()` 调用），在配置阶段而非首帧运行时暴露问题。
+
+**新增测试**：`test_dependency_validation_passes_for_registered_deps` 和 `test_dependency_validation_panics_for_missing_dep`。
+
+---
+
+## ISSUE-019（2026-03-29 评估，2026-03-30 修复）
+
+**类型**：dx
+**优先级**：p1-high
+**最终状态**：resolved（2026-03-30 源码 + 文档已完成）
+
+**结论**：部分采纳——`step_collect` API 采纳；独立 `SimulationTestHarness` 类型不采纳（过度设计）。
+
+**修复位置**：
+- `src/world.rs`：新增 `step_collect(dt) -> Vec<Arc<dyn CustomEvent>>` 和私有辅助 `drain_and_process_events_collect`
+- `docs/duan-docs/guides/testing.md`：新建测试指南文档
+- `docs/duan-docs/index.md`：新增指南链接
+
+**关键设计**：`step_collect` 复用 `compute_domains`/`check_timers`/`cleanup` 阶段，独立实现事件处理以收集 Arc；不暴露 `EventChannel` 内部字段。

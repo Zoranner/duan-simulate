@@ -3,10 +3,10 @@ id: ISSUE-018
 title: dependencies() 使用字符串 key 声明依赖，拼写错误无法被编译期捕获
 type: api-design
 priority: p2-medium
-status: open
+status: resolved
 reporter: framework-consumer
 created: 2026-03-29
-updated: 2026-03-29
+updated: 2026-03-30
 ---
 
 ## 问题描述
@@ -97,10 +97,27 @@ fn dependencies(&self) -> Vec<&'static str> {
 
 ## 维护者评估
 
-**结论**：
+**结论**：采纳（短期运行时校验）；类型安全依赖声明（方案 A/B）不采纳，原因见下
 
 **分析**：
 
+问题描述准确。通过阅读 `src/domain.rs` 的 `compute_execution_order()` 实现（第 329-333 行）可以确认：拓扑排序时，若 `dependencies()` 返回的字符串在 `domains` 中不存在，`domains.get(name)` 返回 `None`，**循环直接跳过，不产生任何错误**。这意味着拼写错误的依赖名称会让依赖声明静默失效，域可能在依赖域之前执行，产生难以定位的帧内计算顺序 bug。
+
+这是一个需要修复的实现缺陷，而非设计层面的取舍。
+
+**为何不采纳类型安全方案（方案 A：TypeId）**：
+
+`philosophy.md` 明确将"域标识使用字符串"列为框架的设计原则之一，原因是支持运行时注册和多实例场景。TypeId 方案存在本质局限：当同一 `DomainRules` 类型注册了多个实例（如两个不同配置的 `MotionRules`），TypeId 无法区分——`dependencies()` 无法表达"依赖名称为 'motion_fast' 的那个运动域"。引入 TypeId 依赖会强迫框架放弃多实例支持，这是不可接受的代价。
+
+方案 B（辅助宏）本质上仍依赖字符串，需额外维护"类型 → 注册名"映射，工程复杂度大于收益。
+
+**正确的修复方向**：
+
+在 `compute_execution_order()` 或 `DomainRegistry::execution_order()` 的首次计算中，增加依赖合法性校验：若某域声明的依赖名称未出现在已注册域列表中，立即 `panic!` 或至少 `eprintln!` 警告。这能在仿真第一帧就暴露问题，而不是静默失效。
+
 **行动计划**：
 
-**关闭理由**（如拒绝或 wontfix）：
+- [x] 在 `DomainRegistry::compute_execution_order()` 的 `visit` 函数内，对每个 `dep` 名称校验是否存在于 `self.domains`；若不存在，`panic!("域 '{}' 声明依赖 '{}'，但该域未注册", name, dep)` 确保立即暴露拼写错误
+  - 实现位置：`src/domain.rs`，`compute_execution_order` 内嵌的 `visit` 闭包
+  - 校验在 `World::build()` 时（通过 `WorldBuilder::build` 调用 `execution_order()`）即触发，在配置阶段就能发现问题，而不是等到首帧才发现
+  - 新增测试：`test_dependency_validation_passes_for_registered_deps` 和 `test_dependency_validation_panics_for_missing_dep`（`#[should_panic]`）

@@ -72,7 +72,7 @@ memory: project
 
 ## 对维护者决策的反馈机制
 
-当你在后续开发中发现某个被 `rejected` 或 `wontfix` 的 Issue 依然造成了真实阻碍时，可以提交一个新 Issue 来补充使用侧证据，说明该问题的实际影响。不要直接修改已关闭 Issue 的结论区域。
+当你在后续开发中发现某个被 `rejected` 或 `wontfix` 的 Issue 依然造成了真实阻碍时，可以提交一个新 Issue 来补充使用侧证据，说明该问题的实际影响。不要直接修改已关闭或已解决（`resolved`/`closed`）Issue 的结论区域。
 
 ## 行为准则
 

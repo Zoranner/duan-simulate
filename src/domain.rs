@@ -328,6 +328,9 @@ impl DomainRegistry {
 
             if let Some(domain) = domains.get(name) {
                 for dep in domain.rules.dependencies() {
+                    if !domains.contains_key(dep) {
+                        panic!("域 '{}' 声明依赖 '{}'，但该域未注册", name, dep);
+                    }
                     visit(dep, domains, visited, temp_mark, order);
                 }
             }
@@ -426,5 +429,66 @@ mod tests {
 
         let order = registry.execution_order();
         assert_eq!(order.len(), 2);
+    }
+
+    struct DependentRules;
+
+    impl DomainRules for DependentRules {
+        fn compute(&mut self, _ctx: &mut DomainContext) {}
+        fn try_attach(&self, _entity: &Entity) -> bool {
+            true
+        }
+        fn on_detach(&mut self, _entity_id: EntityId) {}
+        fn dependencies(&self) -> Vec<&'static str> {
+            vec!["test"]
+        }
+        fn as_any(&self) -> &dyn Any {
+            self
+        }
+        fn as_any_mut(&mut self) -> &mut dyn Any {
+            self
+        }
+    }
+
+    #[test]
+    fn test_dependency_validation_passes_for_registered_deps() {
+        let mut registry = DomainRegistry::new();
+        registry.register("test", TestRules);
+        registry.register("dependent", DependentRules);
+
+        // 依赖已注册，不应 panic
+        let order = registry.execution_order();
+        assert_eq!(order.len(), 2);
+        // "test" 应在 "dependent" 之前
+        let test_pos = order.iter().position(|n| n == "test").unwrap();
+        let dep_pos = order.iter().position(|n| n == "dependent").unwrap();
+        assert!(test_pos < dep_pos);
+    }
+
+    struct MissingDepRules;
+
+    impl DomainRules for MissingDepRules {
+        fn compute(&mut self, _ctx: &mut DomainContext) {}
+        fn try_attach(&self, _entity: &Entity) -> bool {
+            true
+        }
+        fn on_detach(&mut self, _entity_id: EntityId) {}
+        fn dependencies(&self) -> Vec<&'static str> {
+            vec!["nonexistent"]
+        }
+        fn as_any(&self) -> &dyn Any {
+            self
+        }
+        fn as_any_mut(&mut self) -> &mut dyn Any {
+            self
+        }
+    }
+
+    #[test]
+    #[should_panic(expected = "该域未注册")]
+    fn test_dependency_validation_panics_for_missing_dep() {
+        let mut registry = DomainRegistry::new();
+        registry.register("broken", MissingDepRules);
+        registry.execution_order(); // 应立即 panic
     }
 }

@@ -40,6 +40,7 @@ DUAN 是一个通用仿真体系框架，采用**权威域架构（Domain-Author
 - [自定义域](./guides/custom-domain.md) — 如何实现自定义域，含参考实现
 - [自定义组件](./guides/custom-component.md) — 如何定义组件，含参考设计
 - [惯用法](./guides/idioms.md) — 标记组件、域内状态边界、compute 借用模式等标准写法
+- [测试域逻辑](./guides/testing.md) — 在 `#[test]` 中构建仿真场景、断言事件和组件状态
 
 ### 参考
 

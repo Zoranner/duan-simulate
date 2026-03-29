@@ -8,6 +8,7 @@ use crate::{
     EntityStore, EventChannel, Lifecycle, TimeClock, Timer, TimerCallback, TimerManager,
 };
 use std::collections::HashSet;
+use std::sync::Arc;
 
 /// 世界构建器
 ///
@@ -265,6 +266,50 @@ impl World {
         F: FnMut(&(dyn CustomEvent + 'static), &mut Self),
     {
         self.do_step(dt, &mut handler);
+    }
+
+    /// 执行一步仿真，并收集本帧触发的所有自定义事件
+    ///
+    /// 与 [`step`] 相同，额外将本帧产生的自定义事件以列表形式返回，
+    /// 便于在 `#[test]` 中进行结构化断言，无需使用回调。
+    ///
+    /// # 示例
+    ///
+    /// ```rust,ignore
+    /// let events = world.step_collect(1.0);
+    /// let hit = events.iter().find_map(|e| e.downcast::<HitEvent>());
+    /// assert!(hit.is_some(), "期望碰撞事件被发出");
+    /// ```
+    pub fn step_collect(&mut self, dt: f64) -> Vec<Arc<dyn CustomEvent + 'static>> {
+        let sim_dt = self.clock.tick(dt);
+        if sim_dt == 0.0 {
+            return Vec::new();
+        }
+
+        self.compute_domains(sim_dt);
+
+        let sim_time = self.clock.sim_time;
+        self.check_timers(sim_time);
+
+        let collected = self.drain_and_process_events_collect();
+
+        self.cleanup();
+        collected
+    }
+
+    /// 事件处理阶段（收集模式）：将自定义事件以 Arc 列表返回，同时执行框架内置事件处理
+    fn drain_and_process_events_collect(&mut self) -> Vec<Arc<dyn CustomEvent + 'static>> {
+        let events = self.events.drain();
+        let mut collected = Vec::new();
+
+        for event in events {
+            if let DomainEvent::Custom(event_arc) = &event {
+                collected.push(event_arc.clone());
+            }
+            self.handle_event(event);
+        }
+
+        collected
     }
 
     /// 仿真步内部实现
@@ -539,5 +584,54 @@ mod tests {
         // 没有自定义事件，handler 不会被调用
         assert!(!received);
         assert_eq!(world.sim_time(), 0.1);
+    }
+
+    #[test]
+    fn test_step_collect_returns_custom_events() {
+        use crate::{DomainContext, DomainEvent, DomainRules, Entity, EntityId};
+        use std::any::Any;
+
+        struct PingEvent {
+            value: u32,
+        }
+
+        impl crate::CustomEvent for PingEvent {
+            fn as_any(&self) -> &dyn Any {
+                self
+            }
+            fn event_name(&self) -> &str {
+                "ping"
+            }
+        }
+
+        struct PingDomain;
+
+        impl DomainRules for PingDomain {
+            fn compute(&mut self, ctx: &mut DomainContext) {
+                ctx.emit(DomainEvent::custom(PingEvent { value: 99 }));
+            }
+            fn try_attach(&self, _entity: &Entity) -> bool {
+                true
+            }
+            fn on_detach(&mut self, _entity_id: EntityId) {}
+            fn as_any(&self) -> &dyn Any {
+                self
+            }
+            fn as_any_mut(&mut self) -> &mut dyn Any {
+                self
+            }
+        }
+
+        let mut world = World::builder().with_domain("ping", PingDomain).build();
+
+        let events = world.step_collect(1.0);
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0].event_name(), "ping");
+        let ping = events[0].downcast::<PingEvent>().unwrap();
+        assert_eq!(ping.value, 99);
+
+        // 下一帧事件应独立
+        let events2 = world.step_collect(1.0);
+        assert_eq!(events2.len(), 1);
     }
 }
