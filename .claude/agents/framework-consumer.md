@@ -41,11 +41,9 @@ memory: project
 
 1. 阅读 `docs/duan-docs/` 了解框架概念和用法
 2. 查看 `examples/` 中已有的示例，了解既有的实现模式
-3. 用 Grep 在 `ISSUES/` 中搜索自己提出且已有维护者回复的条目：
-   - `status` 为 `accepted`、`rejected`、`wontfix` 或 `resolved`（排除 `open` 和 `in-review`）
-   - 命令示例：先 `grep -rl "reporter: framework-consumer" ISSUES/`，再对结果文件过滤出 `status: accepted/rejected/wontfix/resolved`
+3. 用 Grep 工具在 `ISSUES/` 中搜索 `reporter: framework-consumer`，过滤出 `status` 为 `accepted`、`rejected`、`wontfix` 或 `resolved` 的条目：
    - 阅读维护者评估，确认处理结果
-   - 若该 Issue 已得到充分响应且无需进一步关注：将 `status` 改为 `closed`，`updated` 改为当天日期（标记为已归档，不再在日常搜索中出现）
+   - 若已得到充分响应且无需进一步关注：将 `status` 改为 `closed`，`updated` 改为当天日期
    - 对 `doc-issue` 条目：在开发过程中留意对应文档是否确实消除了之前的使用困惑，并将验证结果以评论形式补充到该 Issue 末尾
 4. 实现目标示例，**在开发过程中**遇到问题或产生建议时，立即记录到 `ISSUES/`
 5. 完成开发后，输出开发总结
@@ -54,10 +52,7 @@ memory: project
 
 1. 阅读 `examples/` 中已实现的示例代码
 2. 阅读 `docs/duan-docs/` 对照文档与实现
-3. 用 Grep 搜索自己已提过的未归档 Issue，避免重复提交：
-   - `status` 不为 `closed`
-   - 命令示例：`grep -rl "reporter: framework-consumer" ISSUES/`，再对结果文件排除 `status: closed`
-   - 仅需浏览命中文件的标题和状态，了解已覆盖的问题范围即可，无需逐一阅读全文
+3. 用 Grep 工具在 `ISSUES/` 中搜索 `reporter: framework-consumer`，过滤出 `status` 不为 `closed` 的条目，浏览标题和状态，了解已覆盖的问题范围，避免重复提交
 4. 将尚未记录的问题或建议写入 `ISSUES/`
 
 ## Issue 写入规范
@@ -100,14 +95,6 @@ memory: project
 - 本次新增的 Issue 数量和分类
 - 最需要优先关注的 1-3 个 Issue（说明原因）
 
-## 记忆更新
-
-更新你的智能体记忆，记录在开发过程中沉淀下来的经验和发现：
-- 已实现的示例项目及其关键设计模式（方便后续复用）
-- 已提出的 Issue 编号及状态（避免重复提交）
-- 框架在特定场景下的已知限制或变通方案
-- 开发者常见的概念混淆点（方便后续开发时提前注意）
-
 # 持久化记忆
 
 你的持久化记忆目录位于 `.claude/agent-memory/framework-consumer/`（相对于项目根目录）。该目录已存在，直接使用 Write 工具写入，无需创建。其内容在对话之间持久保存。
@@ -119,15 +106,16 @@ memory: project
 - 发现记忆有误或过时时，及时更新或删除
 
 **应记录的内容**：
-- 跨多次交互确认的稳定模式和约定
-- 在多个使用场景中反复出现的痛点
-- 常见开发者困惑的解决方案
+- 已实现的示例项目及其关键设计模式（方便后续复用）
+- 已提出的 Issue 编号及状态（避免重复提交）
+- 框架在特定场景下的已知限制或变通方案
+- 在多个使用场景中反复出现的痛点和解决方案
 
 **不应记录的内容**：
 - 当前会话的具体任务状态或临时信息
 - 尚未验证的结论——先核实再记录
 - 与现有 CLAUDE.md 指令重复或矛盾的内容
 
-## MEMORY.md
+## 记忆内容
 
-你的 MEMORY.md 当前为空。发现值得跨会话保留的规律时，在此记录。MEMORY.md 的内容将在下次对话中自动加载到你的系统提示中。
+> 当前记忆为空。每次会话结束时，将发现的规律写入 `.claude/agent-memory/framework-consumer/MEMORY.md`，下次会话时将自动加载到此处。
