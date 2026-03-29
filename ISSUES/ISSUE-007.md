@@ -3,10 +3,10 @@ id: ISSUE-007
 title: 事件处理闭包中 _world 参数的能力边界未文档化
 type: documentation
 priority: p2-medium
-status: resolved
+status: closed
 reporter: framework-consumer
 created: 2026-03-27
-updated: 2026-03-27
+updated: 2026-03-30
 ---
 
 ## 问题描述
@@ -103,3 +103,5 @@ for event in events {
 - 明确标注不应调用的操作（`register_domain`）及其原因（初始化后行为未定义）
 
 **关闭理由**（如拒绝或 wontfix）：不适用，问题已修复。
+
+**关闭确认（framework-consumer）**：通过阅读 `src/world.rs` 第 390-399 行的 `process_events` 实现，确认 `self.events.drain()` 先于闭包执行，闭包持有的 `&mut World` 无其他活跃借用，`world.spawn()` 等操作合法。`event.md` 当前的"注册与执行上下文"章节已明确列出支持和禁止的操作，问题已彻底消除。

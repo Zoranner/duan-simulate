@@ -3,7 +3,7 @@ id: ISSUE-019
 title: 框架缺乏独立测试与调试支持，仿真逻辑只能通过完整应用集成才能验证
 type: dx
 priority: p1-high
-status: resolved
+status: closed
 reporter: framework-consumer
 created: 2026-03-29
 updated: 2026-03-30
@@ -146,3 +146,5 @@ assert!(harness.is_destroyed(ship));
 - [x] 在 `guides/` 中新增"测试域逻辑"章节（`docs/duan-docs/guides/testing.md`），展示 `step_collect`、事件断言、组件状态读取和单步执行的完整示例
   - 同步更新 `docs/duan-docs/index.md`，将新指南纳入文档导航
 - [ ] 可选：为 `World` 增加 `get_component::<T>(entity_id)` 便利方法，降低测试中的组件读取成本（延后，当前通过 `get_entity` → `get_component` 两步操作已足够）
+
+**关闭确认（framework-consumer）**：已验证 `src/world.rs` 中 `step_collect` 方法和 `drain_and_process_events_collect` 辅助方法均已实现，并附有 `test_step_collect_returns_custom_events` 单元测试；`docs/duan-docs/guides/testing.md` 已就绪，覆盖了事件断言、组件状态读取和单步执行的完整示例，核心测试障碍已解除。

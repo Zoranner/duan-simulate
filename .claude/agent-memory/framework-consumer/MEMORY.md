@@ -8,15 +8,23 @@
 
 | ID | 状态 | 摘要 |
 |---|---|---|
-| ISSUE-001 | resolved | custom-domain.md 运动域依赖描述错误（已修复，文档已验证） |
-| ISSUE-002 | resolved | downcast 便捷方法生命周期签名（修复不完整，见 ISSUE-005） |
-| ISSUE-003 | resolved | event.md 等文档"计算阶段只读"矛盾（已修复，文档已验证） |
-| ISSUE-004 | resolved | overview.md 初始化顺序和 lifecycle.md Initializing 说明（已修复，文档已验证） |
-| ISSUE-005 | resolved | step_with 闭包隐式 'static 是 E0521 真正根源（维护者采纳，修复为明确 'static） |
-| ISSUE-006 | resolved | decisions.md 补充 step_with 闭包签名决策记录 |
-| ISSUE-007 | open | step_with 闭包中 world 参数的能力边界未文档化（事件处理阶段 spawn） |
-| ISSUE-008 | open | 域服务接口定义与跨域调用方式无完整代码示范（registry 查询语法未知） |
-| ISSUE-009 | open | 探测/战斗类域无法枚举全量活跃实体（ctx.entities 仅暴露管辖域内实体） |
+| ISSUE-001 | closed | custom-domain.md 运动域依赖描述错误（已修复，文档已验证） |
+| ISSUE-002 | closed | downcast 便捷方法生命周期签名（修复不完整，见 ISSUE-005） |
+| ISSUE-003 | closed | event.md 等文档"计算阶段只读"矛盾（已修复，文档已验证） |
+| ISSUE-004 | closed | overview.md 初始化顺序和 lifecycle.md Initializing 说明（已修复，文档已验证） |
+| ISSUE-005 | closed | step_with 闭包隐式 'static 是 E0521 真正根源（维护者采纳，修复为明确 'static） |
+| ISSUE-006 | closed | decisions.md 补充 step_with 闭包签名决策记录 |
+| ISSUE-007 | closed | step_with 闭包中 world 参数能力边界——event.md 已补充说明，源码验证可行 |
+| ISSUE-008 | open | 文档"方式二"示例错误：应用 get_domain_by_name_raw()，而非 get_domain_by_name() |
+| ISSUE-009 | closed | ctx.entities.active_entities() 文档已补充说明全量遍历合法 |
+| ISSUE-021 | open | 域写入边界仅靠文档约定，框架无技术机制阻止越权修改（从 ISSUE-009 升级） |
+| ISSUE-022 | open | compute_domains() 使用 unsafe 裸指针，安全性依赖未记录的内存布局不变量 |
+| ISSUE-023 | open | 同层无依赖域执行顺序不确定（HashMap 迭代顺序随机），影响仿真可复现性 |
+| ISSUE-010 | closed | event.md 补充"实体生效时序"说明（当帧 spawn 下帧才生效，文档已验证） |
+| ISSUE-017 | closed | custom-domain.md 补充"域的写入边界"小节（不可 spawn 的原因与推荐模式） |
+| ISSUE-018 | closed | domain.rs compute_execution_order 增加依赖名称合法性校验（panic on missing dep） |
+| ISSUE-019 | closed | world.rs 新增 step_collect(dt)；guides/testing.md 新增测试域逻辑指南 |
+| ISSUE-020 | closed | custom-domain.md 补充 on_attach/on_detach 生命周期钩子完整说明与示例 |
 
 ## 关键开发规律
 

@@ -3,10 +3,10 @@ id: ISSUE-008
 title: 域服务接口的定义与调用方式在文档和示例中均无完整代码示范
 type: documentation
 priority: p1-high
-status: resolved
+status: open
 reporter: framework-consumer
 created: 2026-03-27
-updated: 2026-03-27
+updated: 2026-03-30
 ---
 
 ## 问题描述
@@ -108,3 +108,36 @@ Reporter 猜测的 `ctx.registry.get_domain_as::<T>()` 不存在，但 `ctx.get_
 2. 在 `concepts/domain.md` 的"域上下文"章节，在 `registry` 行的描述中补充具体方法名
 
 **关闭理由**（如拒绝或 wontfix）：
+
+---
+
+## 追加说明（framework-consumer，2026-03-30）
+
+**重新打开原因：文档中"方式二"示例代码存在具体编译错误。**
+
+维护者在 `custom-domain.md` 补充的"方式二：按名称查找"示例如下：
+
+```rust
+if let Some(domain) = ctx.get_domain_by_name("faction") {
+    if let Some(faction) = domain.rules.as_any().downcast_ref::<FactionRules>() {
+        // ...
+    }
+}
+```
+
+但通过阅读 `src/domain.rs` 第 141-144 行可以确认，`ctx.get_domain_by_name<T>()` 是泛型方法，返回的是 `Option<&T>`——即已经转换好的具体类型，不存在 `.rules` 字段。上述代码**无法编译**。
+
+若要获取原始 `&Domain` 再手动向下转型，需要调用的是 `ctx.get_domain_by_name_raw(name)`（第 150-152 行），它返回 `Option<&Domain>`。正确的方式二示例应为：
+
+```rust
+// 方式二：按名称查找（获取原始域引用，再手动向下转型）
+if let Some(domain) = ctx.get_domain_by_name_raw("faction") {
+    if let Some(faction) = domain.rules.as_any().downcast_ref::<FactionRules>() {
+        // 调用服务方法...
+    }
+}
+```
+
+此外，既然 `get_domain_by_name<T>()` 本身已完成类型转换，实际上方式二和方式一的使用场景描述也需要重新澄清——两者的区别在于"按类型查找（有多实例时取最后注册的）"与"按名称精确定位特定实例"，而非"有无手动 downcast"。
+
+**请求维护者修正文档示例，并重新校对两种方式的使用场景说明。**

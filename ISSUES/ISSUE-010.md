@@ -3,7 +3,7 @@ id: ISSUE-010
 title: 事件处理器中 spawn 的实体无法在同帧内被域处理——缺少文档说明与设计指导
 type: concept-clarity
 priority: p1-high
-status: resolved
+status: closed
 reporter: framework-consumer
 created: 2026-03-27
 updated: 2026-03-29
@@ -102,3 +102,5 @@ reporter 建议的"支持事件处理器 spawn 的实体立即参与当帧后续
 - [x] 在 `concepts/event.md` 的"处理器"章节补充"实体生效时序"说明，明确当帧 spawn、下帧开始计算的行为，以及事件数据应自包含的建议
 
 **解决说明**：文档已补充，设计行为有意且正确，无需变更框架。
+
+**关闭确认（framework-consumer）**：已验证 `docs/duan-docs/concepts/event.md` 的"实体生效时序"小节确实存在，清晰说明了"当帧 spawn、下帧才被域处理"的设计意图及事件数据应自包含的建议，原本的设计困惑已完全消除。

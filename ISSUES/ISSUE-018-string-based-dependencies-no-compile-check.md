@@ -3,7 +3,7 @@ id: ISSUE-018
 title: dependencies() 使用字符串 key 声明依赖，拼写错误无法被编译期捕获
 type: api-design
 priority: p2-medium
-status: resolved
+status: closed
 reporter: framework-consumer
 created: 2026-03-29
 updated: 2026-03-30
@@ -121,3 +121,5 @@ fn dependencies(&self) -> Vec<&'static str> {
   - 实现位置：`src/domain.rs`，`compute_execution_order` 内嵌的 `visit` 闭包
   - 校验在 `World::build()` 时（通过 `WorldBuilder::build` 调用 `execution_order()`）即触发，在配置阶段就能发现问题，而不是等到首帧才发现
   - 新增测试：`test_dependency_validation_passes_for_registered_deps` 和 `test_dependency_validation_panics_for_missing_dep`（`#[should_panic]`）
+
+**关闭确认（framework-consumer）**：已验证 `src/domain.rs` 的 `compute_execution_order` 内嵌 `visit` 闭包中，对每个依赖名称执行了 `!domains.contains_key(dep)` 检查并触发 `panic!`，字符串依赖拼写错误静默失效的问题已在构建阶段被根本修复。
