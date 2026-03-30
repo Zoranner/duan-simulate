@@ -1,9 +1,5 @@
-use duan::impl_component;
-
-/// 阵营组件
-///
-/// 0 = 红方，1 = 蓝方
-#[derive(Debug, Clone, Copy)]
+/// 阵营标记（0=红方，1=蓝方）
+#[derive(Debug, Clone)]
 pub struct Faction {
     pub team: u8,
 }
@@ -18,4 +14,4 @@ impl Faction {
     }
 }
 
-impl_component!(Faction, "faction");
+duan::state!(Faction);

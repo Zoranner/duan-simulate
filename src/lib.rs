@@ -1,115 +1,86 @@
 //! DUAN 仿真体系核心框架
 //!
-//! DUAN 采用域驱动设计，以域（Domain）为核心计算单元，构建可扩展的仿真体系。
+//! DUAN 采用域驱动 ECS 架构，以域（Domain）为核心计算单元，构建可扩展的仿真体系。
 //!
-//! # 核心概念
+//! # 三大编程原语
 //!
-//! - **实体（Entity）**：仿真对象的基本单元，是组件的容器
-//! - **组件（Component）**：实体的数据组成单元
-//! - **域（Domain）**：权威计算单元，负责特定领域的计算和判定
-//! - **事件（Event）**：域之间通信的机制
-//! - **世界（World）**：仿真的顶层容器
+//! | 原语      | 角色          | 说明                              |
+//! |---------|-------------|----------------------------------|
+//! | Component | 数据        | 实体附加数据的通用约束，分认知/意图/状态（`Memory`/`Intent`/`State`） |
+//! | Entity  | 意志主体      | 零大小标记类型，通过 tick() 定义行为         |
+//! | Domain  | 状态权威      | 独占写入特定**状态**（`State`）类型，按拓扑顺序执行 |
 //!
-//! # 设计原则
+//! # 三元语义：认知、意图、状态
 //!
-//! - **域是权威**：每个领域有唯一的权威域来裁决
-//! - **域运行时定义**：框架不预设域类型，运行时注册
-//! - **实体自声明归属**：实体声明自己要加入哪些域
-//! - **事件驱动传播**：域的计算结果通过事件系统传播
+//! 中文术语与 Rust trait 一一对应：**认知** → [`Memory`]，**意图** → [`Intent`]，**状态** → [`State`]。
+//!
+//! | 术语（中文） | Rust trait | 实体         | 域          | WorldSnapshot |
+//! |-----------|-----------|------------|------------|---------------|
+//! | 认知 | Memory | 读写         | 不可见       | 不可见          |
+//! | 意图 | Intent | 读写         | 只读（快照）   | 只读            |
+//! | 状态 | State  | 只读（快照）   | 独占写入      | 只读            |
+//!
+//! # 快速开始
+//!
+//! ```rust,ignore
+//! use duan::{World, Entity, EntityContext, Domain, DomainContext, state};
+//!
+//! // 定义 State 组件
+//! #[derive(Clone, Default)]
+//! struct Position { pub x: f64, pub y: f64 }
+//! state!(Position);
+//!
+//! // 定义实体（可无行为）
+//! struct Ball;
+//! impl Entity for Ball {
+//!     fn bundle() -> impl duan::ComponentBundle {
+//!         (Position { x: 0.0, y: 10.0 },)
+//!     }
+//! }
+//!
+//! // 定义域
+//! struct GravityDomain;
+//! impl Domain for GravityDomain {
+//!     type Writes = (Position,);
+//!     type Reads = (Position,);
+//!     type After = ();
+//!     fn compute(&mut self, ctx: &mut DomainContext<Self>, dt: f64) {
+//!         // ...
+//!     }
+//! }
+//!
+//! // 构建并运行
+//! let mut world = World::builder()
+//!     .with_domain(GravityDomain)
+//!     .build();
+//! let ball = world.spawn::<Ball>();
+//! world.step(0.016);
+//! ```
 
 pub mod component;
 pub mod domain;
 pub mod entity;
 pub mod events;
+pub mod scheduler;
+pub mod snapshot;
 pub mod time;
 pub mod world;
 
-// 重导出核心类型
-pub use component::Component;
-pub use domain::{Domain, DomainContext, DomainRegistry, DomainRules};
-pub use entity::{Entity, EntityId, EntityStore, Lifecycle};
-pub use events::{CustomEvent, DestroyCause, DomainEvent, EventChannel, TimerCallback};
+// ──── 核心类型重导出 ──────────────────────────────────────────────────────
+
+pub use component::{Component, ComponentSet, Contains, EntityWritable, Intent, Memory, State};
+pub use domain::context::DomainContext;
+pub use domain::{Domain, DomainSet, InReads, InWrites};
+pub use entity::context::EntityContext;
+pub use entity::id::EntityId;
+pub use entity::{ComponentBundle, Entity, Lifecycle};
+pub use events::{CustomEvent, EventBuffer, FrameworkEvent, TimerCallback};
+pub use snapshot::WorldSnapshot;
 pub use time::{TimeClock, Timer, TimerEvent, TimerManager};
-pub use world::{World, WorldBuilder};
+pub use world::World;
+pub use world::WorldBuilder;
 
-/// 为结构体自动实现 `Component` trait 的全部方法
-///
-/// 生成完整的 `impl Component for $type` 块，包含：
-/// `component_type`、`as_any`、`as_any_mut`、`into_any_boxed` 四个方法。
-///
-/// # 用法
-///
-/// ```rust,ignore
-/// use duan::impl_component;
-///
-/// pub struct Position { pub x: f64, pub y: f64 }
-///
-/// impl_component!(Position, "position");
-/// ```
-///
-/// 宏展开后等价于：
-///
-/// ```rust,ignore
-/// impl Component for Position {
-///     fn component_type(&self) -> &'static str { "position" }
-///     fn as_any(&self) -> &dyn Any { self }
-///     fn as_any_mut(&mut self) -> &mut dyn Any { self }
-///     fn into_any_boxed(self: Box<Self>) -> Box<dyn Any> { self }
-/// }
-/// ```
-#[macro_export]
-macro_rules! impl_component {
-    ($type:ty, $name:expr) => {
-        impl $crate::Component for $type {
-            fn component_type(&self) -> &'static str {
-                $name
-            }
-            fn as_any(&self) -> &dyn ::std::any::Any {
-                self
-            }
-            fn as_any_mut(&mut self) -> &mut dyn ::std::any::Any {
-                self
-            }
-            fn into_any_boxed(
-                self: ::std::boxed::Box<Self>,
-            ) -> ::std::boxed::Box<dyn ::std::any::Any> {
-                self
-            }
-        }
-    };
-}
+// ──── 框架常量 ──────────────────────────────────────────────────────────
 
-/// 为 `DomainRules` 实现类型转换样板（`as_any` / `as_any_mut`）
-///
-/// 在 `impl DomainRules for MyRules { ... }` 块内调用，
-/// 替代手写 `as_any` 和 `as_any_mut` 两个方法。
-///
-/// # 用法
-///
-/// ```rust,ignore
-/// use duan::{DomainRules, domain_rules_any};
-///
-/// impl DomainRules for MotionRules {
-///     fn compute(&mut self, ctx: &mut DomainContext, dt: f64) { ... }
-///     fn try_attach(&mut self, entity: &Entity) -> bool { ... }
-///     fn on_detach(&mut self, _entity_id: EntityId) {}
-///     domain_rules_any!(MotionRules);
-/// }
-/// ```
-#[macro_export]
-macro_rules! domain_rules_any {
-    ($type:ty) => {
-        fn as_any(&self) -> &dyn ::std::any::Any {
-            self
-        }
-        fn as_any_mut(&mut self) -> &mut dyn ::std::any::Any {
-            self
-        }
-    };
-}
-
-/// 仿真体系的版本信息
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
-
-/// 仿真体系的名称
 pub const NAME: &str = "DUAN";

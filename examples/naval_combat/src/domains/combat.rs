@@ -1,197 +1,157 @@
 //! 战斗域
 //!
-//! 遍历有武器的舰船，查询探测域的探测结果，对射程内的目标发出 FireEvent。
-//! 检查 Health 为零时发出 ShipDestroyedEvent。
+//! 在运动域之后执行：
+//! - 更新武器冷却
+//! - 对射程内的敌方目标发出 FireEvent
+//! - 检测已死亡的舰船，发出 ShipDestroyedEvent
 
-use duan::{domain_rules_any, DomainContext, DomainEvent, DomainRules, Entity, EntityId};
-use std::collections::HashMap;
+use duan::{Domain, DomainContext, EntityId};
 
-use crate::components::{Faction, Health, Weapon};
-use crate::domains::{CommandRules, DetectionRules, SpaceRules};
+use crate::components::{Faction, Health, Position, Radar, Weapon};
+use crate::domains::MotionDomain;
 use crate::events::{FireEvent, ShipDestroyedEvent};
 
-pub struct CombatRules {
-    /// 各实体的开火冷却剩余时间（秒）
-    fire_cooldowns: HashMap<EntityId, f64>,
-}
+/// 战斗域
+pub struct CombatDomain;
 
-impl CombatRules {
-    pub fn new() -> Self {
-        Self {
-            fire_cooldowns: HashMap::new(),
-        }
-    }
-}
+impl Domain for CombatDomain {
+    type Writes = (Weapon,);
+    type Reads = (Position, Faction, Radar, Health);
+    type After = (MotionDomain,);
 
-impl Default for CombatRules {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+    fn compute(&mut self, ctx: &mut DomainContext<Self>, dt: f64) {
+        // ── 1. 更新武器冷却 ────────────────────────────────────────────────
+        let ship_ids: Vec<EntityId> = ctx.each_mut::<Weapon>().map(|(id, _)| id).collect();
 
-impl DomainRules for CombatRules {
-    fn compute(&mut self, ctx: &mut DomainContext) {
-        let dt = ctx.dt;
-        let entity_ids: Vec<EntityId> = ctx.own_entity_ids().collect();
-
-        // 更新冷却计时
-        for cd in self.fire_cooldowns.values_mut() {
-            *cd = (*cd - dt).max(0.0);
+        for id in &ship_ids {
+            if let Some(w) = ctx.get_mut::<Weapon>(*id) {
+                w.cooldown_remaining = (w.cooldown_remaining - dt).max(0.0);
+            }
         }
 
-        for entity_id in entity_ids {
-            // 检查 Health 是否归零（仅处理尚未触发销毁的实体）
+        // ── 2. 探测并开火 ──────────────────────────────────────────────────
+        // 从快照读取所有实体位置和阵营（上帧值，只读）
+        let all_positions: Vec<(EntityId, f64, f64)> = ctx
+            .each::<Position>()
+            .map(|(id, p)| (id, p.x, p.y))
+            .collect();
+
+        let all_factions: Vec<(EntityId, u8)> =
+            ctx.each::<Faction>().map(|(id, f)| (id, f.team)).collect();
+
+        for &shooter_id in &ship_ids {
+            // 检查是否已死亡（从快照读取）
             let is_dead = ctx
-                .entities
-                .get(entity_id)
-                .and_then(|e| e.get_component::<Health>())
+                .get::<Health>(shooter_id)
                 .map(|h| h.is_dead())
                 .unwrap_or(false);
-
-            if is_dead && !ctx.entities.is_destroying(entity_id) {
-                // 暂时没有 killer 信息，使用 entity_id 自身占位（HitEvent 已记录 killer）
-                ctx.emit(DomainEvent::custom(ShipDestroyedEvent {
-                    ship_id: entity_id,
-                    killer_id: entity_id,
-                }));
-                continue;
-            }
-
             if is_dead {
                 continue;
             }
 
-            // 读取武器参数
-            let (weapon_range, weapon_damage, weapon_cooldown, missile_speed) = {
-                let entity = match ctx.entities.get(entity_id) {
-                    Some(e) => e,
-                    None => continue,
-                };
-                match entity.get_component::<Weapon>() {
-                    Some(w) => (w.range, w.damage, w.fire_cooldown, w.missile_speed),
-                    None => continue,
-                }
-            };
-            // 导弹射程 = 武器射程的 2.5 倍（保证能飞抵目标但不无限飞行）
-            let missile_range = weapon_range * 2.5;
-
-            // 检查冷却
-            let cooldown = self.fire_cooldowns.entry(entity_id).or_insert(0.0);
-            if *cooldown > 0.0 {
+            // 读取射手位置和阵营
+            let Some((sx, sy)) = all_positions
+                .iter()
+                .find(|(id, _, _)| *id == shooter_id)
+                .map(|(_, x, y)| (*x, *y))
+            else {
                 continue;
-            }
-
-            // 读取本舰阵营
-            let my_team = match ctx
-                .entities
-                .get(entity_id)
-                .and_then(|e| e.get_component::<Faction>())
-                .map(|f| f.team)
-            {
-                Some(t) => t,
-                None => continue,
+            };
+            let Some(my_team) = all_factions
+                .iter()
+                .find(|(id, _)| *id == shooter_id)
+                .map(|(_, t)| *t)
+            else {
+                continue;
             };
 
-            // 优先使用指挥域的指派目标；无指派时退化为个舰探测
-            let assigned = ctx
-                .get_domain::<CommandRules>()
-                .and_then(|c| c.get_assignment(entity_id));
-
-            // 候选目标：指派目标优先，其次是舰队探测池，最后是个舰探测
-            let fleet_detected: Vec<EntityId> = ctx
-                .get_domain::<CommandRules>()
-                .map(|c| c.get_fleet_detected(my_team).iter().copied().collect())
-                .unwrap_or_else(|| {
-                    ctx.get_domain::<DetectionRules>()
-                        .map(|d| d.get_detected(entity_id).iter().copied().collect())
-                        .unwrap_or_default()
-                });
-
-            // 构建有序候选列表：指派目标排首位
-            let mut candidates: Vec<EntityId> = Vec::new();
-            if let Some(t) = assigned {
-                if fleet_detected.contains(&t) {
-                    candidates.push(t);
-                }
-            }
-            for t in &fleet_detected {
-                if !candidates.contains(t) {
-                    candidates.push(*t);
-                }
-            }
-
-            // 对第一个在射程内的目标开火
-            for target_id in candidates {
-                let distance = match ctx.get_domain::<SpaceRules>() {
-                    Some(space) => space.distance(entity_id, target_id, ctx.entities),
-                    None => None,
+            // 读取武器参数（当前帧可变存储）
+            let (range, damage, missile_speed, fire_cd) = {
+                let Some(w) = ctx.get_mut::<Weapon>(shooter_id) else {
+                    continue;
                 };
+                if !w.is_ready() {
+                    continue;
+                }
+                (w.range, w.damage, w.missile_speed, w.fire_cooldown)
+            };
 
-                let distance = match distance {
-                    Some(d) => d,
-                    None => continue,
-                };
+            // 读取雷达范围（从快照）
+            let radar_range = ctx
+                .get::<Radar>(shooter_id)
+                .map(|r| r.range)
+                .unwrap_or(range * 1.5);
 
-                if distance > weapon_range {
+            // 在探测范围内找最近的敌方目标
+            let mut best_target: Option<(EntityId, f64)> = None;
+            for &(target_id, tx, ty) in &all_positions {
+                if target_id == shooter_id {
+                    continue;
+                }
+                let enemy_team = all_factions
+                    .iter()
+                    .find(|(id, _)| *id == target_id)
+                    .map(|(_, t)| *t);
+
+                if enemy_team != Some(1 - my_team) {
+                    continue; // 同阵营或无阵营跳过
+                }
+
+                // 检查目标是否存活
+                let target_dead = ctx
+                    .get::<Health>(target_id)
+                    .map(|h| h.is_dead())
+                    .unwrap_or(true);
+                if target_dead {
                     continue;
                 }
 
-                // 计算朝目标的方向向量
-                let (dir_x, dir_y) = {
-                    let shooter_pos = ctx
-                        .entities
-                        .get(entity_id)
-                        .and_then(|e| e.get_component::<crate::components::Position>())
-                        .map(|p| (p.x, p.y));
-                    let target_pos = ctx
-                        .entities
-                        .get(target_id)
-                        .and_then(|e| e.get_component::<crate::components::Position>())
-                        .map(|p| (p.x, p.y));
+                let dx = tx - sx;
+                let dy = ty - sy;
+                let dist = (dx * dx + dy * dy).sqrt();
 
-                    match (shooter_pos, target_pos) {
-                        (Some((sx, sy)), Some((tx, ty))) => (tx - sx, ty - sy),
-                        _ => continue,
+                if dist <= radar_range && best_target.is_none_or(|(_, d)| dist < d) {
+                    best_target = Some((target_id, dist));
+                }
+            }
+
+            // 对射程内的目标开火
+            if let Some((target_id, dist)) = best_target {
+                if dist <= range {
+                    let Some((tx, ty)) = all_positions
+                        .iter()
+                        .find(|(id, _, _)| *id == target_id)
+                        .map(|(_, x, y)| (*x, *y))
+                    else {
+                        continue;
+                    };
+
+                    if let Some(w) = ctx.get_mut::<Weapon>(shooter_id) {
+                        w.cooldown_remaining = fire_cd;
                     }
-                };
 
-                let (launch_x, launch_y) = ctx
-                    .entities
-                    .get(entity_id)
-                    .and_then(|e| e.get_component::<crate::components::Position>())
-                    .map(|p| (p.x, p.y))
-                    .unwrap_or((0.0, 0.0));
+                    ctx.emit(FireEvent {
+                        shooter_id,
+                        target_id,
+                        launch_x: sx,
+                        launch_y: sy,
+                        dir_x: tx - sx,
+                        dir_y: ty - sy,
+                        missile_speed,
+                        missile_range: range * 2.5,
+                        damage,
+                    });
+                }
+            }
+        }
 
-                ctx.emit(DomainEvent::custom(FireEvent {
-                    shooter_id: entity_id,
-                    target_id,
-                    launch_x,
-                    launch_y,
-                    dir_x,
-                    dir_y,
-                    missile_speed,
-                    missile_range,
-                    damage: weapon_damage,
-                }));
-
-                // 重置冷却，每帧只对一个目标开火
-                *self.fire_cooldowns.entry(entity_id).or_insert(0.0) = weapon_cooldown;
-                break;
+        // ── 3. 检测死亡舰船 ────────────────────────────────────────────────
+        let health_ids: Vec<EntityId> = ctx.entities::<Health>().collect();
+        for id in health_ids {
+            let is_dead = ctx.get::<Health>(id).map(|h| h.is_dead()).unwrap_or(false);
+            if is_dead {
+                ctx.emit(ShipDestroyedEvent { ship_id: id });
             }
         }
     }
-
-    fn try_attach(&self, entity: &Entity) -> bool {
-        entity.has_component::<Weapon>() && entity.has_component::<Health>()
-    }
-
-    fn on_detach(&mut self, entity_id: EntityId) {
-        self.fire_cooldowns.remove(&entity_id);
-    }
-
-    fn dependencies(&self) -> Vec<&'static str> {
-        vec!["command", "detection", "space"]
-    }
-
-    domain_rules_any!(CombatRules);
 }

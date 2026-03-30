@@ -1,9 +1,7 @@
-//! 域模块
-//!
-//! 导出所有域规则类型。
+//! 物理仿真域
 
-pub mod collision;
-pub mod motion;
+mod collision;
+mod motion;
 
-pub use collision::CollisionRules;
-pub use motion::MotionRules;
+pub use collision::CollisionDomain;
+pub use motion::MotionDomain;

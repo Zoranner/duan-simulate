@@ -1,16 +1,12 @@
-use duan::impl_component;
-
-/// 武器组件
-#[derive(Debug, Clone, Copy)]
+/// 武器参数（含开火冷却计时）
+#[derive(Debug, Clone)]
 pub struct Weapon {
-    /// 武器射程
     pub range: f64,
-    /// 导弹命中伤害
     pub damage: f64,
-    /// 开火冷却时间（秒）
     pub fire_cooldown: f64,
-    /// 导弹速度（m/s）
     pub missile_speed: f64,
+    /// 剩余冷却时间（秒）
+    pub cooldown_remaining: f64,
 }
 
 impl Weapon {
@@ -20,8 +16,13 @@ impl Weapon {
             damage,
             fire_cooldown,
             missile_speed,
+            cooldown_remaining: 0.0,
         }
+    }
+
+    pub fn is_ready(&self) -> bool {
+        self.cooldown_remaining <= 0.0
     }
 }
 
-impl_component!(Weapon, "weapon");
+duan::state!(Weapon);

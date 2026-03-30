@@ -1,6 +1,5 @@
-use duan::impl_component;
-
-#[derive(Debug, Clone, Copy)]
+/// 生命值
+#[derive(Debug, Clone)]
 pub struct Health {
     pub current: f64,
     pub max: f64,
@@ -16,4 +15,4 @@ impl Health {
     }
 }
 
-impl_component!(Health, "health");
+duan::state!(Health);

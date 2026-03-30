@@ -1,43 +1,19 @@
-//! 碰撞体组件
-//!
-//! 描述实体的碰撞属性。与 Position 组件配合使用，
-//! 可同时挂载在动态物体（如小球）和静态表面（如地面）上。
-
-use duan::impl_component;
-
-/// 碰撞体组件
-///
-/// 描述实体的碰撞表面参数。与 Position 组件配合：
-/// - 有 Position + Collider + Velocity：动态碰撞体（运动 + 碰撞检测）
-/// - 有 Position + Collider（无 Velocity）：静态碰撞体（静止表面）
-///
-/// 碰撞域通过此组件识别可碰撞的实体。
+/// 碰撞体参数（State：弹性系数和摩擦系数）
 #[derive(Debug, Clone)]
 pub struct Collider {
-    /// 碰撞体名称
-    pub name: String,
-    /// 相对于位置组件的高度偏移（用于地面等水平表面）
-    pub offset_y: f64,
-    /// 弹性系数（碰撞时的能量保留比例，0=完全非弹性，1=完全弹性）
+    /// 弹性系数（0.0 = 完全非弹性，1.0 = 完全弹性）
     pub restitution: f64,
-    /// 摩擦系数（影响水平速度的衰减）
+    /// 摩擦系数
     pub friction: f64,
 }
 
 impl Collider {
-    pub fn new(name: impl Into<String>, offset_y: f64, restitution: f64, friction: f64) -> Self {
+    pub fn new(restitution: f64, friction: f64) -> Self {
         Self {
-            name: name.into(),
-            offset_y,
             restitution,
             friction,
         }
     }
-
-    /// 创建地面碰撞体
-    pub fn ground(restitution: f64, friction: f64) -> Self {
-        Self::new("地面", 0.0, restitution, friction)
-    }
 }
 
-impl_component!(Collider, "collider");
+duan::state!(Collider);

@@ -190,9 +190,7 @@ impl NavalDisplay {
                 "  DUAN 海战仿真{:>56}\n",
                 format!("t = {:6.1}s", frame.sim_time)
             )),
-            Print(
-                "  ──────────────────────────────────────────────────────────────────────\n"
-            ),
+            Print("  ──────────────────────────────────────────────────────────────────────\n"),
             ResetColor,
         )?;
 
@@ -245,7 +243,12 @@ impl NavalDisplay {
 
         for (row, grid_row) in grid.iter().enumerate() {
             // 左边框
-            queue!(out, SetForegroundColor(Color::DarkGrey), Print("  │"), ResetColor)?;
+            queue!(
+                out,
+                SetForegroundColor(Color::DarkGrey),
+                Print("  │"),
+                ResetColor
+            )?;
 
             // 地图内容
             for cell in grid_row.iter() {
@@ -255,7 +258,11 @@ impl NavalDisplay {
                         let color = if *team == 0 { Color::Red } else { Color::Cyan };
                         queue!(out, SetForegroundColor(color))?;
                         let ch = if *is_ship {
-                            if *team == 0 { "▲" } else { "▼" }
+                            if *team == 0 {
+                                "▲"
+                            } else {
+                                "▼"
+                            }
                         } else {
                             "·"
                         };
@@ -265,20 +272,32 @@ impl NavalDisplay {
             }
 
             // 右边框
-            queue!(out, SetForegroundColor(Color::DarkGrey), Print("│  "), ResetColor)?;
+            queue!(
+                out,
+                SetForegroundColor(Color::DarkGrey),
+                Print("│  "),
+                ResetColor
+            )?;
 
             // 右侧状态列（动态，支持任意舰队规模）
             if row == 0 {
-                queue!(out, SetForegroundColor(Color::Red), Print("红方舰队"), ResetColor)?;
+                queue!(
+                    out,
+                    SetForegroundColor(Color::Red),
+                    Print("红方舰队"),
+                    ResetColor
+                )?;
             } else if row >= 1 && row < 1 + red_idxs.len() {
                 render_ship_line(&mut out, frame.ships.get(red_idxs[row - 1]))?;
             } else if row == blue_hdr_row {
-                queue!(out, SetForegroundColor(Color::Cyan), Print("蓝方舰队"), ResetColor)?;
-            } else if row > blue_hdr_row && row <= blue_hdr_row + blue_idxs.len() {
-                render_ship_line(
-                    &mut out,
-                    frame.ships.get(blue_idxs[row - blue_hdr_row - 1]),
+                queue!(
+                    out,
+                    SetForegroundColor(Color::Cyan),
+                    Print("蓝方舰队"),
+                    ResetColor
                 )?;
+            } else if row > blue_hdr_row && row <= blue_hdr_row + blue_idxs.len() {
+                render_ship_line(&mut out, frame.ships.get(blue_idxs[row - blue_hdr_row - 1]))?;
             } else if row == stats_row {
                 queue!(
                     out,
@@ -304,9 +323,7 @@ impl NavalDisplay {
         queue!(
             out,
             SetForegroundColor(Color::DarkGrey),
-            Print(
-                "  ──────────────────────────────────────────────────────────────────────\n"
-            ),
+            Print("  ──────────────────────────────────────────────────────────────────────\n"),
             ResetColor,
             Print("  最近事件:\n"),
         )?;

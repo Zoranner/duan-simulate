@@ -1,13 +1,15 @@
-//! 组件模块
-//!
-//! 导出所有物理仿真所需的组件类型。
+//! 物理仿真组件
 
-pub mod collider;
-pub mod mass;
-pub mod position;
-pub mod static_body;
-pub mod velocity;
+mod bounce_count;
+mod bounce_state;
+mod collider;
+mod mass;
+mod position;
+mod static_body;
+mod velocity;
 
+pub use bounce_count::BounceCount;
+pub use bounce_state::DidBounce;
 pub use collider::Collider;
 pub use mass::Mass;
 pub use position::Position;

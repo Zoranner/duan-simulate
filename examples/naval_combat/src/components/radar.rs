@@ -1,9 +1,5 @@
-use duan::impl_component;
-
-/// 雷达组件
-///
-/// 赋予实体探测能力，域根据 range 判断探测半径。
-#[derive(Debug, Clone, Copy)]
+/// 雷达探测范围
+#[derive(Debug, Clone)]
 pub struct Radar {
     pub range: f64,
 }
@@ -14,4 +10,4 @@ impl Radar {
     }
 }
 
-impl_component!(Radar, "radar");
+duan::state!(Radar);

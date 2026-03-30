@@ -1,18 +1,14 @@
-use duan::{impl_component, EntityId};
+use duan::EntityId;
 
-/// 追踪组件
-///
-/// 赋予导弹追踪目标的能力，运动域据此计算转向。
-#[derive(Debug, Clone, Copy)]
+/// 导弹寻的参数
+#[derive(Debug, Clone)]
 pub struct Seeker {
     pub target_id: EntityId,
-    /// 射手 ID（用于 HitEvent 记录）
     pub shooter_id: EntityId,
-    /// 命中伤害
     pub damage: f64,
-    /// 最大飞行射程（超出后自毁）
+    /// 最大飞行距离（超出则自毁）
     pub max_range: f64,
-    /// 已飞行距离（由运动域每步累加）
+    /// 已飞行距离
     pub traveled: f64,
 }
 
@@ -28,4 +24,4 @@ impl Seeker {
     }
 }
 
-impl_component!(Seeker, "seeker");
+duan::state!(Seeker);

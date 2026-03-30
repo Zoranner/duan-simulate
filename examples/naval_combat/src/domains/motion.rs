@@ -1,105 +1,74 @@
 //! 运动域
 //!
-//! 负责积分更新位置和速度。
-//! 若实体持有 Seeker 组件，先计算朝目标的转向再积分（保持速度大小不变）。
+//! 每帧执行：
+//! 1. **舰船转向**：读取**意图** `Helm`（`Intent`，上帧快照），以 `turn_rate` 限速逐渐转向期望航向
+//! 2. **位置积分**：对所有有**状态** `Velocity` 的实体做欧拉积分
+//! 3. **导弹里程**：累计**状态** `Seeker` 的飞行距离
 
-use duan::{domain_rules_any, DomainContext, DomainRules, Entity, EntityId};
+use duan::{Domain, DomainContext};
 
-use crate::components::{Position, Seeker, Velocity};
+use crate::components::{Helm, Position, Seeker, Velocity};
 
-pub struct MotionRules;
+/// 运动域
+pub struct MotionDomain;
 
-impl MotionRules {
-    pub fn new() -> Self {
-        Self
-    }
-}
+impl Domain for MotionDomain {
+    type Writes = (Position, Velocity, Seeker);
+    type Reads = (Helm,);
+    type After = ();
 
-impl Default for MotionRules {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+    fn compute(&mut self, ctx: &mut DomainContext<Self>, dt: f64) {
+        // ── 1. 舰船转向（读意图 Helm，写状态 Velocity）──────────────────────
+        //
+        // Helm 为意图（Entity 写），域从快照只读，体现「意志 → 状态」数据流。
+        let helms: Vec<_> = ctx
+            .each::<Helm>()
+            .map(|(id, h)| (id, h.heading, h.turn_rate))
+            .collect();
 
-impl DomainRules for MotionRules {
-    fn compute(&mut self, ctx: &mut DomainContext) {
-        let dt = ctx.dt;
-        let entity_ids: Vec<EntityId> = ctx.own_entity_ids().collect();
+        for (id, desired_heading, turn_rate) in helms {
+            let Some((vx, vy)) = ctx.get_mut::<Velocity>(id).map(|v| (v.vx, v.vy)) else {
+                continue;
+            };
+            let speed = (vx * vx + vy * vy).sqrt();
+            if speed < 0.01 {
+                continue;
+            }
+            let current_heading = vy.atan2(vx);
+            let diff = angle_diff(desired_heading, current_heading);
+            let turn = diff.clamp(-turn_rate * dt, turn_rate * dt);
+            let new_heading = current_heading + turn;
+            if let Some(vel) = ctx.get_mut::<Velocity>(id) {
+                vel.vx = new_heading.cos() * speed;
+                vel.vy = new_heading.sin() * speed;
+            }
+        }
 
-        for entity_id in entity_ids {
-            // 只读阶段：提取当前位置、速度、可选的追踪目标
-            let state = {
-                let entity = match ctx.entities.get(entity_id) {
-                    Some(e) => e,
-                    None => continue,
-                };
-                let pos = match entity.get_component::<Position>() {
-                    Some(p) => (p.x, p.y),
-                    None => continue,
-                };
-                let vel = match entity.get_component::<Velocity>() {
-                    Some(v) => (v.vx, v.vy),
-                    None => continue,
-                };
-                let seeker = entity.get_component::<Seeker>().map(|s| s.target_id);
-                (pos, vel, seeker)
+        // ── 2. 位置积分（欧拉法）──────────────────────────────────────────
+        let ids: Vec<_> = ctx.each_mut::<Velocity>().map(|(id, _)| id).collect();
+
+        for id in ids {
+            let Some((vx, vy)) = ctx.get_mut::<Velocity>(id).map(|v| (v.vx, v.vy)) else {
+                continue;
             };
 
-            let ((px, py), (vx, vy), seeker_target) = state;
+            if let Some(pos) = ctx.get_mut::<Position>(id) {
+                pos.x += vx * dt;
+                pos.y += vy * dt;
+            }
 
-            // 若有追踪目标，重新计算速度方向（保持速率）
-            let (new_vx, new_vy) = if let Some(target_id) = seeker_target {
-                let target_pos = ctx
-                    .entities
-                    .get(target_id)
-                    .and_then(|e| e.get_component::<Position>())
-                    .map(|p| (p.x, p.y));
-
-                if let Some((tx, ty)) = target_pos {
-                    let dx = tx - px;
-                    let dy = ty - py;
-                    let dist = (dx * dx + dy * dy).sqrt();
-                    if dist > 1e-6 {
-                        let speed = (vx * vx + vy * vy).sqrt();
-                        (dx / dist * speed, dy / dist * speed)
-                    } else {
-                        (vx, vy)
-                    }
-                } else {
-                    (vx, vy)
-                }
-            } else {
-                (vx, vy)
-            };
-
-            // 可变阶段：写回积分结果
-            if let Some(entity) = ctx.entities.get_mut(entity_id) {
-                if let Some(pos) = entity.get_component_mut::<Position>() {
-                    pos.x = px + new_vx * dt;
-                    pos.y = py + new_vy * dt;
-                }
-                if let Some(vel) = entity.get_component_mut::<Velocity>() {
-                    vel.vx = new_vx;
-                    vel.vy = new_vy;
-                }
-                // 若为导弹，累加本步飞行距离
-                if let Some(seeker) = entity.get_component_mut::<Seeker>() {
-                    let speed = (new_vx * new_vx + new_vy * new_vy).sqrt();
-                    seeker.traveled += speed * dt;
-                }
+            // ── 3. 导弹飞行里程 ──────────────────────────────────────────
+            let speed = (vx * vx + vy * vy).sqrt();
+            if let Some(seeker) = ctx.get_mut::<Seeker>(id) {
+                seeker.traveled += speed * dt;
             }
         }
     }
+}
 
-    fn try_attach(&self, entity: &Entity) -> bool {
-        entity.has_component::<Position>() && entity.has_component::<Velocity>()
-    }
-
-    fn on_detach(&mut self, _entity_id: EntityId) {}
-
-    fn dependencies(&self) -> Vec<&'static str> {
-        vec![]
-    }
-
-    domain_rules_any!(MotionRules);
+/// 计算从 current 到 desired 的最短角度差，结果在 (-π, π] 范围内
+fn angle_diff(desired: f64, current: f64) -> f64 {
+    let pi = std::f64::consts::PI;
+    let diff = desired - current;
+    ((diff + pi).rem_euclid(2.0 * pi)) - pi
 }

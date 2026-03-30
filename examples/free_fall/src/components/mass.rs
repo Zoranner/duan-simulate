@@ -1,21 +1,13 @@
-//! 质量组件
-//!
-//! 描述实体的质量属性。
-
-use duan::impl_component;
-
-/// 质量组件
-///
-/// 存储实体的质量值。
+/// 质量（State：初始设定，域只读）
 #[derive(Debug, Clone)]
 pub struct Mass {
-    pub value: f64,
+    pub kg: f64,
 }
 
 impl Mass {
-    pub fn new(value: f64) -> Self {
-        Self { value }
+    pub fn new(kg: f64) -> Self {
+        Self { kg }
     }
 }
 
-impl_component!(Mass, "mass");
+duan::state!(Mass);

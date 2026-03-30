@@ -124,7 +124,12 @@ impl FreeFallDisplay {
                 queue!(out, Print(format!("  {:5.1} │", h)))?;
                 for col in 0..TRACK_WIDTH {
                     if col == ball_col && row == ball_row {
-                        queue!(out, SetForegroundColor(ball_color), Print(ball_char), ResetColor)?;
+                        queue!(
+                            out,
+                            SetForegroundColor(ball_color),
+                            Print(ball_char),
+                            ResetColor
+                        )?;
                     } else {
                         queue!(out, Print(" "))?;
                     }
@@ -133,12 +138,27 @@ impl FreeFallDisplay {
             } else {
                 // 地面行：坐标轴零点即地面，消除重复的 0.0 标注
                 // 小球在地面时直接坐在 ═ 线上；弹起后 ★ 在原碰撞列短暂残留
-                queue!(out, SetForegroundColor(Color::DarkGreen), Print(format!("  {:5.1} ╘", h)))?;
+                queue!(
+                    out,
+                    SetForegroundColor(Color::DarkGreen),
+                    Print(format!("  {:5.1} ╘", h))
+                )?;
                 for col in 0..TRACK_WIDTH + 1 {
                     if col == ball_col && ball_row == TRACK_ROWS - 1 {
-                        queue!(out, ResetColor, SetForegroundColor(ball_color), Print(ball_char), SetForegroundColor(Color::DarkGreen))?;
+                        queue!(
+                            out,
+                            ResetColor,
+                            SetForegroundColor(ball_color),
+                            Print(ball_char),
+                            SetForegroundColor(Color::DarkGreen)
+                        )?;
                     } else if col == ball_col && frame.just_bounced {
-                        queue!(out, SetForegroundColor(Color::Yellow), Print("★"), SetForegroundColor(Color::DarkGreen))?;
+                        queue!(
+                            out,
+                            SetForegroundColor(Color::Yellow),
+                            Print("★"),
+                            SetForegroundColor(Color::DarkGreen)
+                        )?;
                     } else {
                         queue!(out, Print("═"))?;
                     }

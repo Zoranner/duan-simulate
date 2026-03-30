@@ -1,33 +1,26 @@
 //! 自由落体小球仿真
 //!
-//! 本示例通过模拟小球从 10m 高空自由落体并与地面弹跳，展示 DUAN 框架的四个核心概念：
+//! 展示 DUAN 框架**认知 / 意图 / 状态**三元语义（Rust：`Memory` / `Intent` / `State`）与
+//! 5 阶段仿真循环的完整用法：
 //!
 //! | 概念 | 本示例中的体现 |
-//! |---|---|
-//! | **实体（Entity）** | `ground`（地面）、`ball`（小球） |
-//! | **组件（Component）** | `Position`、`Velocity`、`Mass`、`Collider`、`StaticBody` |
-//! | **域（Domain）** | `MotionRules`（运动积分）、`CollisionRules`（碰撞检测） |
-//! | **事件（Event）** | `GroundCollisionEvent`（碰撞通知） |
+//! |------|--------------|
+//! | **实体（Entity）** | `Ball`（小球）、`Ground`（地面） |
+//! | **组件（Component）** | 按语义分为认知、意图、状态三类（见下表） |
+//! | **域（Domain）** | `MotionDomain`（运动积分）、`CollisionDomain`（碰撞检测） |
+//! | **事件（CustomEvent）** | `GroundCollisionEvent` |
 //!
-//! # 双域架构设计
+//! # 三元语义：认知、意图、状态
 //!
-//! 本示例将物理计算拆分为两个域，每个域只负责自己领域的权威判定：
+//! | 术语（中文） | Rust | 本示例中的组件 |
+//! |-----------|------|---------------|
+//! | **认知** | `Memory` | `BounceCount`：Ball 私有弹跳计数，仅 `Ball::tick()` 更新 |
+//! | **意图** | `Intent` | （本示例未使用） |
+//! | **状态** | `State` | `Position`、`Velocity`、`Collider`、`StaticBody`、`Mass`、`DidBounce` 等；由域权威写入或由初始生成设定 |
 //!
-//! - **运动域（motion）**：无依赖，最先执行。每帧对所有有速度的实体做半隐式欧拉积分，
-//!   直接修改 `Position` 和 `Velocity` 组件。不产生事件——运动本身不需要通知任何人。
-//!
-//! - **碰撞域（collision）**：依赖运动域，后执行。读取运动域更新后的位置，检测穿越地面，
-//!   修正位置/速度（权威写入），并发出 `GroundCollisionEvent` 通知外部观察者。
-//!
-//! 这种分离的好处：碰撞域看到的是运动域"本帧干净输出"，不存在读到上一帧残留状态的问题。
-//! 执行顺序由框架根据 `dependencies()` 声明自动拓扑排序，无需手动编排。
-//!
-//! # 示例可以在此扩展的方向
-//!
-//! - 增加水平初速度（修改 `Velocity::new` 的 vx 参数）观察抛物线运动
-//! - 调整地面的 `restitution`（弹性系数）参数，对比不同材质的弹跳行为
-//! - 增加多个小球实体，观察多实体独立物理计算
+//! `Ball::tick()` 从上帧快照读取**状态** `DidBounce`，更新自身**认知** `BounceCount`；运动与碰撞仍由域驱动，体现「域是状态权威、实体是意志主体」。
 
 pub mod components;
 pub mod domains;
+pub mod entities;
 pub mod events;

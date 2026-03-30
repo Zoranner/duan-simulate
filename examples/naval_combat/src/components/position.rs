@@ -1,6 +1,5 @@
-use duan::impl_component;
-
-#[derive(Debug, Clone, Copy)]
+/// 2D 位置
+#[derive(Debug, Clone, Default)]
 pub struct Position {
     pub x: f64,
     pub y: f64,
@@ -12,4 +11,4 @@ impl Position {
     }
 }
 
-impl_component!(Position, "position");
+duan::state!(Position);

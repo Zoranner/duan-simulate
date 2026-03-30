@@ -1,17 +1,7 @@
-pub mod collision;
-pub mod combat;
-pub mod command;
-pub mod detection;
-pub mod faction;
-pub mod motion;
-pub mod space;
-pub mod steering;
+mod collision;
+mod combat;
+mod motion;
 
-pub use collision::CollisionRules;
-pub use combat::CombatRules;
-pub use command::CommandRules;
-pub use detection::DetectionRules;
-pub use faction::FactionRules;
-pub use motion::MotionRules;
-pub use space::SpaceRules;
-pub use steering::SteeringRules;
+pub use collision::CollisionDomain;
+pub use combat::CombatDomain;
+pub use motion::MotionDomain;
