@@ -1,5 +1,4 @@
-use duan::{CustomEvent, EntityId};
-use std::any::Any;
+use duan::{EntityId, Event};
 
 /// 舰船被摧毁事件
 #[derive(Debug)]
@@ -7,12 +6,8 @@ pub struct ShipDestroyedEvent {
     pub ship_id: EntityId,
 }
 
-impl CustomEvent for ShipDestroyedEvent {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn event_name(&self) -> &str {
+impl Event for ShipDestroyedEvent {
+    fn event_name(&self) -> &'static str {
         "ship_destroyed"
     }
 }

@@ -5,12 +5,14 @@
 //! - 世界快照的只读访问（跨实体读取意图与状态 `Intent` / `State`）
 //! - 事件发送
 //! - 生命周期命令（spawn/destroy）
+//! - 带仿真上下文的统一日志接口
 
 use crate::component::storage::WorldStorage;
 use crate::component::{Component, EntityWritable};
 use crate::entity::id::EntityId;
 use crate::entity::{Entity, PendingSpawn};
-use crate::events::{CustomEvent, EventBuffer};
+use crate::events::{Event, EventBuffer};
+use crate::logging::{FramePhase, LogContext, LoggerHandle};
 use crate::snapshot::WorldSnapshot;
 use crate::time::TimeClock;
 
@@ -34,6 +36,8 @@ pub struct EntityContext<'w> {
     pub(crate) events: &'w mut EventBuffer,
     /// 仿真时钟（只读）
     pub clock: &'w TimeClock,
+    /// 日志句柄
+    pub(crate) logger: &'w LoggerHandle,
     /// 当前帧时间步长（秒）
     pub dt: f64,
 }
@@ -77,9 +81,12 @@ impl<'w> EntityContext<'w> {
 
     // ──── 事件 ──────────────────────────────────────────────────────────
 
-    /// 发送自定义事件
-    pub fn emit<E: CustomEvent + 'static>(&mut self, event: E) {
-        self.events.push_custom(event);
+    /// 发出领域事实事件
+    ///
+    /// 事件将在帧末分发给所有通过 [`WorldBuilder::with_reaction`](crate::WorldBuilder::with_reaction)
+    /// 和 [`WorldBuilder::with_observer`](crate::WorldBuilder::with_observer) 注册的处理器。
+    pub fn emit<E: Event>(&mut self, event: E) {
+        self.events.emit(event);
     }
 
     // ──── 生命周期命令 ───────────────────────────────────────────────────
@@ -90,7 +97,6 @@ impl<'w> EntityContext<'w> {
     pub fn spawn<E: Entity>(&mut self) -> EntityId {
         let bundle = E::bundle();
         self.pending_spawns.push(PendingSpawn::new::<E>(bundle));
-        // 返回占位 ID，实际 ID 在 Phase 5 分配
         EntityId::placeholder()
     }
 
@@ -106,5 +112,48 @@ impl<'w> EntityContext<'w> {
     /// 当前仿真时间（秒）
     pub fn sim_time(&self) -> f64 {
         self.clock.sim_time
+    }
+
+    // ──── 日志接口 ───────────────────────────────────────────────────────
+
+    /// 构造当前实体的 [`LogContext`]（自动补齐 EntityTick 阶段与 entity_id）
+    fn log_ctx(&self) -> LogContext {
+        LogContext::new(
+            FramePhase::EntityTick,
+            self.clock.sim_time,
+            self.dt,
+            self.clock.step_count,
+            Some(self.entity_id),
+        )
+    }
+
+    /// 记录 Trace 级别日志（自动附带实体 ID 和 EntityTick 阶段）
+    pub fn trace(&self, target: &str, message: &str) {
+        self.logger.trace(self.log_ctx(), target, message);
+    }
+
+    /// 记录 Debug 级别日志（自动附带实体 ID 和 EntityTick 阶段）
+    pub fn debug(&self, target: &str, message: &str) {
+        self.logger.debug(self.log_ctx(), target, message);
+    }
+
+    /// 记录 Info 级别日志（自动附带实体 ID 和 EntityTick 阶段）
+    pub fn info(&self, target: &str, message: &str) {
+        self.logger.info(self.log_ctx(), target, message);
+    }
+
+    /// 记录 Warn 级别日志（自动附带实体 ID 和 EntityTick 阶段）
+    pub fn warn(&self, target: &str, message: &str) {
+        self.logger.warn(self.log_ctx(), target, message);
+    }
+
+    /// 记录 Error 级别日志（自动附带实体 ID 和 EntityTick 阶段）
+    pub fn error(&self, target: &str, message: &str) {
+        self.logger.error(self.log_ctx(), target, message);
+    }
+
+    /// 获取底层日志句柄（用于复杂场景，如循环内条件日志）
+    pub fn logger(&self) -> &LoggerHandle {
+        self.logger
     }
 }

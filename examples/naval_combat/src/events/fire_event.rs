@@ -1,5 +1,4 @@
-use duan::{CustomEvent, EntityId};
-use std::any::Any;
+use duan::{EntityId, Event};
 
 /// 开火事件
 #[derive(Debug)]
@@ -15,12 +14,8 @@ pub struct FireEvent {
     pub damage: f64,
 }
 
-impl CustomEvent for FireEvent {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn event_name(&self) -> &str {
+impl Event for FireEvent {
+    fn event_name(&self) -> &'static str {
         "fire"
     }
 }

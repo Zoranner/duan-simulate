@@ -1,5 +1,4 @@
-use duan::CustomEvent;
-use std::any::Any;
+use duan::Event;
 
 /// 小球与地面碰撞事件
 #[derive(Debug)]
@@ -10,12 +9,8 @@ pub struct GroundCollisionEvent {
     pub restitution: f64,
 }
 
-impl CustomEvent for GroundCollisionEvent {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn event_name(&self) -> &str {
+impl Event for GroundCollisionEvent {
+    fn event_name(&self) -> &'static str {
         "ground_collision"
     }
 }

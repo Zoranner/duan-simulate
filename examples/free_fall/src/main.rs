@@ -1,9 +1,9 @@
 //! 自由落体小球仿真 — 主程序
 //!
 //! 本示例展示 DUAN 框架新一代 API 的完整使用流程：
-//! 1. `World::builder().with_domain(...).build()` 构建仿真世界（自动调度分析）
+//! 1. `World::builder().with_domain(...).with_observer(...).build()` 构建仿真世界
 //! 2. `world.spawn_with::<Ball>(...)` 生成带运行时组件的实体
-//! 3. `world.step_with(dt, |event, _| ...)` 推进仿真并处理事件
+//! 3. `world.step(dt)` 推进仿真；事件由注册的 Observer 自动处理
 //! 4. `world.get::<Position>(id)` 读取实体组件状态
 //!
 //! # 两阶段设计
@@ -13,6 +13,7 @@
 
 mod display;
 
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use free_fall::components::{Collider, Position, StaticBody, Velocity};
@@ -28,17 +29,40 @@ const MAX_SIM_TIME: f64 = 20.0;
 const REST_HEIGHT_THRESHOLD: f64 = 0.01;
 const REST_VELOCITY_THRESHOLD: f64 = 0.1;
 
+// 需要在 Observer 闭包与主循环之间共享的仿真状态
+struct AppState {
+    bounce_count: u32,
+    bounce_flash_remaining: u32,
+    last_collision: Option<CollisionSnapshot>,
+}
+
 fn main() {
+    let app = Arc::new(Mutex::new(AppState {
+        bounce_count: 0,
+        bounce_flash_remaining: 0,
+        last_collision: None,
+    }));
+
     // ── 构建仿真世界 ───────────────────────────────────────────────────────
-    // with_domain 注册域；build() 时调度器静态分析写入冲突和循环依赖
+    // GroundCollisionEvent 不需要修改世界，注册为 Observer（只读访问）
     let mut world = duan::World::builder()
         .with_domain(MotionDomain::earth())
         .with_domain(CollisionDomain)
+        .with_observer::<GroundCollisionEvent, _>({
+            let app = Arc::clone(&app);
+            move |e: &GroundCollisionEvent, _world: &duan::World| {
+                let mut s = app.lock().unwrap();
+                s.bounce_count += 1;
+                s.bounce_flash_remaining = 8;
+                s.last_collision = Some(CollisionSnapshot {
+                    impact_velocity: e.impact_velocity,
+                    restitution: e.restitution,
+                });
+            }
+        })
         .build();
 
     // ── 生成实体 ───────────────────────────────────────────────────────────
-    // spawn_with 允许传入运行时确定的组件，与 bundle() 默认值合并
-
     // 地面（y=0）：StaticBody 标记使运动域跳过此实体
     world.spawn_with::<Ground>((
         Position::new(0.0, 0.0),
@@ -55,30 +79,22 @@ fn main() {
 
     // ── Phase 1：全速仿真，缓存帧序列 ─────────────────────────────────────
     let mut frames: Vec<RenderFrame> = Vec::new();
-    let mut bounce_count = 0u32;
-    let mut last_collision: Option<CollisionSnapshot> = None;
-    let mut bounce_flash_remaining: u32 = 0;
 
     let sim_start = Instant::now();
 
     loop {
-        world.step_with(SIM_DT, |event, _world| {
-            if let Some(c) = event.downcast::<GroundCollisionEvent>() {
-                bounce_count += 1;
-                bounce_flash_remaining = 8;
-                last_collision = Some(CollisionSnapshot {
-                    impact_velocity: c.impact_velocity,
-                    restitution: c.restitution,
-                });
-            }
-        });
+        world.step(SIM_DT);
 
         let y = world.get::<Position>(ball_id).map_or(0.0, |p| p.y);
         let vy = world.get::<Velocity>(ball_id).map_or(0.0, |v| v.vy);
         let sim_time = world.sim_time();
 
-        let just_bounced = bounce_flash_remaining > 0;
-        bounce_flash_remaining = bounce_flash_remaining.saturating_sub(1);
+        let (bounce_count, last_collision, just_bounced) = {
+            let mut s = app.lock().unwrap();
+            let just_bounced = s.bounce_flash_remaining > 0;
+            s.bounce_flash_remaining = s.bounce_flash_remaining.saturating_sub(1);
+            (s.bounce_count, s.last_collision, just_bounced)
+        };
 
         frames.push(RenderFrame {
             sim_time,
@@ -122,10 +138,11 @@ fn main() {
     std::thread::sleep(Duration::from_secs(2));
     drop(display);
 
+    let final_bounce_count = app.lock().unwrap().bounce_count;
     println!("=== 仿真统计 ===");
     println!("  仿真时间：{:.2} s", world.sim_time());
     println!("  总帧数：  {}", frames.len());
-    println!("  弹跳次数：{}", bounce_count);
+    println!("  弹跳次数：{}", final_bounce_count);
     println!("  仿真耗时：{:.2} ms", sim_elapsed.as_secs_f64() * 1000.0);
     println!("=== 仿真完成 ===");
 }

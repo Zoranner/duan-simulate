@@ -1,5 +1,4 @@
-use duan::{CustomEvent, EntityId};
-use std::any::Any;
+use duan::{EntityId, Event};
 
 /// 导弹超出射程自毁事件
 #[derive(Debug)]
@@ -7,12 +6,8 @@ pub struct MissileExpiredEvent {
     pub missile_id: EntityId,
 }
 
-impl CustomEvent for MissileExpiredEvent {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn event_name(&self) -> &str {
+impl Event for MissileExpiredEvent {
+    fn event_name(&self) -> &'static str {
         "missile_expired"
     }
 }

@@ -4,30 +4,39 @@
 //! Phase 1  clock.tick(dt)               时间推进
 //! Phase 2  冻结 WorldSnapshot            实体 tick（每实体调用 Entity::tick）
 //! Phase 3  Domain::compute              域计算（按调度顺序）
-//! Phase 4  事件处理                      分发 FrameworkEvent 和 CustomEvent
+//! Phase 4  事件分发                      按类型分发到 Reaction / Observer
 //! Phase 5  生命周期管理                  批量执行 spawn/destroy，清理已销毁实体
 //! ```
 
 use crate::domain::ComputeResources;
 use crate::entity::context::EntityContext;
 use crate::entity::id::EntityId;
-use crate::entity::{Lifecycle, PendingSpawn};
-use crate::events::{CustomEvent, FrameworkEvent};
+use crate::entity::PendingSpawn;
+use crate::events::ArcEvent;
+use crate::logging::{FramePhase, LogLevel};
 use crate::snapshot::WorldSnapshot;
-use std::sync::Arc;
 
 use super::World;
 
-/// 执行一步仿真（带事件回调）
-pub fn run<F>(world: &mut World, dt: f64, handler: &mut F)
-where
-    F: FnMut(&(dyn CustomEvent + 'static), &mut World),
-{
+/// 执行一步仿真
+pub fn run(world: &mut World, dt: f64) {
     // Phase 1：时间推进
     let sim_dt = world.clock.tick(dt);
     if sim_dt == 0.0 {
         return;
     }
+
+    let sim_time = world.clock.sim_time;
+    let step_count = world.clock.step_count;
+
+    world.emit_at(
+        LogLevel::Debug,
+        FramePhase::StepStart,
+        sim_dt,
+        None,
+        "duan::step",
+        &format!("step #{step_count} begin  sim_time={sim_time:.6}  dt={sim_dt:.6}"),
+    );
 
     // Phase 2：冻结快照 + Entity tick
     do_entity_ticks(world, sim_dt);
@@ -35,55 +44,42 @@ where
     // Phase 3：域计算
     do_domain_compute(world, sim_dt);
 
-    // 定时器检查（在域计算后，事件处理前）
+    // 定时器检查（在域计算后、事件分发前）
     world.handle_timer_events();
 
-    // Phase 4：事件处理
+    // Phase 4：事件分发
     let events = world.events.drain();
-    for event in events {
-        if let FrameworkEvent::Custom(arc) = &event {
-            handler(arc.as_ref(), world);
-        }
-        handle_framework_event(world, event);
+    if !events.is_empty() {
+        world.emit_at(
+            LogLevel::Debug,
+            FramePhase::EventDispatch,
+            sim_dt,
+            None,
+            "duan::step",
+            &format!("dispatching {} event(s)", events.len()),
+        );
     }
+    do_event_dispatch(world, events, sim_dt);
 
     // Phase 5：生命周期管理
     world.cleanup_destroyed();
-}
 
-/// 执行一步仿真，收集本帧所有自定义事件
-pub fn run_collect(world: &mut World, dt: f64) -> Vec<Arc<dyn CustomEvent + 'static>> {
-    let sim_dt = world.clock.tick(dt);
-    if sim_dt == 0.0 {
-        return Vec::new();
-    }
-
-    do_entity_ticks(world, sim_dt);
-    do_domain_compute(world, sim_dt);
-    world.handle_timer_events();
-
-    let events = world.events.drain();
-    let mut collected = Vec::new();
-
-    for event in events {
-        if let FrameworkEvent::Custom(arc) = &event {
-            collected.push(arc.clone());
-        }
-        handle_framework_event(world, event);
-    }
-
-    world.cleanup_destroyed();
-    collected
+    world.emit_at(
+        LogLevel::Debug,
+        FramePhase::StepEnd,
+        sim_dt,
+        None,
+        "duan::step",
+        &format!("step #{step_count} end"),
+    );
 }
 
 // ──── Phase 2：Entity tick ────────────────────────────────────────────────
 
 fn do_entity_ticks(world: &mut World, dt: f64) {
-    // 冻结快照（排除认知 Memory 类型）
     let snapshot = WorldSnapshot::build(&world.storage, &world.memory_type_ids);
 
     type TickEntry = (EntityId, fn(&mut EntityContext));
-    // 收集所有活跃实体 ID 和 tick 函数（避免借用冲突）
     let active: Vec<TickEntry> = world
         .entities
         .values()
@@ -91,10 +87,31 @@ fn do_entity_ticks(world: &mut World, dt: f64) {
         .map(|r| (r.id, r.tick_fn))
         .collect();
 
+    let entity_count = active.len();
+    world.emit_at(
+        LogLevel::Trace,
+        FramePhase::EntityTick,
+        dt,
+        None,
+        "duan::step",
+        &format!("entity tick phase: {entity_count} active entities"),
+    );
+
     let mut pending_spawns: Vec<PendingSpawn> = Vec::new();
     let mut pending_destroys: Vec<EntityId> = Vec::new();
 
     for (id, tick_fn) in active {
+        if world.logger().enabled(LogLevel::Trace) {
+            world.emit_at(
+                LogLevel::Trace,
+                FramePhase::EntityTick,
+                dt,
+                Some(id),
+                "duan::entity",
+                &format!("tick {id}"),
+            );
+        }
+
         let mut ctx = EntityContext {
             entity_id: id,
             storage: &mut world.storage,
@@ -103,39 +120,57 @@ fn do_entity_ticks(world: &mut World, dt: f64) {
             pending_destroys: &mut pending_destroys,
             events: &mut world.events,
             clock: &world.clock,
+            logger: &world.logger,
             dt,
         };
         tick_fn(&mut ctx);
     }
 
-    // Phase 5 预处理：立即处理本帧 tick 产生的 spawn/destroy
-    // （spawn 先于 destroy，保证同帧内 spawn 的实体不被立即销毁）
     world.flush_pending(pending_spawns, pending_destroys);
 }
 
 // ──── Phase 3：Domain compute ─────────────────────────────────────────────
 
 fn do_domain_compute(world: &mut World, dt: f64) {
-    // 域计算前再次冻结快照（包含 Entity tick 修改的意图与认知结果）
     let snapshot = WorldSnapshot::build(&world.storage, &world.memory_type_ids);
 
     let order = world.scheduler.execution_order.clone();
 
+    let domain_count = order.len();
+    world.emit_at(
+        LogLevel::Trace,
+        FramePhase::DomainCompute,
+        dt,
+        None,
+        "duan::step",
+        &format!("domain compute phase: {domain_count} domain(s)"),
+    );
+
     let mut pending_spawns: Vec<PendingSpawn> = Vec::new();
     let mut pending_destroys: Vec<EntityId> = Vec::new();
 
-    // 将 domains 暂时移出，使借用检查器能同时访问 world 的其他字段。
-    // compute_dyn 期间 world.domains 为空 Vec；执行后归还。
     let mut domains = std::mem::take(&mut world.domains);
 
-    for idx in order {
-        domains[idx].compute_dyn(ComputeResources {
+    for (pos, idx) in order.iter().enumerate() {
+        if world.logger().enabled(LogLevel::Trace) {
+            world.emit_at(
+                LogLevel::Trace,
+                FramePhase::DomainCompute,
+                dt,
+                None,
+                "duan::domain",
+                &format!("compute domain[{pos}] idx={idx}"),
+            );
+        }
+
+        domains[*idx].compute_dyn(ComputeResources {
             storage: &mut world.storage,
             snapshot: &snapshot,
             pending_spawns: &mut pending_spawns,
             pending_destroys: &mut pending_destroys,
             events: &mut world.events,
             clock: &world.clock,
+            logger: &world.logger,
             dt,
         });
     }
@@ -144,32 +179,40 @@ fn do_domain_compute(world: &mut World, dt: f64) {
     world.flush_pending(pending_spawns, pending_destroys);
 }
 
-// ──── Phase 4：事件处理 ───────────────────────────────────────────────────
+// ──── Phase 4：事件分发 ───────────────────────────────────────────────────
 
-fn handle_framework_event(world: &mut World, event: FrameworkEvent) {
-    match event {
-        FrameworkEvent::EntityDestroyed { entity_id } => {
-            if let Some(rec) = world.entities.get_mut(&entity_id) {
-                rec.lifecycle = Lifecycle::Destroyed;
-            }
+/// 将本帧事实事件按类型分发到反应器和观察器。
+///
+/// 分发顺序：先依次执行所有反应器（可修改世界），再依次执行所有观察器（只读）。
+/// 同一事件类型的多个处理器按注册顺序调用。
+fn do_event_dispatch(world: &mut World, events: Vec<ArcEvent>, sim_dt: f64) {
+    for arc_event in events {
+        if world.logger().enabled(LogLevel::Trace) {
+            world.emit_at(
+                LogLevel::Trace,
+                FramePhase::EventDispatch,
+                sim_dt,
+                None,
+                "duan::step",
+                &format!("dispatch event '{}'", arc_event.name),
+            );
         }
-        FrameworkEvent::Timer {
-            entity_id,
-            timer_id: _,
-            callback,
-        } => match callback {
-            crate::events::TimerCallback::SelfDestruct => {
-                if let Some(rec) = world.entities.get_mut(&entity_id) {
-                    rec.lifecycle = Lifecycle::Destroyed;
-                }
-                world.storage.remove_entity(entity_id);
+
+        // 先执行反应器（可修改世界）
+        // 将 reactions 暂时移出以满足借用检查器，执行后归还
+        if let Some(mut reactions) = world.reactions.remove(&arc_event.type_id) {
+            for r in &mut reactions {
+                r.react_dyn(arc_event.inner.as_ref(), world);
             }
-            crate::events::TimerCallback::Event(inner) => {
-                handle_framework_event(world, *inner);
+            world.reactions.insert(arc_event.type_id, reactions);
+        }
+
+        // 再执行观察器（只读消费）
+        if let Some(mut observers) = world.observers.remove(&arc_event.type_id) {
+            for o in &mut observers {
+                o.observe_dyn(arc_event.inner.as_ref(), world);
             }
-        },
-        FrameworkEvent::Custom(_) => {
-            // 已由调用方的 handler 处理
+            world.observers.insert(arc_event.type_id, observers);
         }
     }
 }

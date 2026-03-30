@@ -9,9 +9,11 @@
 
 mod display;
 
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use duan::EntityId;
+use duan::logging::{FramePhase, LogLevel, LogRecord, LogSink};
+use duan::{EntityId, World};
 use naval_combat::components::{
     Faction, Health, Helm, MissileBody, Position, Radar, Seeker, Velocity, Weapon,
 };
@@ -35,6 +37,17 @@ struct Archetype {
     weapon_cooldown: f64,
     missile_speed: f64,
     turn_rate: f64,
+}
+
+// ── 仿真阶段的可变应用状态 ───────────────────────────────────────────────
+//
+// 多个 Reaction 闭包都需要读写这些字段。用 Arc<Mutex<_>> 共享，
+// 避免了 step_with 回调中把所有变量挤在一个大闭包里的问题。
+struct AppState {
+    log: CombatLog,
+    missile_ids: Vec<EntityId>,
+    total_missiles: u32,
+    total_hits: u32,
 }
 
 fn main() {
@@ -73,11 +86,174 @@ fn main() {
 
     let mut rng = rand::thread_rng();
 
+    // ── 构建统一日志后端 ──────────────────────────────────────────────────
+    // 三层观察语义：
+    //   Info  — 默认层，关键业务事件（开火/命中/击毁/事件分发摘要）
+    //   Debug — 框架层，每帧边界、阶段汇总、定时器、生命周期变化
+    //   Trace — 热路径层，逐实体 tick、逐域执行明细
+    //
+    // level 作为主过滤轴，phase/target 作为辅助屏蔽噪音：
+    //   - Info 过滤掉纯框架 Debug 打点（StepStart/StepEnd 在 Debug 层）
+    //   - Debug 开放全部框架摘要，同时过滤热路径 Trace 明细
+    struct DebugLogger {
+        min_level: LogLevel,
+    }
+    impl LogSink for DebugLogger {
+        fn enabled(&self, level: LogLevel) -> bool {
+            level >= self.min_level
+        }
+        fn log(&self, record: &LogRecord) {
+            use LogLevel::{Debug, Info};
+            let show = match record.level {
+                // Info 层：只显示关键业务事件与事件分发摘要，屏蔽框架阶段噪音
+                Info => match record.phase() {
+                    FramePhase::DomainCompute => record.target.starts_with("naval_combat::"),
+                    FramePhase::EventDispatch => true,
+                    _ => false,
+                },
+                // Debug 层：框架阶段边界、汇总信息全显示（热路径 Trace 由 enabled 拦截）
+                Debug => true,
+                // Warn/Error：始终显示
+                _ => record.level > Debug,
+            };
+            if !show {
+                return;
+            }
+            let entity_str = record
+                .entity_id()
+                .map(|id| format!(" entity={id}"))
+                .unwrap_or_default();
+            eprintln!(
+                "[{:.3}][{:>5}][{:<13}]{} {}",
+                record.sim_time(),
+                record.level,
+                record.phase(),
+                entity_str,
+                record.message
+            );
+        }
+    }
+
+    // ── 初始化应用状态 ────────────────────────────────────────────────────
+    let app = Arc::new(Mutex::new(AppState {
+        log: CombatLog::new(),
+        missile_ids: Vec::new(),
+        total_missiles: 0,
+        total_hits: 0,
+    }));
+
     // ── 构建仿真世界 ──────────────────────────────────────────────────────
-    let mut world = duan::World::builder()
+    //
+    // 使用 with_reaction 注册类型化事件反应器，彻底替代 step_with 的 downcast 链。
+    // 每个反应器负责：① 触发世界副作用（spawn/destroy）② 更新应用状态。
+    let mut world = World::builder()
         .with_domain(MotionDomain)
         .with_domain(CombatDomain)
         .with_domain(CollisionDomain)
+        .with_logger(Arc::new(DebugLogger {
+            min_level: LogLevel::Info,
+        }))
+        // ── FireEvent：生成导弹实体，记录开火日志 ──
+        .with_reaction::<FireEvent, _>({
+            let app = Arc::clone(&app);
+            move |e: &FireEvent, world: &mut World| {
+                let faction_team = world
+                    .get::<Faction>(e.shooter_id)
+                    .map(|f| f.team)
+                    .unwrap_or(99);
+
+                let missile_id = world.spawn_with::<Missile>((
+                    Position::new(e.launch_x, e.launch_y),
+                    Velocity::towards(e.dir_x, e.dir_y, e.missile_speed),
+                    Seeker::new(e.target_id, e.shooter_id, e.damage, e.missile_range),
+                    MissileBody,
+                    Faction { team: faction_team },
+                ));
+
+                let t = world.sim_time();
+                let mut s = app.lock().unwrap();
+                s.total_missiles += 1;
+                s.missile_ids.push(missile_id);
+                let shooter_name = s.log.get_name(e.shooter_id);
+                let target_name = s.log.get_name(e.target_id);
+                s.log
+                    .register_name(missile_id, format!("导弹({}→{})", shooter_name, target_name));
+                s.log.log(
+                    t,
+                    LogEntry::Fire {
+                        shooter: shooter_name,
+                        target: target_name,
+                    },
+                );
+            }
+        })
+        // ── HitEvent：销毁导弹，记录命中日志 ──
+        .with_reaction::<HitEvent, _>({
+            let app = Arc::clone(&app);
+            move |e: &HitEvent, world: &mut World| {
+                let health_after = world
+                    .get::<Health>(e.target_id)
+                    .map(|h| h.current)
+                    .unwrap_or(0.0);
+                world.destroy(e.missile_id);
+
+                let t = world.sim_time();
+                let mut s = app.lock().unwrap();
+                s.total_hits += 1;
+                s.missile_ids.retain(|&id| id != e.missile_id);
+                let target_name = s.log.get_name(e.target_id);
+                world.event_info(
+                    SIM_DT,
+                    "naval_combat::events",
+                    &format!(
+                        "hit target={target_name} damage={} hp_after={health_after:.1}",
+                        e.damage
+                    ),
+                );
+                s.log.log(
+                    t,
+                    LogEntry::Hit {
+                        target: target_name,
+                        damage: e.damage,
+                        health_after,
+                    },
+                );
+            }
+        })
+        // ── ShipDestroyedEvent：销毁舰船实体，记录击沉日志 ──
+        .with_reaction::<ShipDestroyedEvent, _>({
+            let app = Arc::clone(&app);
+            move |e: &ShipDestroyedEvent, world: &mut World| {
+                let t = world.sim_time();
+                let mut s = app.lock().unwrap();
+                let name = s.log.get_name(e.ship_id);
+                world.event_info_for(
+                    SIM_DT,
+                    e.ship_id,
+                    "naval_combat::events",
+                    &format!("ship_destroyed name={name}"),
+                );
+                world.destroy(e.ship_id);
+                s.log.log(t, LogEntry::ShipDestroyed { name });
+            }
+        })
+        // ── MissileExpiredEvent：销毁超寿导弹 ──
+        .with_reaction::<MissileExpiredEvent, _>({
+            let app = Arc::clone(&app);
+            move |e: &MissileExpiredEvent, world: &mut World| {
+                world.event_debug_for(
+                    SIM_DT,
+                    e.missile_id,
+                    "naval_combat::events",
+                    "missile_expired",
+                );
+                world.destroy(e.missile_id);
+                app.lock()
+                    .unwrap()
+                    .missile_ids
+                    .retain(|&id| id != e.missile_id);
+            }
+        })
         .build();
 
     // ── 随机生成舰队 ──────────────────────────────────────────────────────
@@ -113,6 +289,7 @@ fn main() {
             Helm::new(arch.turn_rate),
         ));
 
+        app.lock().unwrap().log.register_name(id, &name);
         ship_ids.push(id);
         ship_names.push(name);
         ship_teams.push(0);
@@ -144,6 +321,7 @@ fn main() {
             Helm::new(arch.turn_rate),
         ));
 
+        app.lock().unwrap().log.register_name(id, &name);
         ship_ids.push(id);
         ship_names.push(name);
         ship_teams.push(1);
@@ -153,85 +331,19 @@ fn main() {
 
     let total_ships = ship_ids.len();
 
-    // ── 仿真状态 ──────────────────────────────────────────────────────────
-    let mut log = CombatLog::new();
-    for (id, name) in ship_ids.iter().zip(ship_names.iter()) {
-        log.register_name(*id, name.as_str());
-    }
-
-    let mut missile_ids: Vec<EntityId> = Vec::new();
-    let mut total_missiles: u32 = 0;
-    let mut total_hits: u32 = 0;
     let mut winner: Option<u8> = None;
 
     // ── Phase 1：全速仿真 ────────────────────────────────────────────────
     let mut frames: Vec<RenderFrame> = Vec::new();
 
     loop {
-        world.step_with(SIM_DT, |event, world| {
-            let t = world.sim_time();
+        world.step(SIM_DT);
 
-            if let Some(e) = event.downcast::<FireEvent>() {
-                total_missiles += 1;
-                let shooter_name = log.get_name(e.shooter_id);
-                let target_name = log.get_name(e.target_id);
-
-                let missile_id = world.spawn_with::<Missile>((
-                    Position::new(e.launch_x, e.launch_y),
-                    Velocity::towards(e.dir_x, e.dir_y, e.missile_speed),
-                    Seeker::new(e.target_id, e.shooter_id, e.damage, e.missile_range),
-                    MissileBody,
-                    Faction {
-                        team: world
-                            .get::<Faction>(e.shooter_id)
-                            .map(|f| f.team)
-                            .unwrap_or(99),
-                    },
-                ));
-
-                missile_ids.push(missile_id);
-                log.register_name(
-                    missile_id,
-                    format!("导弹({}→{})", shooter_name, target_name),
-                );
-                log.log(
-                    t,
-                    LogEntry::Fire {
-                        shooter: shooter_name,
-                        target: target_name,
-                    },
-                );
-            } else if let Some(e) = event.downcast::<HitEvent>() {
-                total_hits += 1;
-                let target_name = log.get_name(e.target_id);
-                let health_after = world
-                    .get::<Health>(e.target_id)
-                    .map(|h| h.current)
-                    .unwrap_or(0.0);
-
-                world.destroy(e.missile_id);
-                missile_ids.retain(|&id| id != e.missile_id);
-
-                log.log(
-                    t,
-                    LogEntry::Hit {
-                        target: target_name,
-                        damage: e.damage,
-                        health_after,
-                    },
-                );
-            } else if let Some(e) = event.downcast::<ShipDestroyedEvent>() {
-                let name = log.get_name(e.ship_id);
-                world.destroy(e.ship_id);
-                log.log(t, LogEntry::ShipDestroyed { name });
-            } else if let Some(e) = event.downcast::<MissileExpiredEvent>() {
-                world.destroy(e.missile_id);
-                missile_ids.retain(|&id| id != e.missile_id);
-            }
-        });
-
-        log.drain_to_recent();
-        missile_ids.retain(|&id| world.is_alive(id));
+        {
+            let mut s = app.lock().unwrap();
+            s.log.drain_to_recent();
+            s.missile_ids.retain(|&id| world.is_alive(id));
+        }
 
         // 收集舰船状态快照
         let mut ships = Vec::with_capacity(total_ships);
@@ -270,27 +382,33 @@ fn main() {
             }
         }
 
-        let missiles: Vec<MissileDot> = missile_ids
-            .iter()
-            .filter_map(|&id| {
-                let pos = world.get::<Position>(id)?;
-                let team = world.get::<Faction>(id).map(|f| f.team).unwrap_or(0);
-                Some(MissileDot {
-                    x: pos.x,
-                    y: pos.y,
-                    team,
+        let missiles: Vec<MissileDot> = {
+            let s = app.lock().unwrap();
+            s.missile_ids
+                .iter()
+                .filter_map(|&id| {
+                    let pos = world.get::<Position>(id)?;
+                    let team = world.get::<Faction>(id).map(|f| f.team).unwrap_or(0);
+                    Some(MissileDot {
+                        x: pos.x,
+                        y: pos.y,
+                        team,
+                    })
                 })
-            })
-            .collect();
+                .collect()
+        };
 
-        let active_missile_count = missiles.len();
+        let (recent_log, total_missiles, total_hits) = {
+            let s = app.lock().unwrap();
+            (s.log.recent_log(), s.total_missiles, s.total_hits)
+        };
 
         frames.push(RenderFrame {
             sim_time: world.sim_time(),
             ships,
             missiles,
-            recent_log: log.recent_log(),
-            active_missile_count,
+            recent_log,
+            active_missile_count: app.lock().unwrap().missile_ids.len(),
             total_missiles,
             total_hits,
         });
@@ -319,6 +437,10 @@ fn main() {
     }
 
     let final_sim_time = world.sim_time();
+    let (final_total_missiles, final_total_hits) = {
+        let s = app.lock().unwrap();
+        (s.total_missiles, s.total_hits)
+    };
 
     // ── Phase 2：按 sim_time 1:1 回放 ────────────────────────────────────
     let display = match NavalDisplay::new() {
@@ -356,8 +478,8 @@ fn main() {
         }
     }
     println!("  仿真时长：{final_sim_time:.1}s");
-    println!("  总发射导弹：{total_missiles}");
-    println!("  总命中次数：{total_hits}");
+    println!("  总发射导弹：{final_total_missiles}");
+    println!("  总命中次数：{final_total_hits}");
     println!("  总帧数：{}", frames.len());
     println!("========================");
 }

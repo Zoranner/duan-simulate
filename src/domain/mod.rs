@@ -57,6 +57,7 @@ pub(crate) struct ComputeResources<'a> {
     pub pending_destroys: &'a mut Vec<crate::entity::id::EntityId>,
     pub events: &'a mut crate::events::EventBuffer,
     pub clock: &'a crate::time::TimeClock,
+    pub logger: &'a crate::logging::LoggerHandle,
     pub dt: f64,
 }
 
@@ -153,14 +154,14 @@ pub trait InReads<D: Domain>: crate::component::Component {}
 
 /// 类型擦除的域接口（框架内部使用）
 pub(crate) trait AnyDomain: Send + Sync {
-    fn type_id(&self) -> TypeId;
+    fn get_type_id(&self) -> TypeId;
     fn writes_type_ids(&self) -> Vec<TypeId>;
     fn after_type_ids(&self) -> Vec<TypeId>;
     fn compute_dyn(&mut self, res: ComputeResources<'_>);
 }
 
 impl<D: Domain> AnyDomain for D {
-    fn type_id(&self) -> TypeId {
+    fn get_type_id(&self) -> TypeId {
         TypeId::of::<D>()
     }
 
@@ -181,6 +182,7 @@ impl<D: Domain> AnyDomain for D {
             pending_destroys: res.pending_destroys,
             events: res.events,
             clock: res.clock,
+            logger: res.logger,
             dt,
             _phantom: std::marker::PhantomData,
         };

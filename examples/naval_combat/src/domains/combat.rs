@@ -141,6 +141,11 @@ impl Domain for CombatDomain {
                         missile_range: range * 2.5,
                         damage,
                     });
+
+                    ctx.info(
+                        "naval_combat::combat",
+                        &format!("fire shooter={shooter_id} -> target={target_id} dist={dist:.1}"),
+                    );
                 }
             }
         }
@@ -150,6 +155,10 @@ impl Domain for CombatDomain {
         for id in health_ids {
             let is_dead = ctx.get::<Health>(id).map(|h| h.is_dead()).unwrap_or(false);
             if is_dead {
+                ctx.info(
+                    "naval_combat::combat",
+                    &format!("ship_destroyed ship_id={id}"),
+                );
                 ctx.emit(ShipDestroyedEvent { ship_id: id });
             }
         }

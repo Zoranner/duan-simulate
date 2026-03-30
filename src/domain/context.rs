@@ -4,13 +4,15 @@
 //! - 类型安全的组件读取（仅限 `D::Reads` 中声明的意图/状态类型）
 //! - 类型安全的组件写入（仅限 `D::Writes` 中声明的状态类型）
 //! - 事件发送、生命周期命令
+//! - 带仿真上下文的统一日志接口
 
 use super::Domain;
 use crate::component::storage::WorldStorage;
 use crate::component::Component;
 use crate::entity::id::EntityId;
 use crate::entity::{Entity, PendingSpawn};
-use crate::events::{CustomEvent, EventBuffer};
+use crate::events::{Event, EventBuffer};
+use crate::logging::{FramePhase, LogContext, LoggerHandle};
 use crate::snapshot::WorldSnapshot;
 use crate::time::TimeClock;
 use std::marker::PhantomData;
@@ -32,6 +34,8 @@ pub struct DomainContext<'w, D: Domain> {
     pub(crate) events: &'w mut EventBuffer,
     /// 仿真时钟（只读）
     pub clock: &'w TimeClock,
+    /// 日志句柄
+    pub(crate) logger: &'w LoggerHandle,
     /// 当前帧时间步长（秒）
     pub dt: f64,
     pub(crate) _phantom: PhantomData<D>,
@@ -85,9 +89,12 @@ impl<'w, D: Domain> DomainContext<'w, D> {
 
     // ──── 事件 ──────────────────────────────────────────────────────────
 
-    /// 发送自定义事件
-    pub fn emit<E: CustomEvent + 'static>(&mut self, event: E) {
-        self.events.push_custom(event);
+    /// 发出领域事实事件
+    ///
+    /// 事件将在帧末分发给所有通过 [`WorldBuilder::with_reaction`](crate::WorldBuilder::with_reaction)
+    /// 和 [`WorldBuilder::with_observer`](crate::WorldBuilder::with_observer) 注册的处理器。
+    pub fn emit<E: Event>(&mut self, event: E) {
+        self.events.emit(event);
     }
 
     // ──── 生命周期命令 ───────────────────────────────────────────────────
@@ -109,5 +116,48 @@ impl<'w, D: Domain> DomainContext<'w, D> {
     /// 当前仿真时间（秒）
     pub fn sim_time(&self) -> f64 {
         self.clock.sim_time
+    }
+
+    // ──── 日志接口 ───────────────────────────────────────────────────────
+
+    /// 构造当前域的 [`LogContext`]
+    fn log_ctx(&self, entity_id: Option<EntityId>) -> LogContext {
+        LogContext::new(
+            FramePhase::DomainCompute,
+            self.clock.sim_time,
+            self.dt,
+            self.clock.step_count,
+            entity_id,
+        )
+    }
+
+    /// 记录 Trace 级别日志（带域阶段上下文）
+    pub fn trace(&self, target: &str, message: &str) {
+        self.logger.trace(self.log_ctx(None), target, message);
+    }
+
+    /// 记录 Debug 级别日志（带域阶段上下文）
+    pub fn debug(&self, target: &str, message: &str) {
+        self.logger.debug(self.log_ctx(None), target, message);
+    }
+
+    /// 记录 Info 级别日志（带域阶段上下文）
+    pub fn info(&self, target: &str, message: &str) {
+        self.logger.info(self.log_ctx(None), target, message);
+    }
+
+    /// 记录 Warn 级别日志（带域阶段上下文）
+    pub fn warn(&self, target: &str, message: &str) {
+        self.logger.warn(self.log_ctx(None), target, message);
+    }
+
+    /// 记录 Error 级别日志（带域阶段上下文）
+    pub fn error(&self, target: &str, message: &str) {
+        self.logger.error(self.log_ctx(None), target, message);
+    }
+
+    /// 获取底层日志句柄（用于复杂场景，如循环内条件日志）
+    pub fn logger(&self) -> &LoggerHandle {
+        self.logger
     }
 }

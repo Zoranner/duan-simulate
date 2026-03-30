@@ -1,5 +1,4 @@
-use duan::{CustomEvent, EntityId};
-use std::any::Any;
+use duan::{EntityId, Event};
 
 /// 探测事件：观察者发现敌方目标
 pub struct DetectionEvent {
@@ -18,11 +17,8 @@ impl DetectionEvent {
     }
 }
 
-impl CustomEvent for DetectionEvent {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-    fn event_name(&self) -> &str {
+impl Event for DetectionEvent {
+    fn event_name(&self) -> &'static str {
         "detection"
     }
 }
