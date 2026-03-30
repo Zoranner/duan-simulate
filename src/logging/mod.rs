@@ -232,6 +232,30 @@ pub trait LogSink: Send + Sync {
     }
 }
 
+// ──── 时间格式化工具 ──────────────────────────────────────────────────────
+
+/// 将仿真时间（秒）格式化为可读时间字符串。
+///
+/// - 不足一天：`HH:MM:SS.mmm`（例如 `01:23:45.678`）
+/// - 满一天及以上：`Nd+HH:MM:SS.mmm`（例如 `2d+14:30:00.000`）
+pub fn fmt_sim_time(secs: f64) -> String {
+    let total_ms = (secs * 1000.0).round() as u64;
+    let ms = total_ms % 1000;
+    let total_secs = total_ms / 1000;
+    let s = total_secs % 60;
+    let total_mins = total_secs / 60;
+    let m = total_mins % 60;
+    let total_hours = total_mins / 60;
+    let h = total_hours % 24;
+    let d = total_hours / 24;
+
+    if d > 0 {
+        format!("{d}d+{h:02}:{m:02}:{s:02}.{ms:03}")
+    } else {
+        format!("{h:02}:{m:02}:{s:02}.{ms:03}")
+    }
+}
+
 // ──── 内置 Logger（默认）──────────────────────────────────────────────────
 
 /// 框架默认日志后端（终端输出）。
@@ -256,8 +280,8 @@ impl Default for Logger {
 impl LogSink for Logger {
     fn log(&self, record: &LogRecord<'_>) {
         eprintln!(
-            "[DUAN][{:.3}s][{:>5}][{:<13}][step={}] {}: {}",
-            record.sim_time(),
+            "[DUAN][{}][{:>5}][{:<13}][step={}] {}: {}",
+            fmt_sim_time(record.sim_time()),
             record.level,
             record.phase(),
             record.step_count(),
@@ -360,5 +384,35 @@ impl LoggerHandle {
 impl fmt::Debug for LoggerHandle {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("LoggerHandle")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::fmt_sim_time;
+
+    #[test]
+    fn test_fmt_sim_time_seconds() {
+        assert_eq!(fmt_sim_time(0.0), "00:00:00.000");
+        assert_eq!(fmt_sim_time(1.5), "00:00:01.500");
+        assert_eq!(fmt_sim_time(59.999), "00:00:59.999");
+    }
+
+    #[test]
+    fn test_fmt_sim_time_minutes() {
+        assert_eq!(fmt_sim_time(90.0), "00:01:30.000");
+        assert_eq!(fmt_sim_time(3599.0), "00:59:59.000");
+    }
+
+    #[test]
+    fn test_fmt_sim_time_hours() {
+        assert_eq!(fmt_sim_time(3600.0), "01:00:00.000");
+        assert_eq!(fmt_sim_time(86399.0), "23:59:59.000");
+    }
+
+    #[test]
+    fn test_fmt_sim_time_days() {
+        assert_eq!(fmt_sim_time(86400.0), "1d+00:00:00.000");
+        assert_eq!(fmt_sim_time(86400.0 * 2.0 + 3661.5), "2d+01:01:01.500");
     }
 }
