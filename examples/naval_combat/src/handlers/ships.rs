@@ -7,21 +7,31 @@ use crate::display::LogEntry;
 use crate::AppState;
 
 pub(super) fn install(builder: WorldBuilder, app: &Arc<Mutex<AppState>>) -> WorldBuilder {
-    builder.on::<ShipDestroyedEvent>(on_ship_destroyed(app))
+    builder.on::<ShipDestroyedEvent>(OnShipDestroyed {
+        app: Arc::clone(app),
+    })
 }
 
-fn on_ship_destroyed(app: &Arc<Mutex<AppState>>) -> impl Reaction<ShipDestroyedEvent> {
-    let app = Arc::clone(app);
-    move |e: &ShipDestroyedEvent, world: &mut World| {
+// ──── 舰船摧毁反应器 ──────────────────────────────────────────────────────────
+
+/// 舰船摧毁反应器
+///
+/// 接收 [`ShipDestroyedEvent`]，销毁舰船实体，记录战斗日志。
+struct OnShipDestroyed {
+    app: Arc<Mutex<AppState>>,
+}
+
+impl Reaction<ShipDestroyedEvent> for OnShipDestroyed {
+    fn react(&mut self, ev: &ShipDestroyedEvent, world: &mut World) {
         let t = world.time();
-        let mut s = app.lock().unwrap();
-        let name = s.log.get_name(e.ship_id);
+        let mut s = self.app.lock().unwrap();
+        let name = s.log.get_name(ev.ship_id);
         world.event_info_for(
-            e.ship_id,
+            ev.ship_id,
             "naval_combat::events",
             &format!("ship_destroyed name={name}"),
         );
-        world.destroy(e.ship_id);
+        world.destroy(ev.ship_id);
         s.log.log(t, LogEntry::ShipDestroyed { name });
     }
 }

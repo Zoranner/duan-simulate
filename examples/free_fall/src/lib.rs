@@ -14,11 +14,13 @@
 //!
 //! | 术语（中文） | Rust | 本示例中的组件 |
 //! |-----------|------|---------------|
-//! | **认知** | `Memory` | `BounceCount`：Ball 私有弹跳计数，仅 `Ball::tick()` 更新 |
-//! | **意图** | `Intent` | （本示例未使用） |
-//! | **状态** | `State` | `Position`、`Velocity`、`Collider`、`StaticBody`、`Mass`、`DidBounce` 等；由域权威写入或由初始生成设定 |
+//! | **认知** | `Memory` | `BounceCount`：Ball 私有弹跳计数，仅 `Ball::tick()` 更新，域和快照不可见 |
+//! | **意图** | `Intent` | `Elasticity`：Ball 每帧声明期望弹性系数，`MotionDomain` 从快照只读 |
+//! | **状态** | `State` | `Position`、`Velocity`、`Collider`、`StaticBody`、`Mass`、`DidBounce` 等；由域权威写入 |
 //!
-//! `Ball::tick()` 从上帧快照读取**状态** `DidBounce`，更新自身**认知** `BounceCount`；运动与碰撞仍由域驱动，体现「域是状态权威、实体是意志主体」。
+//! `Ball::tick()` 感知上帧**状态** `DidBounce`，更新自身**认知** `BounceCount`，
+//! 再据此重新声明**意图** `Elasticity`（弹性随弹跳次数递减）；
+//! `MotionDomain` 读取意图乘以地面参数得出实际弹性系数，体现「实体意志驱动域行为」的完整闭环。
 
 pub mod components;
 pub mod domains;

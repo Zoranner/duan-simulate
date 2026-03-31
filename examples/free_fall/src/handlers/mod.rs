@@ -5,7 +5,6 @@
 //! ```rust,ignore
 //! World::builder()
 //!     .domain(MotionDomain::earth())
-//!     .domain(CollisionDomain)
 //!     .apply(handlers::install(&app))
 //!     .build()
 //! ```

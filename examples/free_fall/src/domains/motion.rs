@@ -1,16 +1,18 @@
 //! 运动域（含碰撞响应）
 //!
-//! 作为 Position / Velocity / DidBounce 的唯一权威域，每帧顺序执行：
+//! 作为 `Position` / `Velocity` / `DidBounce` 的唯一权威域，每帧顺序执行：
 //!
-//! 1. 半隐式欧拉积分（Symplectic Euler）：
+//! 1. 从快照读取小球**意图** `Elasticity`（Ball::tick() 在 Phase 2 写入），
+//!    乘以地面 `Collider.restitution` 得出本帧实际弹性系数。
+//! 2. 半隐式欧拉积分（Symplectic Euler）：
 //!    ```text
 //!    v_new = v_old - g * dt
 //!    p_new = p_old + v_new * dt
 //!    ```
-//! 2. 地面碰撞检测与弹性响应：
-//!    若 y_new ≤ 0 且 vy_new < 0，则将 y 贴地并反转速度（乘以弹性系数）。
-//! 3. 更新 [`DidBounce`] 状态（实体 tick 下帧可通过快照感知）。
-//! 4. 发出 [`GroundCollisionEvent`]（由 handlers 模块中的 Observer 消费）。
+//! 3. 地面碰撞检测与弹性响应：
+//!    若 `y_new ≤ 0` 且 `vy_new < 0`，贴地并按弹性系数反转速度。
+//! 4. 更新 [`DidBounce`] 状态（Ball::tick() 下帧经快照感知）。
+//! 5. 发出 [`GroundCollisionEvent`]（由 handlers 模块中的 Observer 消费）。
 //!
 //! # 为什么合并而不拆分？
 //!
@@ -20,7 +22,7 @@
 
 use duan::{Domain, DomainContext};
 
-use crate::components::{Collider, DidBounce, Position, StaticBody, Velocity};
+use crate::components::{Collider, DidBounce, Elasticity, Position, StaticBody, Velocity};
 use crate::events::GroundCollisionEvent;
 
 /// 运动域：积分 + 碰撞响应
@@ -36,24 +38,25 @@ impl MotionDomain {
 
 impl Domain for MotionDomain {
     type Writes = (Position, Velocity, DidBounce);
-    type Reads = (Collider, StaticBody);
+    /// Reads 同时包含 State（Collider / StaticBody）和 Intent（Elasticity）
+    type Reads = (Collider, StaticBody, Elasticity);
     type After = ();
 
     fn compute(&mut self, ctx: &mut DomainContext<Self>, delta_time: f64) {
         let gravity = self.gravity;
 
-        // 读取地面弹性系数（从快照）
-        let restitution = ctx
+        // 地面弹性系数（State，来自静态体的 Collider，快照只读）
+        let ground_restitution = ctx
             .entities::<StaticBody>()
             .find_map(|id| ctx.get::<Collider>(id))
             .map(|c| c.restitution)
-            .unwrap_or(0.8);
+            .unwrap_or(1.0);
 
         // 收集有 Velocity 的实体 ID（避免多重借用）
         let ids: Vec<_> = ctx.each_mut::<Velocity>().map(|(id, _)| id).collect();
 
         for id in ids {
-            // 取当前 position/velocity（当帧存储）
+            // 当帧存储：读取 position / velocity 当前值
             let Some((x, y)) = ctx.get_mut::<Position>(id).map(|p| (p.x, p.y)) else {
                 continue;
             };
@@ -62,12 +65,20 @@ impl Domain for MotionDomain {
             };
             let vx = ctx.get_mut::<Velocity>(id).map(|v| v.vx).unwrap_or(0.0);
 
+            // 快照读取：小球的意图弹性系数（Intent，由 Ball::tick() 在 Phase 2 写入）
+            // 与地面弹性系数相乘，体现实体意图和物理参数的共同作用
+            let ball_restitution = ctx
+                .get::<Elasticity>(id)
+                .map(|e| e.restitution)
+                .unwrap_or(0.8);
+            let restitution = ball_restitution * ground_restitution;
+
             // Phase 1：半隐式欧拉积分
             let vy_new = vy - gravity * delta_time;
             let y_new = y + vy_new * delta_time;
             let x_new = x + vx * delta_time;
 
-            // Phase 2：每帧先重置 DidBounce
+            // 每帧先重置 DidBounce（默认无弹跳）
             ctx.insert(id, DidBounce { value: false });
 
             if y_new <= 0.0 && vy_new < 0.0 {
