@@ -83,8 +83,8 @@ impl<'w> EntityContext<'w> {
 
     /// 发出领域事实事件
     ///
-    /// 事件将在帧末分发给所有通过 [`WorldBuilder::events`](crate::WorldBuilder::events)
-    /// 注册的处理器（`on` / `observe`）。
+    /// 事件将在帧末分发给所有通过 [`WorldBuilder::on`](crate::WorldBuilder::on) 或
+    /// [`WorldBuilder::observe`](crate::WorldBuilder::observe) 注册的处理器。
     pub fn emit<E: Event>(&mut self, event: E) {
         self.events.emit(event);
     }

@@ -146,7 +146,7 @@ fn main() {
         .domain(MotionDomain)
         .domain(CombatDomain)
         .domain(CollisionDomain)
-        .apply(|b| handlers::install(b, &app))
+        .apply(handlers::install(&app))
         .build();
 
     // ── 随机生成舰队 ──────────────────────────────────────────────────────

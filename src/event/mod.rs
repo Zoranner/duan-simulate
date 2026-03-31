@@ -83,21 +83,21 @@ pub(crate) struct ArcEvent {
 
 // ──── EventBuffer ────────────────────────────────────────────────────────
 
-/// 帧内事件缓冲区
+/// 帧内事件缓冲区（框架内部使用）
 ///
 /// 收集一帧内产生的所有事实事件，在帧末统一分发到反应器和观察器。
-/// 框架内部使用，用户通过 [`crate::EntityContext::emit`] 或
-/// [`crate::DomainContext::emit`] 发送事件。
-pub struct EventBuffer {
+/// 用户通过 [`crate::EntityContext::emit`] 或 [`crate::DomainContext::emit`] 发送事件，
+/// 不需要直接操作此类型。
+pub(crate) struct EventBuffer {
     facts: Vec<ArcEvent>,
 }
 
 impl EventBuffer {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self { facts: Vec::new() }
     }
 
-    /// 发出一个领域事实（框架内部接口，供 Context 调用）
+    /// 发出一个领域事实（供 Context 调用）
     pub(crate) fn emit<E: Event>(&mut self, event: E) {
         let name = event.event_name();
         self.facts.push(ArcEvent {
@@ -109,14 +109,6 @@ impl EventBuffer {
 
     pub(crate) fn drain(&mut self) -> Vec<ArcEvent> {
         std::mem::take(&mut self.facts)
-    }
-
-    pub fn len(&self) -> usize {
-        self.facts.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.facts.is_empty()
     }
 }
 
@@ -248,11 +240,13 @@ mod tests {
     fn test_event_buffer_emit_and_drain() {
         let mut buf = EventBuffer::new();
         buf.emit(PingEvent { value: 42 });
-        assert_eq!(buf.len(), 1);
 
         let events = buf.drain();
         assert_eq!(events.len(), 1);
-        assert!(buf.is_empty());
+
+        // drain 后缓冲区为空
+        let remaining = buf.drain();
+        assert!(remaining.is_empty());
 
         assert_eq!(events[0].name, "ping");
         assert_eq!(events[0].type_id, TypeId::of::<PingEvent>());
@@ -263,8 +257,7 @@ mod tests {
 
     #[test]
     fn test_event_buffer_default_empty() {
-        let buf = EventBuffer::default();
-        assert!(buf.is_empty());
-        assert_eq!(buf.len(), 0);
+        let mut buf = EventBuffer::default();
+        assert!(buf.drain().is_empty());
     }
 }
