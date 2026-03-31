@@ -289,7 +289,7 @@ impl World {
         }
         self.timer_manager.remove_entity(id);
         self.timer_manager
-            .schedule(id, Timer::self_destruct(self.clock.sim_time + delay));
+            .schedule(id, Timer::self_destruct(self.clock.time + delay));
     }
 
     // ──── 查询 ──────────────────────────────────────────────────────────
@@ -319,7 +319,7 @@ impl World {
 
     /// 获取当前仿真时间（秒）
     pub fn time(&self) -> f64 {
-        self.clock.sim_time
+        self.clock.time
     }
 
     /// 获取活跃实体数量
@@ -341,7 +341,7 @@ impl World {
         &self,
         level: LogLevel,
         phase: FramePhase,
-        dt: f64,
+        delta_time: f64,
         entity_id: Option<EntityId>,
         target: &str,
         message: &str,
@@ -350,8 +350,8 @@ impl World {
             level,
             LogContext::new(
                 phase,
-                self.clock.sim_time,
-                dt,
+                self.clock.time,
+                delta_time,
                 self.clock.step_count,
                 entity_id,
             ),
@@ -417,7 +417,7 @@ impl World {
         self.emit_at(
             LogLevel::Trace,
             FramePhase::EventDispatch,
-            self.clock.current_dt,
+            self.clock.current_delta_time,
             None,
             target,
             message,
@@ -430,7 +430,7 @@ impl World {
         self.emit_at(
             LogLevel::Debug,
             FramePhase::EventDispatch,
-            self.clock.current_dt,
+            self.clock.current_delta_time,
             None,
             target,
             message,
@@ -443,7 +443,7 @@ impl World {
         self.emit_at(
             LogLevel::Info,
             FramePhase::EventDispatch,
-            self.clock.current_dt,
+            self.clock.current_delta_time,
             None,
             target,
             message,
@@ -456,7 +456,7 @@ impl World {
         self.emit_at(
             LogLevel::Info,
             FramePhase::EventDispatch,
-            self.clock.current_dt,
+            self.clock.current_delta_time,
             Some(entity_id),
             target,
             message,
@@ -469,7 +469,7 @@ impl World {
         self.emit_at(
             LogLevel::Debug,
             FramePhase::EventDispatch,
-            self.clock.current_dt,
+            self.clock.current_delta_time,
             Some(entity_id),
             target,
             message,
@@ -482,8 +482,8 @@ impl World {
     ///
     /// 运行完整的 5 阶段循环，并在 Phase 4 将帧内事件分发到所有已注册的
     /// 反应器（[`crate::Reaction<E>`](crate::runtime::events::Reaction)）和观察器（[`crate::Observer<E>`](crate::runtime::events::Observer)）。
-    pub fn step(&mut self, dt: f64) {
-        step::run(self, dt);
+    pub fn step(&mut self, delta_time: f64) {
+        step::run(self, delta_time);
     }
 
     /// 暂停仿真
@@ -581,8 +581,8 @@ impl World {
     }
 
     pub(crate) fn handle_timer_events(&mut self) {
-        let sim_time = self.clock.sim_time;
-        let fired = self.timer_manager.check(sim_time);
+        let time = self.clock.time;
+        let fired = self.timer_manager.check(time);
 
         let fired_count = fired.len();
         if fired_count > 0 {

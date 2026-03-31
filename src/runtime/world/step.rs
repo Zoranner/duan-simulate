@@ -1,7 +1,7 @@
 //! 5 阶段仿真循环
 //!
 //! ```text
-//! Phase 1  clock.tick(dt)               时间推进
+//! Phase 1  clock.tick(delta_time)        时间推进
 //! Phase 2  冻结 WorldSnapshot            实体 tick（每实体调用 Entity::tick）
 //! Phase 3  Domain::compute              域计算（按调度顺序）
 //! Phase 4  事件分发                      按类型分发到 Reaction / Observer
@@ -19,31 +19,31 @@ use crate::snapshot::WorldSnapshot;
 use super::World;
 
 /// 执行一步仿真
-pub fn run(world: &mut World, dt: f64) {
+pub fn run(world: &mut World, delta_time: f64) {
     // Phase 1：时间推进
-    let sim_dt = world.clock.tick(dt);
-    if sim_dt == 0.0 {
+    let frame_delta_time = world.clock.tick(delta_time);
+    if frame_delta_time == 0.0 {
         return;
     }
-    world.clock.current_dt = sim_dt;
+    world.clock.current_delta_time = frame_delta_time;
 
-    let sim_time = world.clock.sim_time;
+    let time = world.clock.time;
     let step_count = world.clock.step_count;
 
     world.emit_at(
         LogLevel::Debug,
         FramePhase::StepStart,
-        sim_dt,
+        frame_delta_time,
         None,
         "duan::step",
-        &format!("step #{step_count} begin  sim_time={sim_time:.6}  dt={sim_dt:.6}"),
+        &format!("step #{step_count} begin  time={time:.6}  delta_time={frame_delta_time:.6}"),
     );
 
     // Phase 2：冻结快照 + Entity tick
-    do_entity_ticks(world, sim_dt);
+    do_entity_ticks(world, frame_delta_time);
 
     // Phase 3：域计算
-    do_domain_compute(world, sim_dt);
+    do_domain_compute(world, frame_delta_time);
 
     // 定时器检查（在域计算后、事件分发前）
     world.handle_timer_events();
@@ -54,13 +54,13 @@ pub fn run(world: &mut World, dt: f64) {
         world.emit_at(
             LogLevel::Debug,
             FramePhase::EventDispatch,
-            sim_dt,
+            frame_delta_time,
             None,
             "duan::step",
             &format!("dispatching {} event(s)", events.len()),
         );
     }
-    do_event_dispatch(world, events, sim_dt);
+    do_event_dispatch(world, events, frame_delta_time);
 
     // Phase 5：生命周期管理
     world.cleanup_destroyed();
@@ -68,7 +68,7 @@ pub fn run(world: &mut World, dt: f64) {
     world.emit_at(
         LogLevel::Debug,
         FramePhase::StepEnd,
-        sim_dt,
+        frame_delta_time,
         None,
         "duan::step",
         &format!("step #{step_count} end"),
@@ -77,7 +77,7 @@ pub fn run(world: &mut World, dt: f64) {
 
 // ──── Phase 2：Entity tick ────────────────────────────────────────────────
 
-fn do_entity_ticks(world: &mut World, dt: f64) {
+fn do_entity_ticks(world: &mut World, delta_time: f64) {
     let snapshot = WorldSnapshot::build(&world.storage);
 
     type TickEntry = (EntityId, fn(&mut EntityContext));
@@ -92,7 +92,7 @@ fn do_entity_ticks(world: &mut World, dt: f64) {
     world.emit_at(
         LogLevel::Trace,
         FramePhase::EntityTick,
-        dt,
+        delta_time,
         None,
         "duan::step",
         &format!("entity tick phase: {entity_count} active entities"),
@@ -106,7 +106,7 @@ fn do_entity_ticks(world: &mut World, dt: f64) {
             world.emit_at(
                 LogLevel::Trace,
                 FramePhase::EntityTick,
-                dt,
+                delta_time,
                 Some(id),
                 "duan::entity",
                 &format!("tick {id}"),
@@ -122,7 +122,7 @@ fn do_entity_ticks(world: &mut World, dt: f64) {
             events: &mut world.events,
             clock: &world.clock,
             logger: &world.logger,
-            delta_time: dt,
+            delta_time,
         };
         tick_fn(&mut ctx);
     }
@@ -132,7 +132,7 @@ fn do_entity_ticks(world: &mut World, dt: f64) {
 
 // ──── Phase 3：Domain compute ─────────────────────────────────────────────
 
-fn do_domain_compute(world: &mut World, dt: f64) {
+fn do_domain_compute(world: &mut World, delta_time: f64) {
     let snapshot = WorldSnapshot::build(&world.storage);
 
     let order = world.scheduler.execution_order.clone();
@@ -141,7 +141,7 @@ fn do_domain_compute(world: &mut World, dt: f64) {
     world.emit_at(
         LogLevel::Trace,
         FramePhase::DomainCompute,
-        dt,
+        delta_time,
         None,
         "duan::step",
         &format!("domain compute phase: {domain_count} domain(s)"),
@@ -157,7 +157,7 @@ fn do_domain_compute(world: &mut World, dt: f64) {
             world.emit_at(
                 LogLevel::Trace,
                 FramePhase::DomainCompute,
-                dt,
+                delta_time,
                 None,
                 "duan::domain",
                 &format!("compute domain[{pos}] idx={idx}"),
@@ -172,7 +172,7 @@ fn do_domain_compute(world: &mut World, dt: f64) {
             events: &mut world.events,
             clock: &world.clock,
             logger: &world.logger,
-            delta_time: dt,
+            delta_time,
         });
     }
 
@@ -186,13 +186,13 @@ fn do_domain_compute(world: &mut World, dt: f64) {
 ///
 /// 分发顺序：先依次执行所有反应器（可修改世界），再依次执行所有观察器（只读）。
 /// 同一事件类型的多个处理器按注册顺序调用。
-fn do_event_dispatch(world: &mut World, events: Vec<ArcEvent>, sim_dt: f64) {
+fn do_event_dispatch(world: &mut World, events: Vec<ArcEvent>, frame_delta_time: f64) {
     for arc_event in events {
         if world.logger().enabled(LogLevel::Trace) {
             world.emit_at(
                 LogLevel::Trace,
                 FramePhase::EventDispatch,
-                sim_dt,
+                frame_delta_time,
                 None,
                 "duan::step",
                 &format!("dispatch event '{}'", arc_event.name),

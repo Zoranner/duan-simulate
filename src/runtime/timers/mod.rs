@@ -14,8 +14,8 @@ use std::collections::{BTreeMap, HashMap};
 /// 管理仿真时间，支持暂停、加速等功能。
 #[derive(Clone, Debug)]
 pub struct TimeClock {
-    /// 当前仿真时间（秒）
-    pub sim_time: f64,
+    /// 当前时间（秒）
+    pub time: f64,
     /// 时间比例（1.0 = 实时，2.0 = 2倍速）
     pub time_scale: f64,
     /// 是否运行
@@ -23,49 +23,49 @@ pub struct TimeClock {
     /// 已执行步数
     pub step_count: u64,
     /// 当前帧的仿真步长（由 `step()` 在每帧开始时写入）
-    pub current_dt: f64,
+    pub current_delta_time: f64,
 }
 
 impl TimeClock {
     pub fn new() -> Self {
         Self {
-            sim_time: 0.0,
+            time: 0.0,
             time_scale: 1.0,
             running: true,
             step_count: 0,
-            current_dt: 0.0,
+            current_delta_time: 0.0,
         }
     }
 
     pub fn paused() -> Self {
         Self {
-            sim_time: 0.0,
+            time: 0.0,
             time_scale: 1.0,
             running: false,
             step_count: 0,
-            current_dt: 0.0,
+            current_delta_time: 0.0,
         }
     }
 
     pub fn with_scale(time_scale: f64) -> Self {
         Self {
-            sim_time: 0.0,
+            time: 0.0,
             time_scale,
             running: true,
             step_count: 0,
-            current_dt: 0.0,
+            current_delta_time: 0.0,
         }
     }
 
-    /// 推进时间，返回实际仿真帧时间（暂停时返回 0）
-    pub fn tick(&mut self, real_dt: f64) -> f64 {
+    /// 推进时间，返回本帧实际步长（暂停时返回 0）
+    pub fn tick(&mut self, raw_delta_time: f64) -> f64 {
         if !self.running {
             return 0.0;
         }
-        let sim_dt = real_dt * self.time_scale;
-        self.sim_time += sim_dt;
+        let delta_time = raw_delta_time * self.time_scale;
+        self.time += delta_time;
         self.step_count += 1;
-        sim_dt
+        delta_time
     }
 
     pub fn pause(&mut self) {
@@ -81,7 +81,7 @@ impl TimeClock {
     }
 
     pub fn reset(&mut self) {
-        self.sim_time = 0.0;
+        self.time = 0.0;
         self.step_count = 0;
     }
 
@@ -90,7 +90,7 @@ impl TimeClock {
     }
 
     pub fn now(&self) -> f64 {
-        self.sim_time
+        self.time
     }
 }
 
@@ -105,7 +105,7 @@ impl Default for TimeClock {
 /// 定时器回调
 ///
 /// 当前唯一支持的行为是让实体在定时器触发时自毁。
-/// 若需在特定时间发出事件，推荐在域的 `compute()` 中检查 `ctx.sim_time()` 并主动 `emit`。
+/// 若需在特定时间发出事件，推荐在域的 `compute()` 中检查 `ctx.time()` 并主动 `emit`。
 #[derive(Clone, Debug)]
 pub enum TimerCallback {
     /// 使实体在定时器触发时进入已销毁状态（自毁定时器）
@@ -202,11 +202,11 @@ impl TimerManager {
         self.repeating.retain(|(eid, _), _| *eid != entity_id);
     }
 
-    pub fn check(&mut self, sim_time: f64) -> Vec<TimerEvent> {
+    pub fn check(&mut self, time: f64) -> Vec<TimerEvent> {
         let mut events = Vec::new();
 
         while let Some((&(OrderedFloat(trigger_at), _, _), _)) = self.pending.first_key_value() {
-            if trigger_at > sim_time {
+            if trigger_at > time {
                 break;
             }
 
@@ -219,7 +219,7 @@ impl TimerManager {
             });
 
             if let Some((interval, cb)) = self.repeating.get(&(entity_id, timer_id.clone())) {
-                let next_trigger = sim_time + interval;
+                let next_trigger = time + interval;
                 self.pending.insert(
                     (OrderedFloat(next_trigger), entity_id, timer_id),
                     cb.clone(),

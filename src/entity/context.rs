@@ -109,9 +109,9 @@ impl<'w> EntityContext<'w> {
 
     // ──── 时钟快捷访问 ───────────────────────────────────────────────────
 
-    /// 当前仿真时间（秒）
+    /// 当前时间（秒）
     pub fn time(&self) -> f64 {
-        self.clock.sim_time
+        self.clock.time
     }
 
     // ──── 日志接口 ───────────────────────────────────────────────────────
@@ -120,7 +120,7 @@ impl<'w> EntityContext<'w> {
     fn log_ctx(&self) -> LogContext {
         LogContext::new(
             FramePhase::EntityTick,
-            self.clock.sim_time,
+            self.clock.time,
             self.delta_time,
             self.clock.step_count,
             Some(self.entity_id),

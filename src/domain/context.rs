@@ -144,9 +144,9 @@ impl<'w, D: Domain> DomainContext<'w, D> {
 
     // ──── 时钟快捷访问 ───────────────────────────────────────────────────
 
-    /// 当前仿真时间（秒）
+    /// 当前时间（秒）
     pub fn time(&self) -> f64 {
-        self.clock.sim_time
+        self.clock.time
     }
 
     // ──── 日志接口 ───────────────────────────────────────────────────────
@@ -155,7 +155,7 @@ impl<'w, D: Domain> DomainContext<'w, D> {
     fn log_ctx(&self, entity_id: Option<EntityId>) -> LogContext {
         LogContext::new(
             FramePhase::DomainCompute,
-            self.clock.sim_time,
+            self.clock.time,
             self.delta_time,
             self.clock.step_count,
             entity_id,
