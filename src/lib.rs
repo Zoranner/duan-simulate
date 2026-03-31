@@ -64,11 +64,17 @@
 //!     fn event_name(&self) -> &'static str { "bounce" }
 //! }
 //!
+//! /// 观察器：记录弹跳事件（只读，不修改世界）
+//! struct LogBounce;
+//! impl Observer<BounceEvent> for LogBounce {
+//!     fn observe(&mut self, ev: &BounceEvent, _world: &World) {
+//!         println!("弹跳！冲击速度 = {:.2}", ev.impact_velocity);
+//!     }
+//! }
+//!
 //! let mut world = World::builder()
 //!     .domain(GravityDomain)
-//!     .observe::<BounceEvent>(|ev: &BounceEvent, _: &World| {
-//!         println!("弹跳！冲击速度 = {:.2}", ev.impact_velocity);
-//!     })
+//!     .observe::<BounceEvent>(LogBounce)
 //!     .build();
 //!
 //! let ball = world.spawn::<Ball>();

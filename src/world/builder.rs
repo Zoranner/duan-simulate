@@ -196,3 +196,122 @@ impl Default for WorldBuilder {
         Self::new()
     }
 }
+
+// ──── 测试 ────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::context::DomainContext;
+    use crate::domain::Domain;
+    use crate::event::{Event, Observer, Reaction};
+
+    // ──── 测试桩 ──────────────────────────────────────────────────────────
+
+    #[derive(Clone)]
+    struct Pos;
+    impl crate::Component for Pos {}
+    impl crate::State for Pos {}
+
+    struct NopDomain;
+    impl Domain for NopDomain {
+        type Writes = (Pos,);
+        type Reads = ();
+        type After = ();
+        fn compute(&mut self, _ctx: &mut DomainContext<Self>, _delta_time: f64) {}
+    }
+
+    struct NopEvent;
+    impl Event for NopEvent {
+        fn event_name(&self) -> &'static str {
+            "nop"
+        }
+    }
+
+    struct NopReaction;
+    impl Reaction<NopEvent> for NopReaction {
+        fn react(&mut self, _event: &NopEvent, _world: &mut crate::World) {}
+    }
+
+    struct NopObserver;
+    impl Observer<NopEvent> for NopObserver {
+        fn observe(&mut self, _event: &NopEvent, _world: &crate::World) {}
+    }
+
+    // ──── 帮助函数：仿照 combat::install 的签名 ────────────────────────────
+
+    fn install_nop_domain(builder: WorldBuilder) -> WorldBuilder {
+        builder.domain(NopDomain)
+    }
+
+    fn install_nop_handlers(builder: WorldBuilder) -> WorldBuilder {
+        builder
+            .on::<NopEvent>(NopReaction)
+            .observe::<NopEvent>(NopObserver)
+    }
+
+    // ──── 测试 ────────────────────────────────────────────────────────────
+
+    /// .apply(fn) 与直接链式调用结果等价
+    #[test]
+    fn test_apply_equivalent_to_chain() {
+        let via_chain = WorldBuilder::new()
+            .domain(NopDomain)
+            .on::<NopEvent>(NopReaction)
+            .observe::<NopEvent>(NopObserver)
+            .build();
+
+        let via_apply = WorldBuilder::new()
+            .apply(install_nop_domain)
+            .apply(install_nop_handlers)
+            .build();
+
+        assert_eq!(via_chain.entity_count(), via_apply.entity_count());
+    }
+
+    /// 多个 .apply() 可以依次组合，顺序不变
+    #[test]
+    fn test_apply_compose_multiple_modules() {
+        let world = WorldBuilder::new()
+            .apply(install_nop_domain)
+            .apply(install_nop_handlers)
+            .apply(install_nop_handlers) // 同一事件可注册多个处理器
+            .build();
+
+        // 两次 install_nop_handlers → 2 个 reaction + 2 个 observer
+        let reaction_count = world
+            .reactions
+            .get(&std::any::TypeId::of::<NopEvent>())
+            .map_or(0, |v| v.len());
+        let observer_count = world
+            .observers
+            .get(&std::any::TypeId::of::<NopEvent>())
+            .map_or(0, |v| v.len());
+        assert_eq!(reaction_count, 2);
+        assert_eq!(observer_count, 2);
+    }
+
+    /// .apply() 接受闭包工厂（捕获外部状态后返回 FnOnce）
+    #[test]
+    fn test_apply_closure_factory() {
+        // 模拟 handlers::install(&app) 闭包工厂模式：
+        // install_with_config 返回 impl FnOnce(WorldBuilder) -> WorldBuilder
+        fn install_with_config(emit_value: u32) -> impl FnOnce(WorldBuilder) -> WorldBuilder {
+            move |builder| {
+                let _ = emit_value; // 捕获外部参数
+                builder.domain(NopDomain)
+            }
+        }
+
+        let world = WorldBuilder::new().apply(install_with_config(42)).build();
+
+        assert_eq!(world.entity_count(), 0);
+    }
+
+    /// .apply() 自身是零成本抽象（f(self) 无堆分配）
+    #[test]
+    fn test_apply_identity() {
+        let world = WorldBuilder::new().apply(|b| b).build();
+        assert_eq!(world.entity_count(), 0);
+    }
+}

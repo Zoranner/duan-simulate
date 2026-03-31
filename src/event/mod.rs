@@ -26,14 +26,35 @@
 //!
 //! # 注册与消费
 //!
+//! 推荐为每个处理器定义具名结构体，通过 `.on()` / `.observe()` 注册；
+//! 大型项目将注册逻辑封装到模块的 `install` 函数中，再通过 `.apply()` 组合：
+//!
 //! ```rust,ignore
-//! World::builder()
-//!     .on::<HitEvent>(|ev: &HitEvent, world: &mut World| {
+//! struct DestroyOnHit;
+//! impl Reaction<HitEvent> for DestroyOnHit {
+//!     fn react(&mut self, ev: &HitEvent, world: &mut World) {
 //!         world.destroy(ev.target_id);
-//!     })
-//!     .observe::<HitEvent>(|ev: &HitEvent, _world: &World| {
+//!     }
+//! }
+//!
+//! struct LogHit;
+//! impl Observer<HitEvent> for LogHit {
+//!     fn observe(&mut self, ev: &HitEvent, _world: &World) {
 //!         println!("命中！伤害 = {}", ev.damage);
-//!     })
+//!     }
+//! }
+//!
+//! // 单个模块的装配函数，通过 .apply() 组合到世界中
+//! pub fn install(builder: WorldBuilder) -> WorldBuilder {
+//!     builder
+//!         .on::<HitEvent>(DestroyOnHit)
+//!         .observe::<HitEvent>(LogHit)
+//! }
+//!
+//! // main.rs
+//! World::builder()
+//!     .domain(CombatDomain)
+//!     .apply(combat::install)
 //!     .build()
 //! ```
 
@@ -125,8 +146,8 @@ impl Default for EventBuffer {
 /// 反应器接收特定类型的领域事实事件，并允许修改世界，处理仿真内副作用
 /// （如生成导弹、销毁实体、应用伤害等）。
 ///
-/// 通过 [`crate::WorldBuilder::on`] 注册。可以用闭包直接实现此 trait，
-/// 也可以为具名结构体实现：
+/// 通过 [`crate::WorldBuilder::on`] 注册。为具名结构体实现此 trait，
+/// 再通过模块的 `install` 函数统一组装：
 ///
 /// ```rust,ignore
 /// struct HandleHit;
@@ -136,8 +157,13 @@ impl Default for EventBuffer {
 ///     }
 /// }
 ///
+/// pub fn install(builder: WorldBuilder) -> WorldBuilder {
+///     builder.on::<HitEvent>(HandleHit)
+/// }
+///
+/// // main.rs
 /// World::builder()
-///     .on::<HitEvent>(HandleHit)
+///     .apply(combat::install)
 ///     .build()
 /// ```
 pub trait Reaction<E: Event>: Send + Sync + 'static {
@@ -152,10 +178,20 @@ pub trait Reaction<E: Event>: Send + Sync + 'static {
 /// 通过 [`crate::WorldBuilder::observe`] 注册。
 ///
 /// ```rust,ignore
-/// World::builder()
-///     .observe::<HitEvent>(|ev: &HitEvent, world: &World| {
+/// struct LogHit;
+/// impl Observer<HitEvent> for LogHit {
+///     fn observe(&mut self, ev: &HitEvent, _world: &World) {
 ///         println!("命中！目标 = {:?}，伤害 = {}", ev.target_id, ev.damage);
-///     })
+///     }
+/// }
+///
+/// pub fn install(builder: WorldBuilder) -> WorldBuilder {
+///     builder.observe::<HitEvent>(LogHit)
+/// }
+///
+/// // main.rs
+/// World::builder()
+///     .apply(combat::install)
 ///     .build()
 /// ```
 pub trait Observer<E: Event>: Send + Sync + 'static {
