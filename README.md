@@ -18,7 +18,7 @@
 flowchart LR
     E[实体 Entity]
     D[域 Domain]
-    S[快照 WorldSnapshot]
+    S[快照 Snapshot]
     V[事件 Event]
     H[反应器 Reaction / 观察器 Observer]
 
@@ -65,7 +65,7 @@ flowchart LR
 | 事件 | `Event` | 已发生的一次变化。 |
 | 反应器 | `Reaction` | 对事件作出处理，并允许继续影响世界的单元。 |
 | 观察器 | `Observer` | 只读消费事件的单元。 |
-| 快照 | `WorldSnapshot` | 某一时刻世界的只读截面。 |
+| 快照 | `Snapshot` | 某一时刻世界的只读截面。 |
 
 ## 设计取向
 
