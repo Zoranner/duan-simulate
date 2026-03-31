@@ -6,15 +6,18 @@ use naval_combat::entities::Missile;
 use naval_combat::events::{FireEvent, MissileExpiredEvent};
 
 use crate::display::LogEntry;
-use crate::AppState;
+use crate::SimulationOutput;
 
-pub(super) fn install(builder: WorldBuilder, app: &Arc<Mutex<AppState>>) -> WorldBuilder {
+pub(super) fn install(
+    builder: WorldBuilder,
+    simulation_output: &Arc<Mutex<SimulationOutput>>,
+) -> WorldBuilder {
     builder
         .on::<FireEvent>(OnFire {
-            app: Arc::clone(app),
+            simulation_output: Arc::clone(simulation_output),
         })
         .on::<MissileExpiredEvent>(OnMissileExpired {
-            app: Arc::clone(app),
+            simulation_output: Arc::clone(simulation_output),
         })
 }
 
@@ -24,7 +27,7 @@ pub(super) fn install(builder: WorldBuilder, app: &Arc<Mutex<AppState>>) -> Worl
 ///
 /// 接收 [`FireEvent`]，在世界中生成导弹实体，并更新展示层追踪列表。
 struct OnFire {
-    app: Arc<Mutex<AppState>>,
+    simulation_output: Arc<Mutex<SimulationOutput>>,
 }
 
 impl Reaction<FireEvent> for OnFire {
@@ -43,7 +46,7 @@ impl Reaction<FireEvent> for OnFire {
         ));
 
         let t = world.time();
-        let mut s = self.app.lock().unwrap();
+        let mut s = self.simulation_output.lock().unwrap();
         s.total_missiles += 1;
         s.missile_ids.push(missile_id);
         let shooter_name = s.log.get_name(ev.shooter_id);
@@ -66,14 +69,14 @@ impl Reaction<FireEvent> for OnFire {
 ///
 /// 接收 [`MissileExpiredEvent`]，销毁超出追踪范围的导弹实体。
 struct OnMissileExpired {
-    app: Arc<Mutex<AppState>>,
+    simulation_output: Arc<Mutex<SimulationOutput>>,
 }
 
 impl Reaction<MissileExpiredEvent> for OnMissileExpired {
     fn react(&mut self, ev: &MissileExpiredEvent, world: &mut World) {
         world.event_debug_for(ev.missile_id, "naval_combat::events", "missile_expired");
         world.destroy(ev.missile_id);
-        self.app
+        self.simulation_output
             .lock()
             .unwrap()
             .missile_ids

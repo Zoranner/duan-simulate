@@ -1,7 +1,7 @@
 //! 自由落体小球仿真 — 主程序
 //!
 //! 本示例展示 DUAN 框架新一代 API 的完整使用流程：
-//! 1. `World::builder().domain(...).apply(handlers::install(&app)).build()` 构建仿真世界
+//! 1. `World::builder().domain(...).apply(handlers::install(&simulation_output)).build()` 构建仿真世界
 //! 2. `world.spawn_with::<Ball>(...)` 生成带运行时组件的实体
 //! 3. `world.step(delta_time)` 推进仿真；事件由注册的 Observer 自动处理
 //! 4. `world.get::<Position>(id)` 读取实体组件状态
@@ -29,15 +29,15 @@ const MAX_TIME: f64 = 20.0;
 const REST_HEIGHT_THRESHOLD: f64 = 0.01;
 const REST_VELOCITY_THRESHOLD: f64 = 0.1;
 
-// 在事件处理器（handlers 模块）与主循环之间共享的展示层状态
-pub(crate) struct AppState {
+// 在事件处理器（handlers 模块）与主循环之间共享的仿真输出
+pub(crate) struct SimulationOutput {
     pub(crate) bounce_count: u32,
     pub(crate) bounce_flash_remaining: u32,
     pub(crate) last_collision: Option<CollisionSnapshot>,
 }
 
 fn main() {
-    let app = Arc::new(Mutex::new(AppState {
+    let simulation_output = Arc::new(Mutex::new(SimulationOutput {
         bounce_count: 0,
         bounce_flash_remaining: 0,
         last_collision: None,
@@ -47,7 +47,7 @@ fn main() {
     // handlers::install 将所有事件处理器封装为独立模块，通过 .apply() 装配
     let mut world = duan::World::builder()
         .domain(MotionDomain::earth())
-        .apply(handlers::install(&app))
+        .apply(handlers::install(&simulation_output))
         .build();
 
     // ── 生成实体 ───────────────────────────────────────────────────────────
@@ -78,7 +78,7 @@ fn main() {
         let time = world.time();
 
         let (bounce_count, last_collision, just_bounced) = {
-            let mut s = app.lock().unwrap();
+            let mut s = simulation_output.lock().unwrap();
             let just_bounced = s.bounce_flash_remaining > 0;
             s.bounce_flash_remaining = s.bounce_flash_remaining.saturating_sub(1);
             (s.bounce_count, s.last_collision, just_bounced)
@@ -126,7 +126,7 @@ fn main() {
     std::thread::sleep(Duration::from_secs(2));
     drop(display);
 
-    let final_bounce_count = app.lock().unwrap().bounce_count;
+    let final_bounce_count = simulation_output.lock().unwrap().bounce_count;
     println!("=== 仿真统计 ===");
     println!("  仿真时间：{:.2} s", world.time());
     println!("  总帧数：  {}", frames.len());

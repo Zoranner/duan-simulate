@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 
 use duan::WorldBuilder;
 
-use crate::AppState;
+use crate::SimulationOutput;
 
 mod combat;
 mod missiles;
@@ -15,15 +15,15 @@ mod ships;
 ///
 /// ```rust,ignore
 /// World::builder()
-///     .apply(handlers::install(&app))
+///     .apply(handlers::install(&simulation_output))
 ///     .build()
 /// ```
 pub(crate) fn install(
-    app: &Arc<Mutex<AppState>>,
+    simulation_output: &Arc<Mutex<SimulationOutput>>,
 ) -> impl FnOnce(WorldBuilder) -> WorldBuilder + '_ {
     |builder| {
-        let builder = missiles::install(builder, app);
-        let builder = combat::install(builder, app);
-        ships::install(builder, app)
+        let builder = missiles::install(builder, simulation_output);
+        let builder = combat::install(builder, simulation_output);
+        ships::install(builder, simulation_output)
     }
 }

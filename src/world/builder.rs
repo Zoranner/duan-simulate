@@ -296,7 +296,7 @@ mod tests {
     /// .apply() 接受闭包工厂（捕获外部状态后返回 FnOnce）
     #[test]
     fn test_apply_closure_factory() {
-        // 模拟 handlers::install(&app) 闭包工厂模式：
+        // 模拟 handlers::install(&simulation_output) 闭包工厂模式：
         // install_with_config 返回 impl FnOnce(WorldBuilder) -> WorldBuilder
         fn install_with_config(emit_value: u32) -> impl FnOnce(WorldBuilder) -> WorldBuilder {
             move |builder| {

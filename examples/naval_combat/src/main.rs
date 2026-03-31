@@ -26,8 +26,8 @@ const DELTA_TIME: f64 = 0.05;
 const MAX_TIME: f64 = 120.0;
 const SHIPS_PER_SIDE: usize = 5;
 
-/// 呈现层共享状态，由多个 Reaction 闭包共同读写
-pub(crate) struct AppState {
+/// 呈现层共享的仿真输出，由多个事件处理器共同读写
+pub(crate) struct SimulationOutput {
     pub(crate) log: CombatLog,
     pub(crate) missile_ids: Vec<EntityId>,
     pub(crate) total_missiles: u32,
@@ -130,8 +130,8 @@ fn main() {
         }
     }
 
-    // ── 初始化应用状态 ────────────────────────────────────────────────────
-    let app = Arc::new(Mutex::new(AppState {
+    // ── 初始化展示模型 ────────────────────────────────────────────────────
+    let simulation_output = Arc::new(Mutex::new(SimulationOutput {
         log: CombatLog::new(),
         missile_ids: Vec::new(),
         total_missiles: 0,
@@ -146,7 +146,7 @@ fn main() {
         .domain(MotionDomain)
         .domain(CombatDomain)
         .domain(CollisionDomain)
-        .apply(handlers::install(&app))
+        .apply(handlers::install(&simulation_output))
         .build();
 
     // ── 随机生成舰队 ──────────────────────────────────────────────────────
@@ -182,7 +182,7 @@ fn main() {
             Helm::new(arch.turn_rate),
         ));
 
-        app.lock().unwrap().log.register_name(id, &name);
+        simulation_output.lock().unwrap().log.register_name(id, &name);
         ship_ids.push(id);
         ship_names.push(name);
         ship_teams.push(0);
@@ -214,7 +214,7 @@ fn main() {
             Helm::new(arch.turn_rate),
         ));
 
-        app.lock().unwrap().log.register_name(id, &name);
+        simulation_output.lock().unwrap().log.register_name(id, &name);
         ship_ids.push(id);
         ship_names.push(name);
         ship_teams.push(1);
@@ -233,7 +233,7 @@ fn main() {
         world.step(DELTA_TIME);
 
         {
-            let mut s = app.lock().unwrap();
+            let mut s = simulation_output.lock().unwrap();
             s.log.drain_to_recent();
             s.missile_ids.retain(|&id| world.is_alive(id));
         }
@@ -276,7 +276,7 @@ fn main() {
         }
 
         let missiles: Vec<MissileDot> = {
-            let s = app.lock().unwrap();
+            let s = simulation_output.lock().unwrap();
             s.missile_ids
                 .iter()
                 .filter_map(|&id| {
@@ -292,7 +292,7 @@ fn main() {
         };
 
         let (recent_log, total_missiles, total_hits) = {
-            let s = app.lock().unwrap();
+            let s = simulation_output.lock().unwrap();
             (s.log.recent_log(), s.total_missiles, s.total_hits)
         };
 
@@ -301,7 +301,7 @@ fn main() {
             ships,
             missiles,
             recent_log,
-            active_missile_count: app.lock().unwrap().missile_ids.len(),
+            active_missile_count: simulation_output.lock().unwrap().missile_ids.len(),
             total_missiles,
             total_hits,
         });
@@ -331,7 +331,7 @@ fn main() {
 
     let final_time = world.time();
     let (final_total_missiles, final_total_hits) = {
-        let s = app.lock().unwrap();
+        let s = simulation_output.lock().unwrap();
         (s.total_missiles, s.total_hits)
     };
 

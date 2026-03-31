@@ -4,11 +4,14 @@ use duan::{Reaction, World, WorldBuilder};
 use naval_combat::events::ShipDestroyedEvent;
 
 use crate::display::LogEntry;
-use crate::AppState;
+use crate::SimulationOutput;
 
-pub(super) fn install(builder: WorldBuilder, app: &Arc<Mutex<AppState>>) -> WorldBuilder {
+pub(super) fn install(
+    builder: WorldBuilder,
+    simulation_output: &Arc<Mutex<SimulationOutput>>,
+) -> WorldBuilder {
     builder.on::<ShipDestroyedEvent>(OnShipDestroyed {
-        app: Arc::clone(app),
+        simulation_output: Arc::clone(simulation_output),
     })
 }
 
@@ -18,13 +21,13 @@ pub(super) fn install(builder: WorldBuilder, app: &Arc<Mutex<AppState>>) -> Worl
 ///
 /// 接收 [`ShipDestroyedEvent`]，销毁舰船实体，记录战斗日志。
 struct OnShipDestroyed {
-    app: Arc<Mutex<AppState>>,
+    simulation_output: Arc<Mutex<SimulationOutput>>,
 }
 
 impl Reaction<ShipDestroyedEvent> for OnShipDestroyed {
     fn react(&mut self, ev: &ShipDestroyedEvent, world: &mut World) {
         let t = world.time();
-        let mut s = self.app.lock().unwrap();
+        let mut s = self.simulation_output.lock().unwrap();
         let name = s.log.get_name(ev.ship_id);
         world.event_info_for(
             ev.ship_id,
