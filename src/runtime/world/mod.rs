@@ -10,43 +10,50 @@ use std::sync::Arc;
 
 use crate::diagnostics::{FramePhase, LogContext, LogLevel, LogSink, LoggerHandle};
 use crate::domain::AnyDomain;
+use crate::domain::Domain;
 use crate::entity::id::{EntityAllocator, EntityId};
 use crate::entity::{
     dispatch_tick, ComponentBundle, Entity, EntityRecord, Lifecycle, PendingSpawn,
 };
-use crate::runtime::events::{AnyObserver, AnyReaction, EventBuffer, EventRegistrar};
-use crate::runtime::registrars::DomainRegistrar;
+use crate::runtime::events::{
+    AnyObserver, AnyReaction, Event, EventBuffer, Observer, ObserverWrapper, Reaction,
+    ReactionWrapper,
+};
 use crate::runtime::timers::{TimeClock, Timer, TimerCallback, TimerManager};
 use crate::scheduler::{DomainInfo, Scheduler};
 use crate::storage::WorldStorage;
+use std::marker::PhantomData;
 
 // ──── WorldBuilder ────────────────────────────────────────────────────────
 
 /// 世界构建器
 ///
-/// 只负责两类入口：
-/// - 单值配置：[`logger`](WorldBuilder::logger)、[`time_scale`](WorldBuilder::time_scale)、[`paused`](WorldBuilder::paused)
-/// - 集合装配：[`domains`](WorldBuilder::domains)、[`events`](WorldBuilder::events)
-///
-/// 类型语义（`Memory`/`Intent`/`State`）由组件类型自身声明，`WorldBuilder` 不再承载。
+/// 以流式 API 装配仿真世界：
+/// - 配置：[`time_scale`](WorldBuilder::time_scale)、[`paused`](WorldBuilder::paused)、[`logger`](WorldBuilder::logger)
+/// - 注册：[`domain`](WorldBuilder::domain)、[`on`](WorldBuilder::on)、[`observe`](WorldBuilder::observe)
+/// - 模块化：[`apply`](WorldBuilder::apply)（接受 `fn(WorldBuilder) -> WorldBuilder`，强制子系统封装为独立函数）
 ///
 /// # 示例
 ///
 /// ```rust,ignore
+/// // 最小写法
+/// let world = World::builder()
+///     .domain(GravityDomain)
+///     .build();
+///
+/// // 带事件
+/// let world = World::builder()
+///     .domain(MotionDomain)
+///     .on::<HitEvent>(HandleHit)
+///     .observe::<BounceEvent>(LogBounce)
+///     .build();
+///
+/// // 大型项目模块化装配
 /// let world = World::builder()
 ///     .logger(Arc::new(MyLogger))
-///     .domains(|d| {
-///         d.add(MotionDomain);
-///         d.add(CollisionDomain);
-///     })
-///     .events(|e| {
-///         e.on::<HitEvent>(|ev: &HitEvent, world: &mut World| {
-///             world.destroy(ev.missile_id);
-///         });
-///         e.observe::<HitEvent>(|ev: &HitEvent, _world: &World| {
-///             println!("命中！");
-///         });
-///     })
+///     .domain(MotionDomain)
+///     .apply(combat::install)
+///     .apply(collision::install)
 ///     .build();
 /// ```
 pub struct WorldBuilder {
@@ -85,80 +92,68 @@ impl WorldBuilder {
     /// 注入日志后端
     ///
     /// 未调用此方法时使用内置 `Logger`（Info 级别）。
-    ///
-    /// # 示例
-    ///
-    /// ```rust,ignore
-    /// use duan::{World, diagnostics::{LogSink, LogRecord}};
-    /// use std::sync::Arc;
-    ///
-    /// struct PrintLogger;
-    /// impl LogSink for PrintLogger {
-    ///     fn log(&self, r: &LogRecord) {
-    ///         eprintln!("t={:.3} [{}] {}", r.sim_time(), r.level, r.message);
-    ///     }
-    /// }
-    ///
-    /// let world = World::builder()
-    ///     .logger(Arc::new(PrintLogger))
-    ///     .build();
-    /// ```
     pub fn logger(mut self, logger: Arc<dyn LogSink>) -> Self {
         self.logger = LoggerHandle::new(logger);
         self
     }
 
-    /// 批量注册域
+    /// 注册一个仿真域
     ///
-    /// 闭包接收 [`DomainRegistrar`]，通过 `d.add(...)` 注册各域。
-    /// 域的执行顺序由 `Domain::After` 关联类型在构建期静态分析决定。
-    ///
-    /// # 示例
-    ///
-    /// ```rust,ignore
-    /// World::builder()
-    ///     .domains(|d| {
-    ///         d.add(MotionDomain);
-    ///         d.add(CollisionDomain);
-    ///     })
-    ///     .build();
-    /// ```
-    pub fn domains(mut self, f: impl FnOnce(&mut DomainRegistrar)) -> Self {
-        let mut registrar = DomainRegistrar::new();
-        f(&mut registrar);
-        self.domains.extend(registrar.domains);
+    /// 域的执行顺序由 `Domain::After` 关联类型在构建期静态分析决定，与注册顺序无关。
+    pub fn domain<D: Domain + 'static>(mut self, domain: D) -> Self {
+        self.domains.push(Box::new(domain));
         self
     }
 
-    /// 批量注册事件处理器
+    /// 注册事件反应处理器（可修改世界）
     ///
-    /// 闭包接收 [`EventRegistrar`]，通过 `e.on(...)` 注册反应器，
-    /// 通过 `e.observe(...)` 注册观察器。
+    /// 接受任何实现了 [`Reaction<E>`] 的类型，包括具名结构体和闭包。
+    pub fn on<E: Event + 'static>(mut self, handler: impl Reaction<E> + 'static) -> Self {
+        self.reactions
+            .entry(TypeId::of::<E>())
+            .or_default()
+            .push(Box::new(ReactionWrapper {
+                inner: handler,
+                _phantom: PhantomData,
+            }));
+        self
+    }
+
+    /// 注册事件观察处理器（只读访问世界）
     ///
-    /// # 示例
+    /// 接受任何实现了 [`Observer<E>`] 的类型，包括具名结构体和闭包。
+    pub fn observe<E: Event + 'static>(mut self, handler: impl Observer<E> + 'static) -> Self {
+        self.observers
+            .entry(TypeId::of::<E>())
+            .or_default()
+            .push(Box::new(ObserverWrapper {
+                inner: handler,
+                _phantom: PhantomData,
+            }));
+        self
+    }
+
+    /// 应用一个模块化装配函数
+    ///
+    /// 接受 `fn(WorldBuilder) -> WorldBuilder` 签名的函数，将注册逻辑委托给子系统模块。
+    /// 这是大型项目组织代码的推荐方式——每个子系统封装为独立的 `install` 函数：
     ///
     /// ```rust,ignore
+    /// // combat/mod.rs
+    /// pub fn install(builder: WorldBuilder) -> WorldBuilder {
+    ///     builder
+    ///         .domain(CombatDomain)
+    ///         .on::<HitEvent>(HandleHit)
+    /// }
+    ///
+    /// // main.rs
     /// World::builder()
-    ///     .events(|e| {
-    ///         e.on::<HitEvent>(|ev: &HitEvent, world: &mut World| {
-    ///             world.destroy(ev.missile_id);
-    ///         });
-    ///         e.observe::<HitEvent>(|ev: &HitEvent, _world: &World| {
-    ///             println!("命中！");
-    ///         });
-    ///     })
+    ///     .apply(combat::install)
+    ///     .apply(collision::install)
     ///     .build();
     /// ```
-    pub fn events(mut self, f: impl FnOnce(&mut EventRegistrar)) -> Self {
-        let mut registrar = EventRegistrar::new();
-        f(&mut registrar);
-        for (type_id, handlers) in registrar.reactions {
-            self.reactions.entry(type_id).or_default().extend(handlers);
-        }
-        for (type_id, handlers) in registrar.observers {
-            self.observers.entry(type_id).or_default().extend(handlers);
-        }
-        self
+    pub fn apply(self, f: impl FnOnce(Self) -> Self) -> Self {
+        f(self)
     }
 
     /// 构建世界
@@ -214,8 +209,7 @@ impl Default for WorldBuilder {
 ///
 /// 顶层容器，驱动 5 阶段仿真循环。
 pub struct World {
-    /// 仿真时钟
-    pub clock: TimeClock,
+    pub(crate) clock: TimeClock,
     pub(crate) storage: WorldStorage,
     pub(crate) entities: HashMap<EntityId, EntityRecord>,
     pub(crate) allocator: EntityAllocator,
@@ -323,8 +317,8 @@ impl World {
             .is_some_and(|r| r.lifecycle.is_alive())
     }
 
-    /// 获取当前仿真时间
-    pub fn sim_time(&self) -> f64 {
+    /// 获取当前仿真时间（秒）
+    pub fn time(&self) -> f64 {
         self.clock.sim_time
     }
 
@@ -642,7 +636,7 @@ mod tests {
     fn test_world_creation() {
         let world = World::new();
         assert_eq!(world.entity_count(), 0);
-        assert_eq!(world.sim_time(), 0.0);
+        assert_eq!(world.time(), 0.0);
     }
 
     #[test]
@@ -698,13 +692,9 @@ mod tests {
         let recv_clone = Arc::clone(&received);
 
         let mut world = World::builder()
-            .domains(|d| {
-                d.add(EmitDomain { emit_value: 42 });
-            })
-            .events(|e| {
-                e.on::<TestEvent>(move |ev: &TestEvent, _world: &mut World| {
-                    recv_clone.lock().unwrap().push(ev.value);
-                });
+            .domain(EmitDomain { emit_value: 42 })
+            .on::<TestEvent>(move |ev: &TestEvent, _world: &mut World| {
+                recv_clone.lock().unwrap().push(ev.value);
             })
             .build();
 
@@ -719,13 +709,9 @@ mod tests {
         let obs_clone = Arc::clone(&observed);
 
         let mut world = World::builder()
-            .domains(|d| {
-                d.add(EmitDomain { emit_value: 7 });
-            })
-            .events(|e| {
-                e.observe::<TestEvent>(move |ev: &TestEvent, _world: &World| {
-                    obs_clone.lock().unwrap().push(ev.value);
-                });
+            .domain(EmitDomain { emit_value: 7 })
+            .observe::<TestEvent>(move |ev: &TestEvent, _world: &World| {
+                obs_clone.lock().unwrap().push(ev.value);
             })
             .build();
 
@@ -742,19 +728,15 @@ mod tests {
         let l3 = Arc::clone(&log);
 
         let mut world = World::builder()
-            .domains(|d| {
-                d.add(EmitDomain { emit_value: 1 });
+            .domain(EmitDomain { emit_value: 1 })
+            .on::<TestEvent>(move |_ev: &TestEvent, _w: &mut World| {
+                l1.lock().unwrap().push("reaction_1");
             })
-            .events(|e| {
-                e.on::<TestEvent>(move |_ev: &TestEvent, _w: &mut World| {
-                    l1.lock().unwrap().push("reaction_1");
-                });
-                e.on::<TestEvent>(move |_ev: &TestEvent, _w: &mut World| {
-                    l2.lock().unwrap().push("reaction_2");
-                });
-                e.observe::<TestEvent>(move |_ev: &TestEvent, _w: &World| {
-                    l3.lock().unwrap().push("observer_1");
-                });
+            .on::<TestEvent>(move |_ev: &TestEvent, _w: &mut World| {
+                l2.lock().unwrap().push("reaction_2");
+            })
+            .observe::<TestEvent>(move |_ev: &TestEvent, _w: &World| {
+                l3.lock().unwrap().push("observer_1");
             })
             .build();
 

@@ -3,9 +3,9 @@
 //! DUAN 事件模型以"事实 → 反应/观察"为核心：
 //!
 //! - [`Event`]：仿真中已发生的领域事实，纯数据，不承担副作用逻辑。
-//! - 反应（[`Reaction<E>`]）：由 [`crate::WorldBuilder::events`] 中的 `on` 注册，
+//! - 反应（[`Reaction<E>`]）：通过 [`crate::WorldBuilder::on`] 注册，
 //!   接收特定事件并允许修改世界，处理仿真内副作用（生成实体、销毁实体、应用伤害等）。
-//! - 观察（[`Observer<E>`]）：由 [`crate::WorldBuilder::events`] 中的 `observe` 注册，
+//! - 观察（[`Observer<E>`]）：通过 [`crate::WorldBuilder::observe`] 注册，
 //!   只读消费事件，用于统计、日志、测试采集。
 //!
 //! # 定义事件
@@ -28,19 +28,16 @@
 //!
 //! ```rust,ignore
 //! World::builder()
-//!     .events(|e| {
-//!         e.on::<HitEvent>(|ev: &HitEvent, world: &mut World| {
-//!             world.destroy(ev.target_id);
-//!         });
-//!         e.observe::<HitEvent>(|ev: &HitEvent, _world: &World| {
-//!             println!("命中！伤害 = {}", ev.damage);
-//!         });
+//!     .on::<HitEvent>(|ev: &HitEvent, world: &mut World| {
+//!         world.destroy(ev.target_id);
+//!     })
+//!     .observe::<HitEvent>(|ev: &HitEvent, _world: &World| {
+//!         println!("命中！伤害 = {}", ev.damage);
 //!     })
 //!     .build()
 //! ```
 
 use std::any::{Any, TypeId};
-use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
@@ -136,27 +133,20 @@ impl Default for EventBuffer {
 /// 反应器接收特定类型的领域事实事件，并允许修改世界，处理仿真内副作用
 /// （如生成导弹、销毁实体、应用伤害等）。
 ///
-/// 可以用闭包直接实现此 trait，无需定义独立的结构体：
+/// 通过 [`crate::WorldBuilder::on`] 注册。可以用闭包直接实现此 trait，
+/// 也可以为具名结构体实现：
 ///
 /// ```rust,ignore
-/// World::builder()
-///     .events(|e| {
-///         e.on::<HitEvent>(|ev: &HitEvent, world: &mut World| {
-///             world.destroy(ev.missile_id);
-///         });
-///     })
-///     .build()
-/// ```
-///
-/// 也可以为自定义结构体实现：
-///
-/// ```rust,ignore
-/// struct DestroyMissileReaction;
-/// impl Reaction<HitEvent> for DestroyMissileReaction {
+/// struct HandleHit;
+/// impl Reaction<HitEvent> for HandleHit {
 ///     fn react(&mut self, event: &HitEvent, world: &mut World) {
 ///         world.destroy(event.missile_id);
 ///     }
 /// }
+///
+/// World::builder()
+///     .on::<HitEvent>(HandleHit)
+///     .build()
 /// ```
 pub trait Reaction<E: Event>: Send + Sync + 'static {
     fn react(&mut self, event: &E, world: &mut World);
@@ -167,12 +157,12 @@ pub trait Reaction<E: Event>: Send + Sync + 'static {
 /// 观察器接收特定类型的领域事实事件，但不能修改世界，
 /// 用于统计、日志、测试采集、回放数据录制等只读消费场景。
 ///
+/// 通过 [`crate::WorldBuilder::observe`] 注册。
+///
 /// ```rust,ignore
 /// World::builder()
-///     .events(|e| {
-///         e.observe::<HitEvent>(|ev: &HitEvent, world: &World| {
-///             println!("命中！目标 = {:?}，伤害 = {}", ev.target_id, ev.damage);
-///         });
+///     .observe::<HitEvent>(|ev: &HitEvent, world: &World| {
+///         println!("命中！目标 = {:?}，伤害 = {}", ev.target_id, ev.damage);
 ///     })
 ///     .build()
 /// ```
@@ -213,8 +203,8 @@ pub(crate) trait AnyObserver: Send + Sync {
 }
 
 pub(crate) struct ReactionWrapper<E: Event, R: Reaction<E>> {
-    inner: R,
-    _phantom: PhantomData<fn() -> E>,
+    pub(crate) inner: R,
+    pub(crate) _phantom: PhantomData<fn() -> E>,
 }
 
 impl<E: Event, R: Reaction<E>> AnyReaction for ReactionWrapper<E, R> {
@@ -226,8 +216,8 @@ impl<E: Event, R: Reaction<E>> AnyReaction for ReactionWrapper<E, R> {
 }
 
 pub(crate) struct ObserverWrapper<E: Event, O: Observer<E>> {
-    inner: O,
-    _phantom: PhantomData<fn() -> E>,
+    pub(crate) inner: O,
+    pub(crate) _phantom: PhantomData<fn() -> E>,
 }
 
 impl<E: Event, O: Observer<E>> AnyObserver for ObserverWrapper<E, O> {
@@ -235,60 +225,6 @@ impl<E: Event, O: Observer<E>> AnyObserver for ObserverWrapper<E, O> {
         if let Some(e) = event.downcast_ref::<E>() {
             self.inner.observe(e, world);
         }
-    }
-}
-
-// ──── EventRegistrar ──────────────────────────────────────────────────────
-
-/// 事件处理器注册器
-///
-/// 通过 [`crate::WorldBuilder::events`] 的闭包参数获取，用于批量注册反应器和观察器。
-///
-/// # 示例
-///
-/// ```rust,ignore
-/// World::builder()
-///     .events(|e| {
-///         e.on::<FireEvent>(on_fire(&app));
-///         e.observe::<HitEvent>(on_hit_log(&app));
-///     })
-///     .build();
-/// ```
-pub struct EventRegistrar {
-    pub(crate) reactions: HashMap<TypeId, Vec<Box<dyn AnyReaction>>>,
-    pub(crate) observers: HashMap<TypeId, Vec<Box<dyn AnyObserver>>>,
-}
-
-impl EventRegistrar {
-    pub(crate) fn new() -> Self {
-        Self {
-            reactions: HashMap::new(),
-            observers: HashMap::new(),
-        }
-    }
-
-    /// 注册反应器：当 `E` 类型事件发生时执行，可修改世界
-    pub fn on<E: Event>(&mut self, handler: impl Reaction<E>) -> &mut Self {
-        self.reactions
-            .entry(TypeId::of::<E>())
-            .or_default()
-            .push(Box::new(ReactionWrapper {
-                inner: handler,
-                _phantom: PhantomData,
-            }));
-        self
-    }
-
-    /// 注册观察器：当 `E` 类型事件发生时执行，只读访问世界
-    pub fn observe<E: Event>(&mut self, handler: impl Observer<E>) -> &mut Self {
-        self.observers
-            .entry(TypeId::of::<E>())
-            .or_default()
-            .push(Box::new(ObserverWrapper {
-                inner: handler,
-                _phantom: PhantomData,
-            }));
-        self
     }
 }
 

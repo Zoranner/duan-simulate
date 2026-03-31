@@ -31,7 +31,7 @@
 //! # 快速开始
 //!
 //! ```rust,ignore
-//! use duan::{World, Entity, EntityContext, Domain, DomainContext, state};
+//! use duan::prelude::*;
 //!
 //! // 定义 State 组件
 //! #[derive(Clone, Default)]
@@ -41,7 +41,7 @@
 //! // 定义实体（可无行为）
 //! struct Ball;
 //! impl Entity for Ball {
-//!     fn bundle() -> impl duan::ComponentBundle {
+//!     fn bundle() -> impl ComponentBundle {
 //!         (Position { x: 0.0, y: 10.0 },)
 //!     }
 //! }
@@ -52,30 +52,31 @@
 //!     type Writes = (Position,);
 //!     type Reads = (Position,);
 //!     type After = ();
-//!     fn compute(&mut self, ctx: &mut DomainContext<Self>, dt: f64) {
-//!         // ...
+//!     fn compute(&mut self, ctx: &mut DomainContext<Self>, delta_time: f64) {
+//!         for (id, _) in ctx.each::<Position>() {
+//!             if let Some(p) = ctx.get_mut::<Position>(id) {
+//!                 p.y -= 9.8 * delta_time;
+//!             }
+//!         }
 //!     }
 //! }
 //!
 //! // 定义事件
 //! struct BounceEvent { pub impact_velocity: f64 }
-//! impl duan::Event for BounceEvent {
+//! impl Event for BounceEvent {
 //!     fn event_name(&self) -> &'static str { "bounce" }
 //! }
 //!
 //! // 构建并运行
 //! let mut world = World::builder()
-//!     .domains(|d| {
-//!         d.add(GravityDomain);
-//!     })
-//!     .events(|e| {
-//!         e.observe::<BounceEvent>(|ev: &BounceEvent, _world: &World| {
-//!             println!("弹跳！冲击速度 = {:.2}", ev.impact_velocity);
-//!         });
+//!     .domain(GravityDomain)
+//!     .observe::<BounceEvent>(|ev: &BounceEvent, _world: &World| {
+//!         println!("弹跳！冲击速度 = {:.2}", ev.impact_velocity);
 //!     })
 //!     .build();
 //! let ball = world.spawn::<Ball>();
 //! world.step(0.016);
+//! println!("y = {:.3}", world.get::<Position>(ball).unwrap().y);
 //! ```
 
 pub mod components;
@@ -94,17 +95,14 @@ pub mod storage;
 pub use components::{
     Component, ComponentKind, ComponentSet, Contains, EntityWritable, Intent, Memory, State,
 };
-pub use diagnostics::{FramePhase, LogContext, LogLevel, LogRecord, LogSink, Logger, LoggerHandle};
+pub use diagnostics::{LogLevel, LogRecord, LogSink, Logger, LoggerHandle};
 pub use domain::context::DomainContext;
 pub use domain::{Domain, DomainSet, InReads, InWrites};
 pub use entity::context::EntityContext;
 pub use entity::id::EntityId;
 pub use entity::{ComponentBundle, Entity, Lifecycle};
-pub use runtime::events::{Event, EventBuffer};
-pub use runtime::events::{EventRegistrar, Observer, Reaction};
-pub use runtime::registrars::DomainRegistrar;
-pub use runtime::timers::{TimeClock, Timer};
-pub use runtime::timers::{TimerCallback, TimerEvent, TimerManager};
+pub use runtime::events::{Event, Observer, Reaction};
+pub use runtime::timers::{TimeClock, Timer, TimerCallback};
 pub use runtime::world::{World, WorldBuilder};
 pub use snapshot::WorldSnapshot;
 

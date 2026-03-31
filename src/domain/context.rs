@@ -34,11 +34,11 @@ pub struct DomainContext<'w, D: Domain> {
     pub(crate) pending_destroys: &'w mut Vec<EntityId>,
     pub(crate) events: &'w mut EventBuffer,
     /// 仿真时钟（只读）
-    pub clock: &'w TimeClock,
+    pub(crate) clock: &'w TimeClock,
     /// 日志句柄
     pub(crate) logger: &'w LoggerHandle,
     /// 当前帧时间步长（秒）
-    pub dt: f64,
+    pub delta_time: f64,
     pub(crate) _phantom: PhantomData<D>,
 }
 
@@ -145,7 +145,7 @@ impl<'w, D: Domain> DomainContext<'w, D> {
     // ──── 时钟快捷访问 ───────────────────────────────────────────────────
 
     /// 当前仿真时间（秒）
-    pub fn sim_time(&self) -> f64 {
+    pub fn time(&self) -> f64 {
         self.clock.sim_time
     }
 
@@ -156,7 +156,7 @@ impl<'w, D: Domain> DomainContext<'w, D> {
         LogContext::new(
             FramePhase::DomainCompute,
             self.clock.sim_time,
-            self.dt,
+            self.delta_time,
             self.clock.step_count,
             entity_id,
         )

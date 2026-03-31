@@ -26,14 +26,14 @@
 //!     type Reads = (Velocity,);
 //!     type After = ();
 //!
-//!     fn compute(&mut self, ctx: &mut DomainContext<Self>, dt: f64) {
+//!     fn compute(&mut self, ctx: &mut DomainContext<Self>, delta_time: f64) {
 //!         let updates: Vec<_> = ctx
 //!             .each::<Velocity>()
 //!             .map(|(id, v)| (id, v.clone()))
 //!             .collect();
 //!         for (id, v) in updates {
 //!             if let Some(vel) = ctx.get_mut::<Velocity>(id) {
-//!                 vel.vy -= self.gravity * dt;
+//!                 vel.vy -= self.gravity * delta_time;
 //!             }
 //!         }
 //!     }
@@ -58,7 +58,7 @@ pub(crate) struct ComputeResources<'a> {
     pub events: &'a mut crate::runtime::events::EventBuffer,
     pub clock: &'a crate::runtime::timers::TimeClock,
     pub logger: &'a crate::diagnostics::LoggerHandle,
-    pub dt: f64,
+    pub delta_time: f64,
 }
 
 // ──── DomainSet ───────────────────────────────────────────────────────────
@@ -118,7 +118,7 @@ pub trait Domain: Send + Sync + Sized + 'static {
     /// 每帧计算（Phase 3 执行）
     ///
     /// 通过 [`DomainContext`](context::DomainContext) 读写组件数据和发送事件。
-    fn compute(&mut self, ctx: &mut context::DomainContext<Self>, dt: f64);
+    fn compute(&mut self, ctx: &mut context::DomainContext<Self>, delta_time: f64);
 
     // ──── 框架内部调度信息接口 ─────────────────────────────────────────
 
@@ -174,7 +174,7 @@ impl<D: Domain> AnyDomain for D {
     }
 
     fn compute_dyn(&mut self, res: ComputeResources<'_>) {
-        let dt = res.dt;
+        let delta_time = res.delta_time;
         let mut ctx = context::DomainContext {
             storage: res.storage,
             snapshot: res.snapshot,
@@ -183,9 +183,9 @@ impl<D: Domain> AnyDomain for D {
             events: res.events,
             clock: res.clock,
             logger: res.logger,
-            dt,
+            delta_time,
             _phantom: std::marker::PhantomData,
         };
-        self.compute(&mut ctx, dt);
+        self.compute(&mut ctx, delta_time);
     }
 }

@@ -122,7 +122,7 @@ fn do_entity_ticks(world: &mut World, dt: f64) {
             events: &mut world.events,
             clock: &world.clock,
             logger: &world.logger,
-            dt,
+            delta_time: dt,
         };
         tick_fn(&mut ctx);
     }
@@ -172,7 +172,7 @@ fn do_domain_compute(world: &mut World, dt: f64) {
             events: &mut world.events,
             clock: &world.clock,
             logger: &world.logger,
-            dt,
+            delta_time: dt,
         });
     }
 

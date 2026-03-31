@@ -35,11 +35,11 @@ pub struct EntityContext<'w> {
     pub(crate) pending_destroys: &'w mut Vec<EntityId>,
     pub(crate) events: &'w mut EventBuffer,
     /// 仿真时钟（只读）
-    pub clock: &'w TimeClock,
+    pub(crate) clock: &'w TimeClock,
     /// 日志句柄
     pub(crate) logger: &'w LoggerHandle,
     /// 当前帧时间步长（秒）
-    pub dt: f64,
+    pub delta_time: f64,
 }
 
 impl<'w> EntityContext<'w> {
@@ -110,7 +110,7 @@ impl<'w> EntityContext<'w> {
     // ──── 时钟快捷访问 ───────────────────────────────────────────────────
 
     /// 当前仿真时间（秒）
-    pub fn sim_time(&self) -> f64 {
+    pub fn time(&self) -> f64 {
         self.clock.sim_time
     }
 
@@ -121,7 +121,7 @@ impl<'w> EntityContext<'w> {
         LogContext::new(
             FramePhase::EntityTick,
             self.clock.sim_time,
-            self.dt,
+            self.delta_time,
             self.clock.step_count,
             Some(self.entity_id),
         )
