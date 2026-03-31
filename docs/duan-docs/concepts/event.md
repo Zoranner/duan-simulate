@@ -114,7 +114,7 @@
 - `world.spawn(entity)` — 创建新实体并加入仿真
 - `world.destroy(id, duration)` — 将实体进入销毁流程
 - `world.get_entity(id)` / `world.get_entity_mut(id)` — 读写实体状态
-- `world.sim_time()` — 获取当前仿真时间
+- `world.time()` — 获取当前世界时间
 
 以下操作不应在闭包中调用：
 

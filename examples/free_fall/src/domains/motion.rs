@@ -31,7 +31,7 @@ impl Domain for MotionDomain {
     type Reads = ();
     type After = ();
 
-    fn compute(&mut self, ctx: &mut DomainContext<Self>, dt: f64) {
+    fn compute(&mut self, ctx: &mut DomainContext<Self>, delta_time: f64) {
         let gravity = self.gravity;
 
         // 收集有 Velocity 的实体 ID（copy 出来避免借用冲突）
@@ -46,14 +46,14 @@ impl Domain for MotionDomain {
                 continue;
             };
 
-            let vy_new = vy - gravity * dt;
+            let vy_new = vy - gravity * delta_time;
 
             if let Some(vel) = ctx.get_mut::<Velocity>(id) {
                 vel.vy = vy_new;
             }
             if let Some(pos) = ctx.get_mut::<Position>(id) {
-                pos.x = x + vx * dt;
-                pos.y = y + vy_new * dt;
+                pos.x = x + vx * delta_time;
+                pos.y = y + vy_new * delta_time;
             }
         }
     }

@@ -26,7 +26,7 @@ impl Default for SteeringRules {
 
 impl DomainRules for SteeringRules {
     fn compute(&mut self, ctx: &mut DomainContext) {
-        let dt = ctx.dt;
+        let delta_time = ctx.delta_time;
         let entity_ids: Vec<EntityId> = ctx.own_entity_ids().collect();
 
         for entity_id in entity_ids {
@@ -151,8 +151,8 @@ impl DomainRules for SteeringRules {
             let dot = (curr_vx * desired_vx + curr_vy * desired_vy).clamp(-1.0, 1.0);
             let angle_to_target = cross.signum() * dot.acos();
 
-            // 本步最多偏转 turn_rate * dt 弧度
-            let rotate = angle_to_target.clamp(-turn_rate * dt, turn_rate * dt);
+            // 本步最多偏转 turn_rate * delta_time 弧度
+            let rotate = angle_to_target.clamp(-turn_rate * delta_time, turn_rate * delta_time);
 
             let cos_a = rotate.cos();
             let sin_a = rotate.sin();

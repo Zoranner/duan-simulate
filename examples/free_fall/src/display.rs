@@ -38,8 +38,8 @@ pub struct CollisionSnapshot {
 /// 单帧渲染数据快照，由仿真阶段填充，回放阶段消费
 #[derive(Clone)]
 pub struct RenderFrame {
-    /// 该帧对应的仿真时间（秒），用于回放定时
-    pub sim_time: f64,
+    /// 该帧对应的世界时间（秒），用于回放定时
+    pub time: f64,
     /// 小球当前高度（m）
     pub y: f64,
     /// 小球当前垂直速度（m/s，负值表示下落）
@@ -86,7 +86,7 @@ impl FreeFallDisplay {
             out,
             Print(format!(
                 "  仿真时间  {:6.2} s      弹跳次数  {}\n\n",
-                frame.sim_time, frame.bounce_count
+                frame.time, frame.bounce_count
             ))
         )?;
 

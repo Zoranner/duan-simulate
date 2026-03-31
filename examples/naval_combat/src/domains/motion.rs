@@ -17,7 +17,7 @@ impl Domain for MotionDomain {
     type Reads = (Helm,);
     type After = ();
 
-    fn compute(&mut self, ctx: &mut DomainContext<Self>, dt: f64) {
+    fn compute(&mut self, ctx: &mut DomainContext<Self>, delta_time: f64) {
         // ── 1. 舰船转向（读意图 Helm，写状态 Velocity）──────────────────────
         //
         // Helm 为意图（Entity 写），域从快照只读，体现「意志 → 状态」数据流。
@@ -36,7 +36,7 @@ impl Domain for MotionDomain {
             }
             let current_heading = vy.atan2(vx);
             let diff = angle_diff(desired_heading, current_heading);
-            let turn = diff.clamp(-turn_rate * dt, turn_rate * dt);
+            let turn = diff.clamp(-turn_rate * delta_time, turn_rate * delta_time);
             let new_heading = current_heading + turn;
             if let Some(vel) = ctx.get_mut::<Velocity>(id) {
                 vel.vx = new_heading.cos() * speed;
@@ -53,14 +53,14 @@ impl Domain for MotionDomain {
             };
 
             if let Some(pos) = ctx.get_mut::<Position>(id) {
-                pos.x += vx * dt;
-                pos.y += vy * dt;
+                pos.x += vx * delta_time;
+                pos.y += vy * delta_time;
             }
 
             // ── 3. 导弹飞行里程 ──────────────────────────────────────────
             let speed = (vx * vx + vy * vy).sqrt();
             if let Some(seeker) = ctx.get_mut::<Seeker>(id) {
-                seeker.traveled += speed * dt;
+                seeker.traveled += speed * delta_time;
             }
         }
     }

@@ -19,13 +19,13 @@ impl Domain for CombatDomain {
     type Reads = (Position, Faction, Radar, Health);
     type After = (MotionDomain,);
 
-    fn compute(&mut self, ctx: &mut DomainContext<Self>, dt: f64) {
+    fn compute(&mut self, ctx: &mut DomainContext<Self>, delta_time: f64) {
         // ── 1. 更新武器冷却 ────────────────────────────────────────────────
         let ship_ids: Vec<EntityId> = ctx.each_mut::<Weapon>().map(|(id, _)| id).collect();
 
         for id in &ship_ids {
             if let Some(w) = ctx.get_mut::<Weapon>(*id) {
-                w.cooldown_remaining = (w.cooldown_remaining - dt).max(0.0);
+                w.cooldown_remaining = (w.cooldown_remaining - delta_time).max(0.0);
             }
         }
 

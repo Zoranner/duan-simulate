@@ -6,7 +6,7 @@
 //!
 //! 采用与 free_fall 相同的两阶段设计：无状态渲染器 `NavalDisplay` 仅负责
 //! 将 `RenderFrame` 绘制到屏幕，不持有仿真状态。Phase 1（仿真）全速推进并
-//! 缓存帧序列，Phase 2（回放）按 sim_time 时间戳以真实时钟定时渲染。
+//! 缓存帧序列，Phase 2（回放）按 time 时间戳以真实时钟定时渲染。
 
 use crossterm::{
     cursor, execute, queue,
@@ -65,7 +65,7 @@ pub struct MissileDot {
 
 /// 单帧渲染数据快照，由仿真阶段填充，回放阶段消费
 pub struct RenderFrame {
-    pub sim_time: f64,
+    pub time: f64,
     pub ships: Vec<ShipFrame>,
     pub missiles: Vec<MissileDot>,
     pub recent_log: Vec<String>,
@@ -123,8 +123,8 @@ impl CombatLog {
             .unwrap_or_else(|| format!("#{}", id.raw()))
     }
 
-    pub fn log(&mut self, sim_time: f64, entry: LogEntry) {
-        self.pending.push((sim_time, entry));
+    pub fn log(&mut self, time: f64, entry: LogEntry) {
+        self.pending.push((time, entry));
     }
 
     /// 将本帧待处理条目格式化后推入滚动日志窗口
@@ -188,7 +188,7 @@ impl NavalDisplay {
             SetForegroundColor(Color::Cyan),
             Print(format!(
                 "  DUAN 海战仿真{:>56}\n",
-                format!("t = {:6.1}s", frame.sim_time)
+                format!("t = {:6.1}s", frame.time)
             )),
             Print("  ──────────────────────────────────────────────────────────────────────\n"),
             ResetColor,
