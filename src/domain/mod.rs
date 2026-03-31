@@ -42,7 +42,7 @@
 
 pub mod context;
 
-use crate::component::ComponentSet;
+use crate::ComponentSet;
 use std::any::TypeId;
 
 // ──── ComputeResources ────────────────────────────────────────────────────
@@ -51,13 +51,13 @@ use std::any::TypeId;
 ///
 /// 将 `compute_dyn` 所需的多个可变引用打包，避免参数过多。
 pub(crate) struct ComputeResources<'a> {
-    pub storage: &'a mut crate::component::storage::WorldStorage,
+    pub storage: &'a mut crate::storage::WorldStorage,
     pub snapshot: &'a crate::snapshot::WorldSnapshot,
     pub pending_spawns: &'a mut Vec<crate::entity::PendingSpawn>,
     pub pending_destroys: &'a mut Vec<crate::entity::id::EntityId>,
-    pub events: &'a mut crate::events::EventBuffer,
-    pub clock: &'a crate::time::TimeClock,
-    pub logger: &'a crate::logging::LoggerHandle,
+    pub events: &'a mut crate::runtime::events::EventBuffer,
+    pub clock: &'a crate::runtime::timers::TimeClock,
+    pub logger: &'a crate::diagnostics::LoggerHandle,
     pub dt: f64,
 }
 
@@ -145,10 +145,10 @@ pub trait Domain: Send + Sync + Sized + 'static {
 ///
 /// 框架通过调度器在构建期验证写入冲突；此 trait 可用于手动约束高级场景。
 /// 对于常规域开发，无需关注此 trait。
-pub trait InWrites<D: Domain>: crate::component::Component {}
+pub trait InWrites<D: Domain>: crate::Component {}
 
 /// 读取约束标记（可选的编译期检查）
-pub trait InReads<D: Domain>: crate::component::Component {}
+pub trait InReads<D: Domain>: crate::Component {}
 
 // ──── 类型擦除域接口（供 World 内部使用）─────────────────────────────────
 

@@ -4,7 +4,6 @@
 //! 所有域和实体都需要访问时间，时间是仿真的元数据。
 
 use crate::entity::id::EntityId;
-use crate::events::TimerCallback;
 use ordered_float::OrderedFloat;
 use std::collections::{BTreeMap, HashMap};
 
@@ -23,6 +22,8 @@ pub struct TimeClock {
     pub running: bool,
     /// 已执行步数
     pub step_count: u64,
+    /// 当前帧的仿真步长（由 `step()` 在每帧开始时写入）
+    pub current_dt: f64,
 }
 
 impl TimeClock {
@@ -32,6 +33,7 @@ impl TimeClock {
             time_scale: 1.0,
             running: true,
             step_count: 0,
+            current_dt: 0.0,
         }
     }
 
@@ -41,6 +43,7 @@ impl TimeClock {
             time_scale: 1.0,
             running: false,
             step_count: 0,
+            current_dt: 0.0,
         }
     }
 
@@ -50,6 +53,7 @@ impl TimeClock {
             time_scale,
             running: true,
             step_count: 0,
+            current_dt: 0.0,
         }
     }
 
@@ -97,6 +101,16 @@ impl Default for TimeClock {
 }
 
 // ──── Timer ──────────────────────────────────────────────────────────────
+
+/// 定时器回调
+///
+/// 当前唯一支持的行为是让实体在定时器触发时自毁。
+/// 若需在特定时间发出事件，推荐在域的 `compute()` 中检查 `ctx.sim_time()` 并主动 `emit`。
+#[derive(Clone, Debug)]
+pub enum TimerCallback {
+    /// 使实体在定时器触发时进入已销毁状态（自毁定时器）
+    SelfDestruct,
+}
 
 /// 定时器
 #[derive(Clone, Debug)]

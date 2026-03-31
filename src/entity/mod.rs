@@ -37,8 +37,8 @@
 pub mod context;
 pub mod id;
 
-use crate::component::storage::WorldStorage;
-use crate::component::Component;
+use crate::storage::WorldStorage;
+use crate::Component;
 use id::EntityId;
 
 // ──── Entity trait ───────────────────────────────────────────────────────

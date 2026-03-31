@@ -7,14 +7,14 @@
 //! - 生命周期命令（spawn/destroy）
 //! - 带仿真上下文的统一日志接口
 
-use crate::component::storage::WorldStorage;
-use crate::component::{Component, EntityWritable};
+use crate::diagnostics::{FramePhase, LogContext, LoggerHandle};
 use crate::entity::id::EntityId;
 use crate::entity::{Entity, PendingSpawn};
-use crate::events::{Event, EventBuffer};
-use crate::logging::{FramePhase, LogContext, LoggerHandle};
+use crate::runtime::events::{Event, EventBuffer};
+use crate::runtime::timers::TimeClock;
 use crate::snapshot::WorldSnapshot;
-use crate::time::TimeClock;
+use crate::storage::WorldStorage;
+use crate::{Component, EntityWritable};
 
 /// 实体 tick 上下文
 ///
@@ -83,8 +83,8 @@ impl<'w> EntityContext<'w> {
 
     /// 发出领域事实事件
     ///
-    /// 事件将在帧末分发给所有通过 [`WorldBuilder::with_reaction`](crate::WorldBuilder::with_reaction)
-    /// 和 [`WorldBuilder::with_observer`](crate::WorldBuilder::with_observer) 注册的处理器。
+    /// 事件将在帧末分发给所有通过 [`WorldBuilder::events`](crate::WorldBuilder::events)
+    /// 注册的处理器（`on` / `observe`）。
     pub fn emit<E: Event>(&mut self, event: E) {
         self.events.emit(event);
     }

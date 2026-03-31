@@ -13,10 +13,9 @@
 //!
 //! 认知（`Memory`）类型不进入快照，因此域和其他实体无法访问另一实体的认知数据。
 
-use crate::component::storage::WorldStorage;
-use crate::component::Component;
 use crate::entity::id::EntityId;
-use std::any::TypeId;
+use crate::storage::WorldStorage;
+use crate::Component;
 
 /// 世界快照（只读冻结副本）
 ///
@@ -29,13 +28,10 @@ pub struct WorldSnapshot {
 }
 
 impl WorldSnapshot {
-    /// 从当前世界存储构建快照，排除 Memory 类型
-    ///
-    /// `memory_type_ids` 是所有已注册 Memory 组件的 TypeId 列表，
-    /// 由 World 在构建快照时提供。
-    pub(crate) fn build(storage: &WorldStorage, memory_type_ids: &[TypeId]) -> Self {
+    /// 从当前世界存储构建快照（自动排除 Memory 类型）
+    pub(crate) fn build(storage: &WorldStorage) -> Self {
         Self {
-            storage: storage.clone_excluding(memory_type_ids),
+            storage: storage.clone_for_snapshot(),
         }
     }
 

@@ -8,12 +8,12 @@
 //! Phase 5  生命周期管理                  批量执行 spawn/destroy，清理已销毁实体
 //! ```
 
+use crate::diagnostics::{FramePhase, LogLevel};
 use crate::domain::ComputeResources;
 use crate::entity::context::EntityContext;
 use crate::entity::id::EntityId;
 use crate::entity::PendingSpawn;
-use crate::events::ArcEvent;
-use crate::logging::{FramePhase, LogLevel};
+use crate::runtime::events::ArcEvent;
 use crate::snapshot::WorldSnapshot;
 
 use super::World;
@@ -25,6 +25,7 @@ pub fn run(world: &mut World, dt: f64) {
     if sim_dt == 0.0 {
         return;
     }
+    world.clock.current_dt = sim_dt;
 
     let sim_time = world.clock.sim_time;
     let step_count = world.clock.step_count;
@@ -77,7 +78,7 @@ pub fn run(world: &mut World, dt: f64) {
 // ──── Phase 2：Entity tick ────────────────────────────────────────────────
 
 fn do_entity_ticks(world: &mut World, dt: f64) {
-    let snapshot = WorldSnapshot::build(&world.storage, &world.memory_type_ids);
+    let snapshot = WorldSnapshot::build(&world.storage);
 
     type TickEntry = (EntityId, fn(&mut EntityContext));
     let active: Vec<TickEntry> = world
@@ -132,7 +133,7 @@ fn do_entity_ticks(world: &mut World, dt: f64) {
 // ──── Phase 3：Domain compute ─────────────────────────────────────────────
 
 fn do_domain_compute(world: &mut World, dt: f64) {
-    let snapshot = WorldSnapshot::build(&world.storage, &world.memory_type_ids);
+    let snapshot = WorldSnapshot::build(&world.storage);
 
     let order = world.scheduler.execution_order.clone();
 

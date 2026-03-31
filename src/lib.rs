@@ -25,8 +25,8 @@
 //! | 角色 | trait | 说明 |
 //! |-----|-------|------|
 //! | 事实 | [`Event`] | 领域发出的已发生事实，纯数据 |
-//! | 反应 | [`Reaction<E>`](world::Reaction) | 接收事件并修改世界，用于仿真内副作用 |
-//! | 观察 | [`Observer<E>`](world::Observer) | 只读消费事件，用于统计、日志、测试 |
+//! | 反应 | [`Reaction<E>`](runtime::events::Reaction) | 接收事件并修改世界，用于仿真内副作用 |
+//! | 观察 | [`Observer<E>`](runtime::events::Observer) | 只读消费事件，用于统计、日志、测试 |
 //!
 //! # 快速开始
 //!
@@ -65,38 +65,48 @@
 //!
 //! // 构建并运行
 //! let mut world = World::builder()
-//!     .with_domain(GravityDomain)
-//!     .with_observer::<BounceEvent, _>(|e: &BounceEvent, _world: &World| {
-//!         println!("弹跳！冲击速度 = {:.2}", e.impact_velocity);
+//!     .domains(|d| {
+//!         d.add(GravityDomain);
+//!     })
+//!     .events(|e| {
+//!         e.observe::<BounceEvent>(|ev: &BounceEvent, _world: &World| {
+//!             println!("弹跳！冲击速度 = {:.2}", ev.impact_velocity);
+//!         });
 //!     })
 //!     .build();
 //! let ball = world.spawn::<Ball>();
 //! world.step(0.016);
 //! ```
 
-pub mod component;
+pub mod components;
+pub mod derive;
+pub mod diagnostics;
 pub mod domain;
 pub mod entity;
-pub mod events;
-pub mod logging;
+pub mod prelude;
+pub mod runtime;
 pub mod scheduler;
 pub mod snapshot;
-pub mod time;
-pub mod world;
+pub mod storage;
 
 // ──── 核心类型重导出 ──────────────────────────────────────────────────────
 
-pub use component::{Component, ComponentSet, Contains, EntityWritable, Intent, Memory, State};
+pub use components::{
+    Component, ComponentKind, ComponentSet, Contains, EntityWritable, Intent, Memory, State,
+};
+pub use diagnostics::{FramePhase, LogContext, LogLevel, LogRecord, LogSink, Logger, LoggerHandle};
 pub use domain::context::DomainContext;
 pub use domain::{Domain, DomainSet, InReads, InWrites};
 pub use entity::context::EntityContext;
 pub use entity::id::EntityId;
 pub use entity::{ComponentBundle, Entity, Lifecycle};
-pub use events::{Event, EventBuffer, TimerCallback};
-pub use logging::{FramePhase, LogContext, LogLevel, LogRecord, LogSink, Logger, LoggerHandle};
+pub use runtime::events::{Event, EventBuffer};
+pub use runtime::events::{EventRegistrar, Observer, Reaction};
+pub use runtime::registrars::DomainRegistrar;
+pub use runtime::timers::{TimeClock, Timer};
+pub use runtime::timers::{TimerCallback, TimerEvent, TimerManager};
+pub use runtime::world::{World, WorldBuilder};
 pub use snapshot::WorldSnapshot;
-pub use time::{TimeClock, Timer, TimerEvent, TimerManager};
-pub use world::{Observer, Reaction, World, WorldBuilder};
 
 // ──── 框架常量 ──────────────────────────────────────────────────────────
 

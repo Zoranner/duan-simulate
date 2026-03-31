@@ -11,7 +11,7 @@
 //! # 快速开始
 //!
 //! ```rust,ignore
-//! use duan::logging::{LogSink, LogRecord, LogLevel, LogContext, FramePhase};
+//! use duan::diagnostics::{LogSink, LogRecord, LogLevel, LogContext, FramePhase};
 //! use std::sync::Arc;
 //!
 //! struct PrintLogger;
@@ -22,7 +22,7 @@
 //! }
 //!
 //! let world = duan::World::builder()
-//!     .with_logger(Arc::new(PrintLogger))
+//!     .logger(Arc::new(PrintLogger))
 //!     .build();
 //! ```
 
@@ -204,7 +204,7 @@ impl LogRecord<'_> {
 /// # 示例
 ///
 /// ```rust,ignore
-/// use duan::logging::{LogSink, LogRecord, LogLevel};
+/// use duan::diagnostics::{LogSink, LogRecord, LogLevel};
 ///
 /// struct StderrLogger;
 ///

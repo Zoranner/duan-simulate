@@ -7,14 +7,15 @@
 //! - 带仿真上下文的统一日志接口
 
 use super::Domain;
-use crate::component::storage::WorldStorage;
-use crate::component::Component;
+use crate::diagnostics::{FramePhase, LogContext, LoggerHandle};
 use crate::entity::id::EntityId;
 use crate::entity::{Entity, PendingSpawn};
-use crate::events::{Event, EventBuffer};
-use crate::logging::{FramePhase, LogContext, LoggerHandle};
+use crate::runtime::events::{Event, EventBuffer};
+use crate::runtime::timers::TimeClock;
 use crate::snapshot::WorldSnapshot;
-use crate::time::TimeClock;
+use crate::storage::WorldStorage;
+use crate::{Component, ComponentSet};
+use std::any::TypeId;
 use std::marker::PhantomData;
 
 /// 域计算上下文
@@ -42,25 +43,52 @@ pub struct DomainContext<'w, D: Domain> {
 }
 
 impl<'w, D: Domain> DomainContext<'w, D> {
+    #[inline]
+    fn assert_read_declared<T: Component>() {
+        let type_id = TypeId::of::<T>();
+        if !D::Reads::type_ids().contains(&type_id) {
+            panic!(
+                "Domain `{}` read undeclared component `{}`; add it to `type Reads`",
+                std::any::type_name::<D>(),
+                std::any::type_name::<T>()
+            );
+        }
+    }
+
+    #[inline]
+    fn assert_write_declared<T: Component>() {
+        let type_id = TypeId::of::<T>();
+        if !D::Writes::type_ids().contains(&type_id) {
+            panic!(
+                "Domain `{}` write undeclared component `{}`; add it to `type Writes`",
+                std::any::type_name::<D>(),
+                std::any::type_name::<T>()
+            );
+        }
+    }
+
     // ──── 从快照读取（只读，上帧值）────────────────────────────────────
 
     /// 遍历快照中所有拥有组件 T 的实体（只读，上帧值）
     ///
     /// 读取的是意图或状态（`Intent` / `State`）的上帧快照，不受本帧其他域写入影响。
-    /// 建议仅访问 `D::Reads` 中声明的类型。
+    /// 若 `T` 未在 `D::Reads` 中声明，会在运行时 panic。
     pub fn each<T: Component>(&self) -> impl Iterator<Item = (EntityId, &T)> {
+        Self::assert_read_declared::<T>();
         self.snapshot.iter::<T>()
     }
 
     /// 从快照读取指定实体的组件 T（只读，上帧值）
     ///
-    /// 建议仅访问 `D::Reads` 中声明的类型。
+    /// 若 `T` 未在 `D::Reads` 中声明，会在运行时 panic。
     pub fn get<T: Component>(&self, id: EntityId) -> Option<&T> {
+        Self::assert_read_declared::<T>();
         self.snapshot.get::<T>(id)
     }
 
     /// 遍历快照中拥有组件 T 的所有 EntityId
     pub fn entities<T: Component>(&self) -> impl Iterator<Item = EntityId> + '_ {
+        Self::assert_read_declared::<T>();
         self.snapshot.iter::<T>().map(|(id, _)| id)
     }
 
@@ -68,22 +96,25 @@ impl<'w, D: Domain> DomainContext<'w, D> {
 
     /// 获取指定实体组件 T 的可变引用（写入当前帧）
     ///
-    /// 建议仅写入 `D::Writes` 中声明的类型；写入冲突由调度器在构建时检测。
+    /// 若 `T` 未在 `D::Writes` 中声明，会在运行时 panic。
     pub fn get_mut<T: Component>(&mut self, id: EntityId) -> Option<&mut T> {
+        Self::assert_write_declared::<T>();
         self.storage.get_mut::<T>(id)
     }
 
     /// 写入指定实体的组件 T（当前帧）
     ///
-    /// 建议仅写入 `D::Writes` 中声明的类型。
+    /// 若 `T` 未在 `D::Writes` 中声明，会在运行时 panic。
     pub fn insert<T: Component>(&mut self, id: EntityId, value: T) {
+        Self::assert_write_declared::<T>();
         self.storage.insert::<T>(id, value);
     }
 
     /// 遍历活跃存储中所有拥有组件 T 的实体（可变，当前帧）
     ///
-    /// 建议仅迭代 `D::Writes` 中声明的类型。
+    /// 若 `T` 未在 `D::Writes` 中声明，会在运行时 panic。
     pub fn each_mut<T: Component>(&mut self) -> impl Iterator<Item = (EntityId, &mut T)> {
+        Self::assert_write_declared::<T>();
         self.storage.iter_mut::<T>()
     }
 
@@ -91,8 +122,8 @@ impl<'w, D: Domain> DomainContext<'w, D> {
 
     /// 发出领域事实事件
     ///
-    /// 事件将在帧末分发给所有通过 [`WorldBuilder::with_reaction`](crate::WorldBuilder::with_reaction)
-    /// 和 [`WorldBuilder::with_observer`](crate::WorldBuilder::with_observer) 注册的处理器。
+    /// 事件将在帧末分发给所有通过 [`WorldBuilder::events`](crate::WorldBuilder::events)
+    /// 注册的处理器（`on` / `observe`）。
     pub fn emit<E: Event>(&mut self, event: E) {
         self.events.emit(event);
     }

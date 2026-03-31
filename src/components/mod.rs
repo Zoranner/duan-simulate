@@ -42,9 +42,20 @@
 //! duan::state!(Position, Velocity, Health);
 //! ```
 
-pub(crate) mod storage;
-
 use std::any::TypeId;
+
+/// 组件语义分类
+///
+/// 用于描述组件在仿真中的可见性与写入语义。
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ComponentKind {
+    /// 实体私有认知数据，不进入快照
+    Memory,
+    /// 实体公开意图，进入快照
+    Intent,
+    /// 域权威状态，进入快照
+    State,
+}
 
 /// 实体组件统一约束（sealed supertrait）
 ///
@@ -52,7 +63,12 @@ use std::any::TypeId;
 /// 而是通过实现 [`Memory`]、[`Intent`] 或 [`State`] 之一来声明语义。
 ///
 /// 框架内部以 Component 为统一泛型约束，用户只需关注三个语义 trait。
-pub trait Component: Send + Sync + Clone + 'static {}
+pub trait Component: Send + Sync + Clone + 'static {
+    /// 组件语义（默认视为状态）
+    ///
+    /// 默认值为 `State`，便于渐进迁移已有手写 `impl Component` 的代码。
+    const KIND: ComponentKind = ComponentKind::State;
+}
 
 /// 实体可写标记
 ///
@@ -155,7 +171,9 @@ impl_component_set!(A, B, C, D, E, F, G, H, I, J, K, L);
 #[macro_export]
 macro_rules! memory {
     ($($t:ty),+ $(,)?) => {
-        $(impl $crate::Component for $t {})*
+        $(impl $crate::Component for $t {
+            const KIND: $crate::ComponentKind = $crate::ComponentKind::Memory;
+        })*
         $(impl $crate::EntityWritable for $t {})*
         $(impl $crate::Memory for $t {})*
     };
@@ -167,7 +185,9 @@ macro_rules! memory {
 #[macro_export]
 macro_rules! intent {
     ($($t:ty),+ $(,)?) => {
-        $(impl $crate::Component for $t {})*
+        $(impl $crate::Component for $t {
+            const KIND: $crate::ComponentKind = $crate::ComponentKind::Intent;
+        })*
         $(impl $crate::EntityWritable for $t {})*
         $(impl $crate::Intent for $t {})*
     };
@@ -179,7 +199,9 @@ macro_rules! intent {
 #[macro_export]
 macro_rules! state {
     ($($t:ty),+ $(,)?) => {
-        $(impl $crate::Component for $t {})*
+        $(impl $crate::Component for $t {
+            const KIND: $crate::ComponentKind = $crate::ComponentKind::State;
+        })*
         $(impl $crate::State for $t {})*
     };
 }

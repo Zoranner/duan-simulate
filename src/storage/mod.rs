@@ -2,8 +2,8 @@
 //!
 //! 按组件类型密集存储，提供 O(1) 访问和良好的缓存局部性。
 
-use super::Component;
 use crate::entity::id::EntityId;
+use crate::{Component, ComponentKind};
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
 
@@ -12,6 +12,7 @@ use std::collections::HashMap;
 pub(crate) trait AnyStorage: Send + Sync {
     fn remove_entity(&mut self, id: EntityId);
     fn clone_box(&self) -> Box<dyn AnyStorage>;
+    fn clone_for_snapshot_box(&self) -> Option<Box<dyn AnyStorage>>;
     fn as_any(&self) -> &dyn Any;
     fn as_any_mut(&mut self) -> &mut dyn Any;
 }
@@ -113,6 +114,11 @@ impl<T: Component> ComponentStorage<T> {
     pub fn len(&self) -> usize {
         self.dense.len()
     }
+
+    #[cfg(test)]
+    pub fn is_empty(&self) -> bool {
+        self.dense.is_empty()
+    }
 }
 
 impl<T: Component> Default for ComponentStorage<T> {
@@ -132,6 +138,13 @@ impl<T: Component> AnyStorage for ComponentStorage<T> {
             dense_ids: self.dense_ids.clone(),
             sparse: self.sparse.clone(),
         })
+    }
+
+    fn clone_for_snapshot_box(&self) -> Option<Box<dyn AnyStorage>> {
+        if T::KIND == ComponentKind::Memory {
+            return None;
+        }
+        Some(self.clone_box())
     }
 
     fn as_any(&self) -> &dyn Any {
@@ -232,14 +245,13 @@ impl WorldStorage {
         }
     }
 
-    /// 克隆指定类型集合之外的所有存储（用于排除 Memory）
-    pub fn clone_excluding(&self, exclude: &[TypeId]) -> Self {
+    /// 克隆快照可见的所有存储（自动排除 `Memory`）
+    pub fn clone_for_snapshot(&self) -> Self {
         Self {
             storages: self
                 .storages
                 .iter()
-                .filter(|(k, _)| !exclude.contains(k))
-                .map(|(k, v)| (*k, v.clone_box()))
+                .filter_map(|(k, v)| v.clone_for_snapshot_box().map(|s| (*k, s)))
                 .collect(),
         }
     }
