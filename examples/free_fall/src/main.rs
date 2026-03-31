@@ -1,7 +1,7 @@
 //! 自由落体小球仿真 — 主程序
 //!
 //! 本示例展示 DUAN 框架新一代 API 的完整使用流程：
-//! 1. `World::builder().domains(|d| ...).events(|e| ...).build()` 构建仿真世界
+//! 1. `World::builder().domain(...).observe::<E>(...).build()` 构建仿真世界
 //! 2. `world.spawn_with::<Ball>(...)` 生成带运行时组件的实体
 //! 3. `world.step(delta_time)` 推进仿真；事件由注册的 Observer 自动处理
 //! 4. `world.get::<Position>(id)` 读取实体组件状态

@@ -12,8 +12,8 @@ use crate::event::{
     AnyObserver, AnyReaction, Event, EventBuffer, Observer, ObserverWrapper, Reaction,
     ReactionWrapper,
 };
+use crate::runtime::scheduler::{DomainInfo, Scheduler};
 use crate::runtime::timers::{TimeClock, TimerManager};
-use crate::scheduler::{DomainInfo, Scheduler};
 use crate::storage::WorldStorage;
 
 use super::World;

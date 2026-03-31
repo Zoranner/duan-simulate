@@ -17,8 +17,8 @@ use crate::entity::{
     dispatch_tick, ComponentBundle, Entity, EntityRecord, Lifecycle, PendingSpawn,
 };
 use crate::event::{AnyObserver, AnyReaction, EventBuffer};
+use crate::runtime::scheduler::Scheduler;
 use crate::runtime::timers::{TimeClock, Timer, TimerCallback, TimerManager};
-use crate::scheduler::Scheduler;
 use crate::storage::WorldStorage;
 
 // ──── World ───────────────────────────────────────────────────────────────

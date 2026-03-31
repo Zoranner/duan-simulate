@@ -26,7 +26,7 @@ pub(crate) struct DomainInfo {
 /// 调度器
 ///
 /// 持有域执行顺序（索引列表），在 `World::build()` 时构建一次，运行期不变。
-pub struct Scheduler {
+pub(crate) struct Scheduler {
     /// 按执行顺序排列的域索引（对应 World 的 domains 列表）
     pub(crate) execution_order: Vec<usize>,
 }
