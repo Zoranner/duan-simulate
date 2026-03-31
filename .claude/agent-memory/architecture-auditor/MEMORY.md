@@ -12,6 +12,12 @@
 **as_any 样板污染多个核心 trait**  
 Component、DomainRules、CustomEvent 三个核心 trait 均含 `as_any/as_any_mut` 样板方法。这是 Rust 类型系统限制的工程妥协，宏缓解了实现负担，但设计层面的不优雅持续存在。
 
+**重构规划常见偏差：先搬目录，后定公开 API**  
+若规划把物理目录重组放在前面、把 `lib.rs`/`prelude.rs`/推荐导入路径放到最后统一收尾，通常会导致目标函数倒置：用户体验目标尚未定型，内部搬迁却先扩大改动面。后续审计应优先检查"稳定公开接口是否先于目录重排被定义"。
+
+**重构规划常见偏差：把 Registrar/Registry 暴露成一等用户概念**  
+若方案声称"用户优先、概念最少"，却仍让 `DomainRegistrar`、`EventRegistrar`、`EventRegistry` 成为主路径上的公开心智，通常意味着装配 DSL 仍然偏内部导向。应优先要求默认路径退化为 `WorldBuilder` 的直接 fluent API，仅将注册器保留为高级组合接口或内部实现。
+
 ## 已提出但待处理的重要建议
 
 | ISSUE | 问题 | 优先级 | 状态 |
