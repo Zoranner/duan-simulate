@@ -19,7 +19,7 @@ use crate::snapshot::WorldSnapshot;
 use super::World;
 
 /// 执行一步仿真
-pub fn run(world: &mut World, delta_time: f64) {
+pub(crate) fn run(world: &mut World, delta_time: f64) {
     // Phase 1：时间推进
     let frame_delta_time = world.clock.tick(delta_time);
     if frame_delta_time == 0.0 {

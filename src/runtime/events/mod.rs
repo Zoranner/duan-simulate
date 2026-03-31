@@ -42,7 +42,7 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 
 // World 与 events 在同一 crate 内互相引用，Rust 模块系统允许这种跨模块循环引用。
-use crate::runtime::world::World;
+use crate::world::World;
 
 // ──── Event ──────────────────────────────────────────────────────────────
 

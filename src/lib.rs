@@ -89,6 +89,7 @@ pub mod runtime;
 pub mod scheduler;
 pub mod snapshot;
 pub mod storage;
+pub mod world;
 
 // ──── 核心类型重导出 ──────────────────────────────────────────────────────
 
@@ -103,8 +104,8 @@ pub use entity::id::EntityId;
 pub use entity::{ComponentBundle, Entity, Lifecycle};
 pub use runtime::events::{Event, Observer, Reaction};
 pub use runtime::timers::{TimeClock, Timer, TimerCallback};
-pub use runtime::world::{World, WorldBuilder};
 pub use snapshot::WorldSnapshot;
+pub use world::{World, WorldBuilder};
 
 // ──── 框架常量 ──────────────────────────────────────────────────────────
 
