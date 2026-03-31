@@ -20,7 +20,7 @@ impl Domain for CollisionDomain {
     type Reads = (Position, MissileBody, Seeker);
     type After = (MotionDomain, CombatDomain);
 
-    fn compute(&mut self, ctx: &mut DomainContext<Self>, _dt: f64) {
+    fn compute(&mut self, ctx: &mut DomainContext<Self>, _delta_time: f64) {
         // 从快照中收集导弹列表（有 MissileBody + Seeker）
         let missiles: Vec<(EntityId, f64, f64, EntityId, f64, f64)> = ctx
             .each::<MissileBody>()

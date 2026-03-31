@@ -1,7 +1,7 @@
 //! 自由落体小球仿真 — 主程序
 //!
 //! 本示例展示 DUAN 框架新一代 API 的完整使用流程：
-//! 1. `World::builder().domain(...).observe::<E>(...).build()` 构建仿真世界
+//! 1. `World::builder().domain(...).apply(handlers::install(&app)).build()` 构建仿真世界
 //! 2. `world.spawn_with::<Ball>(...)` 生成带运行时组件的实体
 //! 3. `world.step(delta_time)` 推进仿真；事件由注册的 Observer 自动处理
 //! 4. `world.get::<Position>(id)` 读取实体组件状态
@@ -12,14 +12,14 @@
 //! - **Phase 2（回放）**：按帧的 `time` 以真实时钟定时渲染
 
 mod display;
+mod handlers;
 
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use free_fall::components::{Collider, Position, StaticBody, Velocity};
-use free_fall::domains::{CollisionDomain, MotionDomain};
+use free_fall::domains::MotionDomain;
 use free_fall::entities::{Ball, Ground};
-use free_fall::events::GroundCollisionEvent;
 
 use display::{CollisionSnapshot, FreeFallDisplay, RenderFrame};
 
@@ -29,11 +29,11 @@ const MAX_TIME: f64 = 20.0;
 const REST_HEIGHT_THRESHOLD: f64 = 0.01;
 const REST_VELOCITY_THRESHOLD: f64 = 0.1;
 
-// 需要在 Observer 闭包与主循环之间共享的仿真状态
-struct AppState {
-    bounce_count: u32,
-    bounce_flash_remaining: u32,
-    last_collision: Option<CollisionSnapshot>,
+// 在事件处理器（handlers 模块）与主循环之间共享的展示层状态
+pub(crate) struct AppState {
+    pub(crate) bounce_count: u32,
+    pub(crate) bounce_flash_remaining: u32,
+    pub(crate) last_collision: Option<CollisionSnapshot>,
 }
 
 fn main() {
@@ -44,22 +44,10 @@ fn main() {
     }));
 
     // ── 构建仿真世界 ───────────────────────────────────────────────────────
-    // GroundCollisionEvent 不需要修改世界，注册为 Observer（只读访问）
+    // handlers::install 将所有事件处理器封装为独立模块，通过 .apply() 装配
     let mut world = duan::World::builder()
         .domain(MotionDomain::earth())
-        .domain(CollisionDomain)
-        .observe::<GroundCollisionEvent>({
-            let app = Arc::clone(&app);
-            move |ev: &GroundCollisionEvent, _world: &duan::World| {
-                let mut s = app.lock().unwrap();
-                s.bounce_count += 1;
-                s.bounce_flash_remaining = 8;
-                s.last_collision = Some(CollisionSnapshot {
-                    impact_velocity: ev.impact_velocity,
-                    restitution: ev.restitution,
-                });
-            }
-        })
+        .apply(handlers::install(&app))
         .build();
 
     // ── 生成实体 ───────────────────────────────────────────────────────────

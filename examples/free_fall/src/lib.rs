@@ -7,7 +7,7 @@
 //! |------|--------------|
 //! | **实体（Entity）** | `Ball`（小球）、`Ground`（地面） |
 //! | **组件（Component）** | 按语义分为认知、意图、状态三类（见下表） |
-//! | **域（Domain）** | `MotionDomain`（运动积分）、`CollisionDomain`（碰撞检测） |
+//! | **域（Domain）** | `MotionDomain`（运动积分 + 碰撞响应，Position/Velocity 唯一权威） |
 //! | **事件（CustomEvent）** | `GroundCollisionEvent` |
 //!
 //! # 三元语义：认知、意图、状态

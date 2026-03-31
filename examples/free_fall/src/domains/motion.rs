@@ -1,21 +1,29 @@
-//! 运动域
+//! 运动域（含碰撞响应）
 //!
-//! 对所有有 `Position` + `Velocity` 的动态实体执行半隐式欧拉积分。
-//! 无前置依赖，在 `CollisionDomain` 之前执行。
+//! 作为 Position / Velocity / DidBounce 的唯一权威域，每帧顺序执行：
 //!
-//! # 积分算法
+//! 1. 半隐式欧拉积分（Symplectic Euler）：
+//!    ```text
+//!    v_new = v_old - g * dt
+//!    p_new = p_old + v_new * dt
+//!    ```
+//! 2. 地面碰撞检测与弹性响应：
+//!    若 y_new ≤ 0 且 vy_new < 0，则将 y 贴地并反转速度（乘以弹性系数）。
+//! 3. 更新 [`DidBounce`] 状态（实体 tick 下帧可通过快照感知）。
+//! 4. 发出 [`GroundCollisionEvent`]（由 handlers 模块中的 Observer 消费）。
 //!
-//! 使用半隐式欧拉积分（Symplectic Euler）：
-//! ```text
-//! v_new = v_old + a * dt
-//! p_new = p_old + v_new * dt
-//! ```
+//! # 为什么合并而不拆分？
+//!
+//! 框架规定每个 State 组件只能由**唯一**的域写入。积分和碰撞修正都需要写入
+//! `Position` 和 `Velocity`，因此它们必须属于同一个权威域。
+//! 将它们硬拆为两个域会引发调度器写冲突（Scheduler write-conflict panic）。
 
 use duan::{Domain, DomainContext};
 
-use crate::components::{Position, Velocity};
+use crate::components::{Collider, DidBounce, Position, StaticBody, Velocity};
+use crate::events::GroundCollisionEvent;
 
-/// 运动域：每帧积分速度和位置
+/// 运动域：积分 + 碰撞响应
 pub struct MotionDomain {
     gravity: f64,
 }
@@ -27,33 +35,66 @@ impl MotionDomain {
 }
 
 impl Domain for MotionDomain {
-    type Writes = (Position, Velocity);
-    type Reads = ();
+    type Writes = (Position, Velocity, DidBounce);
+    type Reads = (Collider, StaticBody);
     type After = ();
 
     fn compute(&mut self, ctx: &mut DomainContext<Self>, delta_time: f64) {
         let gravity = self.gravity;
 
-        // 收集有 Velocity 的实体 ID（copy 出来避免借用冲突）
+        // 读取地面弹性系数（从快照）
+        let restitution = ctx
+            .entities::<StaticBody>()
+            .find_map(|id| ctx.get::<Collider>(id))
+            .map(|c| c.restitution)
+            .unwrap_or(0.8);
+
+        // 收集有 Velocity 的实体 ID（避免多重借用）
         let ids: Vec<_> = ctx.each_mut::<Velocity>().map(|(id, _)| id).collect();
 
         for id in ids {
-            // 用 .map() 立即 copy 值并释放可变借用，然后再做下一次 get_mut
+            // 取当前 position/velocity（当帧存储）
             let Some((x, y)) = ctx.get_mut::<Position>(id).map(|p| (p.x, p.y)) else {
                 continue;
             };
-            let Some((vx, vy)) = ctx.get_mut::<Velocity>(id).map(|v| (v.vx, v.vy)) else {
+            let Some(vy) = ctx.get_mut::<Velocity>(id).map(|v| v.vy) else {
                 continue;
             };
+            let vx = ctx.get_mut::<Velocity>(id).map(|v| v.vx).unwrap_or(0.0);
 
+            // Phase 1：半隐式欧拉积分
             let vy_new = vy - gravity * delta_time;
+            let y_new = y + vy_new * delta_time;
+            let x_new = x + vx * delta_time;
 
-            if let Some(vel) = ctx.get_mut::<Velocity>(id) {
-                vel.vy = vy_new;
-            }
-            if let Some(pos) = ctx.get_mut::<Position>(id) {
-                pos.x = x + vx * delta_time;
-                pos.y = y + vy_new * delta_time;
+            // Phase 2：每帧先重置 DidBounce
+            ctx.insert(id, DidBounce { value: false });
+
+            if y_new <= 0.0 && vy_new < 0.0 {
+                // 碰撞响应：贴地 + 弹性反射
+                if let Some(pos) = ctx.get_mut::<Position>(id) {
+                    pos.x = x_new;
+                    pos.y = 0.0;
+                }
+                if let Some(vel) = ctx.get_mut::<Velocity>(id) {
+                    vel.vy = -vy_new * restitution;
+                }
+
+                ctx.insert(id, DidBounce { value: true });
+
+                ctx.emit(GroundCollisionEvent {
+                    impact_velocity: vy_new,
+                    restitution,
+                });
+            } else {
+                // 正常积分写回
+                if let Some(pos) = ctx.get_mut::<Position>(id) {
+                    pos.x = x_new;
+                    pos.y = y_new;
+                }
+                if let Some(vel) = ctx.get_mut::<Velocity>(id) {
+                    vel.vy = vy_new;
+                }
             }
         }
     }
