@@ -13,7 +13,7 @@ use crate::domain::ComputeResources;
 use crate::entity::context::EntityContext;
 use crate::entity::id::EntityId;
 use crate::entity::PendingSpawn;
-use crate::runtime::events::ArcEvent;
+use crate::event::ArcEvent;
 use crate::snapshot::WorldSnapshot;
 
 use super::World;

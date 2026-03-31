@@ -3,9 +3,9 @@
 //! DUAN 事件模型以"事实 → 反应/观察"为核心：
 //!
 //! - [`Event`]：仿真中已发生的领域事实，纯数据，不承担副作用逻辑。
-//! - 反应（[`Reaction<E>`]）：通过 [`crate::WorldBuilder::on`] 注册，
+//! - 反应（[`Reaction<E>`](Reaction)）：通过 [`crate::WorldBuilder::on`] 注册，
 //!   接收特定事件并允许修改世界，处理仿真内副作用（生成实体、销毁实体、应用伤害等）。
-//! - 观察（[`Observer<E>`]）：通过 [`crate::WorldBuilder::observe`] 注册，
+//! - 观察（[`Observer<E>`](Observer)）：通过 [`crate::WorldBuilder::observe`] 注册，
 //!   只读消费事件，用于统计、日志、测试采集。
 //!
 //! # 定义事件
@@ -41,7 +41,7 @@ use std::any::{Any, TypeId};
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-// World 与 events 在同一 crate 内互相引用，Rust 模块系统允许这种跨模块循环引用。
+// World 与 event 在同一 crate 内互相引用，Rust 模块系统允许这种跨模块循环引用。
 use crate::world::World;
 
 // ──── Event ──────────────────────────────────────────────────────────────

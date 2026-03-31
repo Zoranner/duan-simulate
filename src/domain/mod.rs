@@ -55,7 +55,7 @@ pub(crate) struct ComputeResources<'a> {
     pub snapshot: &'a crate::snapshot::WorldSnapshot,
     pub pending_spawns: &'a mut Vec<crate::entity::PendingSpawn>,
     pub pending_destroys: &'a mut Vec<crate::entity::id::EntityId>,
-    pub events: &'a mut crate::runtime::events::EventBuffer,
+    pub events: &'a mut crate::event::EventBuffer,
     pub clock: &'a crate::runtime::timers::TimeClock,
     pub logger: &'a crate::diagnostics::LoggerHandle,
     pub delta_time: f64,

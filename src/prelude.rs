@@ -5,6 +5,6 @@ pub use crate::domain::{Domain, DomainSet};
 pub use crate::entity::context::EntityContext;
 pub use crate::entity::id::EntityId;
 pub use crate::entity::{ComponentBundle, Entity, Lifecycle};
-pub use crate::runtime::events::{Event, Observer, Reaction};
+pub use crate::event::{Event, Observer, Reaction};
 pub use crate::snapshot::WorldSnapshot;
 pub use crate::world::{World, WorldBuilder};

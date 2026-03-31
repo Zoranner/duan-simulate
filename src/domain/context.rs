@@ -10,7 +10,7 @@ use super::Domain;
 use crate::diagnostics::{FramePhase, LogContext, LoggerHandle};
 use crate::entity::id::EntityId;
 use crate::entity::{Entity, PendingSpawn};
-use crate::runtime::events::{Event, EventBuffer};
+use crate::event::{Event, EventBuffer};
 use crate::runtime::timers::TimeClock;
 use crate::snapshot::WorldSnapshot;
 use crate::storage::WorldStorage;

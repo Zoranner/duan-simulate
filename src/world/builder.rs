@@ -8,7 +8,7 @@ use std::sync::Arc;
 use crate::diagnostics::{LogSink, LoggerHandle};
 use crate::domain::{AnyDomain, Domain};
 use crate::entity::id::EntityAllocator;
-use crate::runtime::events::{
+use crate::event::{
     AnyObserver, AnyReaction, Event, EventBuffer, Observer, ObserverWrapper, Reaction,
     ReactionWrapper,
 };

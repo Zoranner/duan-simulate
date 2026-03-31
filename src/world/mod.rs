@@ -16,7 +16,7 @@ use crate::entity::id::{EntityAllocator, EntityId};
 use crate::entity::{
     dispatch_tick, ComponentBundle, Entity, EntityRecord, Lifecycle, PendingSpawn,
 };
-use crate::runtime::events::{AnyObserver, AnyReaction, EventBuffer};
+use crate::event::{AnyObserver, AnyReaction, EventBuffer};
 use crate::runtime::timers::{TimeClock, Timer, TimerCallback, TimerManager};
 use crate::scheduler::Scheduler;
 use crate::storage::WorldStorage;
@@ -445,7 +445,7 @@ impl Default for World {
 mod tests {
     use super::*;
     use crate::domain::Domain;
-    use crate::runtime::events::Event;
+    use crate::event::Event;
 
     #[test]
     fn test_world_creation() {

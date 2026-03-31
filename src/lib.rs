@@ -25,8 +25,8 @@
 //! | 角色 | trait | 说明 |
 //! |-----|-------|------|
 //! | 事实 | [`Event`] | 领域发出的已发生事实，纯数据 |
-//! | 反应 | [`Reaction<E>`](runtime::events::Reaction) | 接收事件并修改世界，用于仿真内副作用 |
-//! | 观察 | [`Observer<E>`](runtime::events::Observer) | 只读消费事件，用于统计、日志、测试 |
+//! | 反应 | [`Reaction<E>`](Reaction) | 接收事件并修改世界，用于仿真内副作用 |
+//! | 观察 | [`Observer<E>`](Observer) | 只读消费事件，用于统计、日志、测试 |
 //!
 //! # 快速开始
 //!
@@ -84,6 +84,7 @@ pub mod derive;
 pub mod diagnostics;
 pub mod domain;
 pub mod entity;
+pub mod event;
 pub mod prelude;
 pub mod runtime;
 pub mod scheduler;
@@ -102,7 +103,7 @@ pub use domain::{Domain, DomainSet, InReads, InWrites};
 pub use entity::context::EntityContext;
 pub use entity::id::EntityId;
 pub use entity::{ComponentBundle, Entity, Lifecycle};
-pub use runtime::events::{Event, Observer, Reaction};
+pub use event::{Event, Observer, Reaction};
 pub use runtime::timers::{TimeClock, Timer, TimerCallback};
 pub use snapshot::WorldSnapshot;
 pub use world::{World, WorldBuilder};
