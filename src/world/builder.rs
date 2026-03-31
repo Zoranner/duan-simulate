@@ -101,7 +101,8 @@ impl WorldBuilder {
 
     /// 注册事件反应处理器（可修改世界）
     ///
-    /// 接受任何实现了 [`Reaction<E>`] 的类型，包括具名结构体和闭包。
+    /// 接受任何实现了 [`Reaction<E>`] 的具名结构体类型。
+    /// 推荐将处理器集中到模块的 `install` 函数中，通过 [`.apply()`](WorldBuilder::apply) 装配。
     pub fn on<E: Event + 'static>(mut self, handler: impl Reaction<E> + 'static) -> Self {
         self.reactions
             .entry(TypeId::of::<E>())
@@ -115,7 +116,8 @@ impl WorldBuilder {
 
     /// 注册事件观察处理器（只读访问世界）
     ///
-    /// 接受任何实现了 [`Observer<E>`] 的类型，包括具名结构体和闭包。
+    /// 接受任何实现了 [`Observer<E>`] 的具名结构体类型。
+    /// 推荐将处理器集中到模块的 `install` 函数中，通过 [`.apply()`](WorldBuilder::apply) 装配。
     pub fn observe<E: Event + 'static>(mut self, handler: impl Observer<E> + 'static) -> Self {
         self.observers
             .entry(TypeId::of::<E>())

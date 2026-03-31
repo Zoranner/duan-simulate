@@ -504,16 +504,56 @@ mod tests {
         }
     }
 
+    // ──── 测试用具名处理器（框架内部测试的标准写法）─────────────────────────
+
+    use std::sync::{Arc, Mutex};
+
+    struct CollectReaction {
+        collected: Arc<Mutex<Vec<u32>>>,
+    }
+    impl crate::event::Reaction<TestEvent> for CollectReaction {
+        fn react(&mut self, ev: &TestEvent, _world: &mut World) {
+            self.collected.lock().unwrap().push(ev.value);
+        }
+    }
+
+    struct CollectObserver {
+        collected: Arc<Mutex<Vec<u32>>>,
+    }
+    impl crate::event::Observer<TestEvent> for CollectObserver {
+        fn observe(&mut self, ev: &TestEvent, _world: &World) {
+            self.collected.lock().unwrap().push(ev.value);
+        }
+    }
+
+    struct LogReaction {
+        log: Arc<Mutex<Vec<&'static str>>>,
+        label: &'static str,
+    }
+    impl crate::event::Reaction<TestEvent> for LogReaction {
+        fn react(&mut self, _ev: &TestEvent, _world: &mut World) {
+            self.log.lock().unwrap().push(self.label);
+        }
+    }
+
+    struct LogObserver {
+        log: Arc<Mutex<Vec<&'static str>>>,
+        label: &'static str,
+    }
+    impl crate::event::Observer<TestEvent> for LogObserver {
+        fn observe(&mut self, _ev: &TestEvent, _world: &World) {
+            self.log.lock().unwrap().push(self.label);
+        }
+    }
+
     #[test]
     fn test_reaction_receives_event() {
-        use std::sync::{Arc, Mutex};
         let received = Arc::new(Mutex::new(Vec::<u32>::new()));
-        let recv_clone = Arc::clone(&received);
 
         let mut world = World::builder()
             .domain(EmitDomain { emit_value: 42 })
-            .on::<TestEvent>(move |ev: &TestEvent, _world: &mut World| {
-                recv_clone.lock().unwrap().push(ev.value);
+            .on::<TestEvent>(CollectReaction {
+                collected: Arc::clone(&received),
             })
             .build();
 
@@ -523,14 +563,12 @@ mod tests {
 
     #[test]
     fn test_observer_receives_event() {
-        use std::sync::{Arc, Mutex};
         let observed = Arc::new(Mutex::new(Vec::<u32>::new()));
-        let obs_clone = Arc::clone(&observed);
 
         let mut world = World::builder()
             .domain(EmitDomain { emit_value: 7 })
-            .observe::<TestEvent>(move |ev: &TestEvent, _world: &World| {
-                obs_clone.lock().unwrap().push(ev.value);
+            .observe::<TestEvent>(CollectObserver {
+                collected: Arc::clone(&observed),
             })
             .build();
 
@@ -540,22 +578,21 @@ mod tests {
 
     #[test]
     fn test_multiple_handlers_same_event() {
-        use std::sync::{Arc, Mutex};
         let log = Arc::new(Mutex::new(Vec::<&'static str>::new()));
-        let l1 = Arc::clone(&log);
-        let l2 = Arc::clone(&log);
-        let l3 = Arc::clone(&log);
 
         let mut world = World::builder()
             .domain(EmitDomain { emit_value: 1 })
-            .on::<TestEvent>(move |_ev: &TestEvent, _w: &mut World| {
-                l1.lock().unwrap().push("reaction_1");
+            .on::<TestEvent>(LogReaction {
+                log: Arc::clone(&log),
+                label: "reaction_1",
             })
-            .on::<TestEvent>(move |_ev: &TestEvent, _w: &mut World| {
-                l2.lock().unwrap().push("reaction_2");
+            .on::<TestEvent>(LogReaction {
+                log: Arc::clone(&log),
+                label: "reaction_2",
             })
-            .observe::<TestEvent>(move |_ev: &TestEvent, _w: &World| {
-                l3.lock().unwrap().push("observer_1");
+            .observe::<TestEvent>(LogObserver {
+                log: Arc::clone(&log),
+                label: "observer_1",
             })
             .build();
 

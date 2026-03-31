@@ -60,10 +60,9 @@ impl Domain for MotionDomain {
             let Some((x, y)) = ctx.get_mut::<Position>(id).map(|p| (p.x, p.y)) else {
                 continue;
             };
-            let Some(vy) = ctx.get_mut::<Velocity>(id).map(|v| v.vy) else {
+            let Some((vy, vx)) = ctx.get_mut::<Velocity>(id).map(|v| (v.vy, v.vx)) else {
                 continue;
             };
-            let vx = ctx.get_mut::<Velocity>(id).map(|v| v.vx).unwrap_or(0.0);
 
             // 快照读取：小球的意图弹性系数（Intent，由 Ball::tick() 在 Phase 2 写入）
             // 与地面弹性系数相乘，体现实体意图和物理参数的共同作用

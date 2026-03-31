@@ -16,7 +16,7 @@
 //! |-----------|------|---------------|
 //! | **认知** | `Memory` | `BounceCount`：Ball 私有弹跳计数，仅 `Ball::tick()` 更新，域和快照不可见 |
 //! | **意图** | `Intent` | `Elasticity`：Ball 每帧声明期望弹性系数，`MotionDomain` 从快照只读 |
-//! | **状态** | `State` | `Position`、`Velocity`、`Collider`、`StaticBody`、`Mass`、`DidBounce` 等；由域权威写入 |
+//! | **状态** | `State` | `Position`、`Velocity`、`Collider`、`StaticBody`、`DidBounce` 等；由域权威写入 |
 //!
 //! `Ball::tick()` 感知上帧**状态** `DidBounce`，更新自身**认知** `BounceCount`，
 //! 再据此重新声明**意图** `Elasticity`（弹性随弹跳次数递减）；

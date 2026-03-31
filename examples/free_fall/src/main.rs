@@ -55,14 +55,13 @@ fn main() {
     world.spawn_with::<Ground>((
         Position::new(0.0, 0.0),
         StaticBody,
-        Collider::new(0.8, 0.05),
+        Collider::new(0.8),
     ));
 
     // 小球：从初始高度自由落体；BounceCount Memory 由 Ball::bundle() 提供默认值
     let ball_id = world.spawn_with::<Ball>((
         Position::new(0.0, BALL_INITIAL_HEIGHT),
         Velocity::new(0.0, 0.0),
-        Collider::new(0.8, 0.05),
     ));
 
     // ── Phase 1：全速仿真，缓存帧序列 ─────────────────────────────────────

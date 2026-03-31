@@ -198,28 +198,6 @@ pub trait Observer<E: Event>: Send + Sync + 'static {
     fn observe(&mut self, event: &E, world: &World);
 }
 
-// ──── 闭包 blanket impl ──────────────────────────────────────────────────
-
-impl<E, F> Reaction<E> for F
-where
-    E: Event,
-    F: FnMut(&E, &mut World) + Send + Sync + 'static,
-{
-    fn react(&mut self, event: &E, world: &mut World) {
-        self(event, world);
-    }
-}
-
-impl<E, F> Observer<E> for F
-where
-    E: Event,
-    F: FnMut(&E, &World) + Send + Sync + 'static,
-{
-    fn observe(&mut self, event: &E, world: &World) {
-        self(event, world);
-    }
-}
-
 // ──── 类型擦除内部接口 ────────────────────────────────────────────────────
 
 pub(crate) trait AnyReaction: Send + Sync {
