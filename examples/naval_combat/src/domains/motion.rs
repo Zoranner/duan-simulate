@@ -2,8 +2,8 @@
 //!
 //! 每帧执行：
 //! 1. **舰船转向**：读取**意图** `Helm`（`Intent`，上帧快照），以 `turn_rate` 限速逐渐转向期望航向
-//! 2. **位置积分**：对所有有**状态** `Velocity` 的实体做欧拉积分
-//! 3. **导弹里程**：累计**状态** `Seeker` 的飞行距离
+//! 2. **位置积分**：对所有有**事实** `Velocity` 的实体做欧拉积分
+//! 3. **导弹里程**：累计**事实** `Seeker` 的飞行距离
 
 use duan::{Domain, DomainContext};
 
@@ -18,9 +18,9 @@ impl Domain for MotionDomain {
     type After = ();
 
     fn compute(&mut self, ctx: &mut DomainContext<Self>, delta_time: f64) {
-        // ── 1. 舰船转向（读意图 Helm，写状态 Velocity）──────────────────────
+        // ── 1. 舰船转向（读意图 Helm，写事实 Velocity）──────────────────────
         //
-        // Helm 为意图（Entity 写），域从快照只读，体现「意志 → 状态」数据流。
+        // Helm 为意图（Entity 写），域从快照只读，体现「意图 → 事实」数据流。
         let helms: Vec<_> = ctx
             .each::<Helm>()
             .map(|(id, h)| (id, h.heading, h.turn_rate))

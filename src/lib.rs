@@ -6,27 +6,27 @@
 //!
 //! | 原语      | 角色     | 说明                                                           |
 //! |---------|--------|--------------------------------------------------------------|
-//! | Component | 数据   | 实体附加数据的通用约束，分认知/意图/状态（`Memory`/`Intent`/`State`）       |
+//! | Component | 数据   | 实体附加数据的通用约束，分认知/意图/事实（`Belief`/`Intent`/`Reality`）       |
 //! | Entity  | 意志主体  | 零大小标记类型，通过 `tick()` 定义行为                                    |
-//! | Domain  | 状态权威  | 独占写入特定**状态**（`State`）类型，按拓扑顺序执行                            |
+//! | Domain  | 规则权威  | 独占写入特定**事实**（`Reality`）类型，按拓扑顺序执行                            |
 //!
-//! # 三元语义：认知、意图、状态
+//! # 三元语义：认知、意图、事实
 //!
-//! 中文术语与 Rust trait 一一对应：**认知** → [`Memory`]，**意图** → [`Intent`]，**状态** → [`State`]。
+//! 中文术语与 Rust trait 一一对应（与 README 术语表一致）：**认知** → [`Belief`]，**意图** → [`Intent`]，**事实** → [`Reality`]。
 //!
-//! | 术语（中文） | Rust trait | 实体       | 域        | WorldSnapshot |
+//! | 术语（中文） | Rust trait | 实体       | 域        | Snapshot |
 //! |-----------|-----------|----------|----------|---------------|
-//! | 认知 | Memory     | 读写       | 不可见     | 不可见           |
+//! | 认知 | Belief     | 读写       | 不可见     | 不可见           |
 //! | 意图 | Intent     | 读写       | 只读（快照） | 只读            |
-//! | 状态 | State      | 只读（快照） | 独占写入   | 只读            |
+//! | 事实 | Reality    | 只读（快照） | 独占写入   | 只读            |
 //!
 //! # 事件模型
 //!
 //! | 角色 | trait | 说明 |
 //! |-----|-------|------|
-//! | 事实 | [`Event`]        | 领域发出的已发生事实，纯数据 |
-//! | 反应 | [`Reaction<E>`](Reaction)  | 接收事件并修改世界，用于仿真内副作用 |
-//! | 观察 | [`Observer<E>`](Observer)  | 只读消费事件，用于统计、日志、测试 |
+//! | 事件 | [`Event`]        | 已发生的一次变化，纯数据（README：事件 / Event） |
+//! | 反应器 | [`Reaction<E>`](Reaction)  | 接收事件并修改世界，用于仿真内副作用 |
+//! | 观察器 | [`Observer<E>`](Observer)  | 只读消费事件，用于统计、日志、测试 |
 //!
 //! # 快速开始
 //!
@@ -35,7 +35,7 @@
 //!
 //! #[derive(Clone, Default)]
 //! struct Position { pub x: f64, pub y: f64 }
-//! state!(Position);
+//! reality!(Position);
 //!
 //! struct Ball;
 //! impl Entity for Ball {
@@ -128,7 +128,7 @@ pub mod runtime;
 
 // 编程原语
 pub use component::{
-    Component, ComponentKind, ComponentSet, EntityWritable, Intent, Memory, State,
+    Belief, Component, ComponentKind, ComponentSet, EntityWritable, Intent, Reality,
 };
 pub use domain::context::DomainContext;
 pub use domain::{Domain, DomainSet};
@@ -141,7 +141,8 @@ pub use world::{World, WorldBuilder};
 // 高级场景
 pub use diagnostics::{LogLevel, LogSink, LoggerHandle};
 pub use runtime::timers::{TimeClock, Timer, TimerCallback};
-pub use snapshot::WorldSnapshot;
+pub use snapshot::Snapshot;
+pub use storage::Storage;
 
 // ──── 框架常量 ──────────────────────────────────────────────────────────────
 

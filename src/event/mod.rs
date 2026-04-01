@@ -1,11 +1,11 @@
 //! 事件系统
 //!
-//! DUAN 事件模型以"事实 → 反应/观察"为核心：
+//! DUAN 事件模型（README：事件 Event、反应器 Reaction、观察器 Observer）：
 //!
-//! - [`Event`]：仿真中已发生的领域事实，纯数据，不承担副作用逻辑。
-//! - 反应（[`Reaction<E>`](Reaction)）：通过 [`crate::WorldBuilder::on`] 注册，
-//!   接收特定事件并允许修改世界，处理仿真内副作用（生成实体、销毁实体、应用伤害等）。
-//! - 观察（[`Observer<E>`](Observer)）：通过 [`crate::WorldBuilder::observe`] 注册，
+//! - [`Event`]：已发生的一次变化，纯数据，不承担副作用逻辑。
+//! - [`Reaction<E>`](Reaction)（反应器）：通过 [`crate::WorldBuilder::on`] 注册，
+//!   接收特定类型事件并允许修改世界，处理仿真内副作用（生成实体、销毁实体、应用伤害等）。
+//! - [`Observer<E>`](Observer)（观察器）：通过 [`crate::WorldBuilder::observe`] 注册，
 //!   只读消费事件，用于统计、日志、测试采集。
 //!
 //! # 定义事件
@@ -67,9 +67,9 @@ use crate::world::World;
 
 // ──── Event ──────────────────────────────────────────────────────────────
 
-/// 领域事实 trait
+/// 事件 trait（README：事件 / Event）
 ///
-/// 实现此 trait 的类型表示仿真中已发生的领域事实，是纯数据载体。
+/// 实现此 trait 的类型表示仿真中已发生的一次变化，是纯数据载体。
 ///
 /// # 约束
 ///
@@ -106,22 +106,24 @@ pub(crate) struct ArcEvent {
 
 /// 帧内事件缓冲区（框架内部使用）
 ///
-/// 收集一帧内产生的所有事实事件，在帧末统一分发到反应器和观察器。
+/// 收集一帧内产生的所有事件，在帧末统一分发到反应器与观察器。
 /// 用户通过 [`crate::EntityContext::emit`] 或 [`crate::DomainContext::emit`] 发送事件，
 /// 不需要直接操作此类型。
 pub(crate) struct EventBuffer {
-    facts: Vec<ArcEvent>,
+    pending: Vec<ArcEvent>,
 }
 
 impl EventBuffer {
     pub(crate) fn new() -> Self {
-        Self { facts: Vec::new() }
+        Self {
+            pending: Vec::new(),
+        }
     }
 
-    /// 发出一个领域事实（供 Context 调用）
+    /// 入队一个事件（供 Context 调用）
     pub(crate) fn emit<E: Event>(&mut self, event: E) {
         let name = event.event_name();
-        self.facts.push(ArcEvent {
+        self.pending.push(ArcEvent {
             type_id: TypeId::of::<E>(),
             inner: Arc::new(event),
             name,
@@ -129,7 +131,7 @@ impl EventBuffer {
     }
 
     pub(crate) fn drain(&mut self) -> Vec<ArcEvent> {
-        std::mem::take(&mut self.facts)
+        std::mem::take(&mut self.pending)
     }
 }
 
@@ -141,9 +143,9 @@ impl Default for EventBuffer {
 
 // ──── Reaction / Observer 公开 trait ────────────────────────────────────
 
-/// 反应器 trait
+/// 反应器 trait（README：反应器 / Reaction）
 ///
-/// 反应器接收特定类型的领域事实事件，并允许修改世界，处理仿真内副作用
+/// 反应器接收特定类型的事件，并允许修改世界，处理仿真内副作用
 /// （如生成导弹、销毁实体、应用伤害等）。
 ///
 /// 通过 [`crate::WorldBuilder::on`] 注册。为具名结构体实现此 trait，
@@ -170,9 +172,9 @@ pub trait Reaction<E: Event>: Send + Sync + 'static {
     fn react(&mut self, event: &E, world: &mut World);
 }
 
-/// 观察器 trait
+/// 观察器 trait（README：观察器 / Observer）
 ///
-/// 观察器接收特定类型的领域事实事件，但不能修改世界，
+/// 观察器接收特定类型的事件，但不能修改世界，
 /// 用于统计、日志、测试采集、回放数据录制等只读消费场景。
 ///
 /// 通过 [`crate::WorldBuilder::observe`] 注册。

@@ -1,45 +1,43 @@
 //! 组件系统
 //!
-//! # 三元语义：认知、意图、状态
+//! # 三元语义：认知、意图、事实
 //!
-//! 中文术语与 Rust trait 对应：**认知**（[`Memory`]）、**意图**（[`Intent`]）、**状态**（[`State`]）。
-//! 所有实体数据按语义归入三类，写入权限由类型本身决定，编译期强制：
+//! 中文术语与 Rust trait 对应：**认知**（[`Belief`]）、**意图**（[`Intent`]）、**事实**（[`Reality`]）。
+//! 与 README 术语表一致。所有实体数据按语义归入三类，写入权限由类型本身决定，编译期强制：
 //!
-//! | 术语（中文） | Rust trait | 实体     | 域       | WorldSnapshot |
+//! | 术语（中文） | Rust trait | 实体     | 域       | Snapshot |
 //! |-----------|-----------|--------|--------|---------------|
-//! | 认知 | Memory | 读写     | 不可见   | 不可见          |
+//! | 认知 | Belief | 读写     | 不可见   | 不可见          |
 //! | 意图 | Intent | 读写     | 只读     | 只读            |
-//! | 状态 | State  | 只读快照 | 独占写入 | 只读            |
+//! | 事实 | Reality | 只读快照 | 独占写入 | 只读            |
 //!
 //! # 用法
 //!
+//! 推荐使用便捷宏声明语义，宏会同时设置正确的 `ComponentKind`：
+//!
 //! ```rust,ignore
-//! use duan::{Component, EntityWritable, Memory, Intent, State};
+//! #[derive(Clone, Default)] pub struct SoldierBelief { pub path_index: usize }
+//! #[derive(Clone, Default)] pub struct MovementOrder { pub target_x: f64, pub target_y: f64 }
+//! #[derive(Clone, Default)] pub struct Position { pub x: f64, pub y: f64 }
 //!
-//! #[derive(Clone, Default)]
-//! pub struct SoldierMemory { pub path_index: usize }
-//! impl Component for SoldierMemory {}
-//! impl EntityWritable for SoldierMemory {}
-//! impl Memory for SoldierMemory {}
-//!
-//! #[derive(Clone, Default)]
-//! pub struct MovementOrder { pub target_x: f64, pub target_y: f64 }
-//! impl Component for MovementOrder {}
-//! impl EntityWritable for MovementOrder {}
-//! impl Intent for MovementOrder {}
-//!
-//! #[derive(Clone, Default)]
-//! pub struct Position { pub x: f64, pub y: f64 }
-//! impl Component for Position {}
-//! impl State for Position {}
+//! duan::belief!(SoldierBelief);          // 认知：ComponentKind::Belief，不进入快照
+//! duan::intent!(MovementOrder);          // 意图：ComponentKind::Intent，进入快照
+//! duan::reality!(Position, Velocity);    // 事实：ComponentKind::Reality，进入快照
 //! ```
 //!
-//! 或使用便捷宏简化样板：
+//! 需要手写 `impl` 时，必须显式覆盖 `const KIND`，否则默认为 `Reality`：
 //!
 //! ```rust,ignore
-//! duan::memory!(SoldierMemory);
-//! duan::intent!(MovementOrder);
-//! duan::state!(Position, Velocity, Health);
+//! use duan::{Component, ComponentKind, EntityWritable, Belief};
+//!
+//! #[derive(Clone, Default)]
+//! pub struct SoldierBelief { pub path_index: usize }
+//!
+//! impl Component for SoldierBelief {
+//!     const KIND: ComponentKind = ComponentKind::Belief; // 必须显式指定，否则默认 Reality
+//! }
+//! impl EntityWritable for SoldierBelief {}
+//! impl Belief for SoldierBelief {}
 //! ```
 
 use std::any::TypeId;
@@ -50,61 +48,61 @@ use std::any::TypeId;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ComponentKind {
     /// 实体私有认知数据，不进入快照
-    Memory,
+    Belief,
     /// 实体公开意图，进入快照
     Intent,
-    /// 域权威状态，进入快照
-    State,
+    /// 域权威事实，进入快照
+    Reality,
 }
 
 /// 实体组件统一约束（sealed supertrait）
 ///
 /// 所有实体附加数据的基础约束。用户不直接实现此 trait，
-/// 而是通过实现 [`Memory`]、[`Intent`] 或 [`State`] 之一来声明语义。
+/// 而是通过实现 [`Belief`]、[`Intent`] 或 [`Reality`] 之一来声明语义。
 ///
 /// 框架内部以 Component 为统一泛型约束，用户只需关注三个语义 trait。
 pub trait Component: Send + Sync + Clone + 'static {
-    /// 组件语义（默认视为状态）
+    /// 组件语义（默认视为事实）
     ///
-    /// 默认值为 `State`，便于渐进迁移已有手写 `impl Component` 的代码。
-    const KIND: ComponentKind = ComponentKind::State;
+    /// 默认值为 `Reality`，便于渐进迁移已有手写 `impl Component` 的代码。
+    const KIND: ComponentKind = ComponentKind::Reality;
 }
 
 /// 实体可写标记
 ///
-/// 只有 [`Memory`] 和 [`Intent`] 类型实现此 trait。
-/// [`EntityContext::set`](crate::EntityContext::set) 使用此约束，在编译期阻止实体写入 [`State`] 类型。
+/// 只有 [`Belief`] 和 [`Intent`] 类型实现此 trait。
+/// [`EntityContext::set`](crate::EntityContext::set) 使用此约束，在编译期阻止实体写入 [`Reality`] 类型。
 pub trait EntityWritable: Component {}
 
-/// 认知（`Memory`）
+/// 认知（`Belief`）
 ///
 /// 实体内部认知数据，对外完全封闭：
 /// - 实体 `tick()` 可读写
 /// - 域 `compute()` 不能访问
-/// - [`WorldSnapshot`](crate::WorldSnapshot) 中不包含
+/// - [`Snapshot`](crate::Snapshot) 中不包含
 ///
-/// 适用于实体的内部决策状态，如路径规划缓存、有限状态机状态等。
-pub trait Memory: EntityWritable {}
+/// 适用于实体的内部决策数据，如路径规划缓存、有限状态机内部变量等。
+pub trait Belief: EntityWritable {}
 
 /// 意图（`Intent`）
 ///
 /// 实体对外表达的意志与诉求（意图数据）：
 /// - 实体 `tick()` 可写（当前帧）
 /// - 域 `compute()` 可读（从快照，上帧值，只读）
-/// - [`WorldSnapshot`](crate::WorldSnapshot) 中可见（只读）
+/// - [`Snapshot`](crate::Snapshot) 中可见（只读）
 ///
 /// 适用于实体希望驱动的行为，如移动命令、攻击意图等。
 pub trait Intent: EntityWritable {}
 
-/// 状态（`State`）
+/// 事实（`Reality`）
 ///
-/// 由域权威写入的客观状态：
+/// 由域权威写入的客观世界内容：
 /// - 域 `compute()` 中声明 `Writes` 的域可独占写入
 /// - 实体 `tick()` 可读（从快照，上帧值，只读）
-/// - [`WorldSnapshot`](crate::WorldSnapshot) 中可见（只读）
+/// - [`Snapshot`](crate::Snapshot) 中可见（只读）
 ///
-/// 适用于由物理、战斗等域权威计算的结果，如位置、速度、生命值等。
-pub trait State: Component {}
+/// 适用于由物理、战斗等域权威裁定的结果，如位置、速度、生命值等。
+pub trait Reality: Component {}
 
 /// 类型级组件集合
 ///
@@ -158,24 +156,24 @@ impl_component_set!(A, B, C, D, E, F, G, H, I, J, K, L);
 
 // ──── 便捷宏 ──────────────────────────────────────────────────────────────
 
-/// 为类型声明认知语义（`Memory`）
+/// 为类型声明认知语义（`Belief`）
 ///
-/// 等价于依次 `impl Component`, `impl EntityWritable`, `impl Memory`。
+/// 等价于依次 `impl Component`, `impl EntityWritable`, `impl Belief`。
 ///
 /// # 用法
 ///
 /// ```rust,ignore
-/// duan::memory!(SoldierMemory);
-/// duan::memory!(A, B, C);
+/// duan::belief!(SoldierBelief);
+/// duan::belief!(A, B, C);
 /// ```
 #[macro_export]
-macro_rules! memory {
+macro_rules! belief {
     ($($t:ty),+ $(,)?) => {
         $(impl $crate::Component for $t {
-            const KIND: $crate::ComponentKind = $crate::ComponentKind::Memory;
+            const KIND: $crate::ComponentKind = $crate::ComponentKind::Belief;
         })*
         $(impl $crate::EntityWritable for $t {})*
-        $(impl $crate::Memory for $t {})*
+        $(impl $crate::Belief for $t {})*
     };
 }
 
@@ -193,15 +191,15 @@ macro_rules! intent {
     };
 }
 
-/// 为类型声明状态语义（`State`）
+/// 为类型声明事实语义（`Reality`）
 ///
-/// 等价于依次 `impl Component`, `impl State`。
+/// 等价于依次 `impl Component`, `impl Reality`。
 #[macro_export]
-macro_rules! state {
+macro_rules! reality {
     ($($t:ty),+ $(,)?) => {
         $(impl $crate::Component for $t {
-            const KIND: $crate::ComponentKind = $crate::ComponentKind::State;
+            const KIND: $crate::ComponentKind = $crate::ComponentKind::Reality;
         })*
-        $(impl $crate::State for $t {})*
+        $(impl $crate::Reality for $t {})*
     };
 }

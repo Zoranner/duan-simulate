@@ -15,4 +15,4 @@ impl Health {
     }
 }
 
-duan::state!(Health);
+duan::reality!(Health);

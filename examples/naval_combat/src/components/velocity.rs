@@ -23,4 +23,4 @@ impl Velocity {
     }
 }
 
-duan::state!(Velocity);
+duan::reality!(Velocity);

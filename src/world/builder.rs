@@ -14,7 +14,7 @@ use crate::event::{
 };
 use crate::runtime::scheduler::{DomainInfo, Scheduler};
 use crate::runtime::timers::{TimeClock, TimerManager};
-use crate::storage::WorldStorage;
+use crate::storage::Storage;
 
 use super::World;
 
@@ -99,7 +99,7 @@ impl WorldBuilder {
         self
     }
 
-    /// 注册事件反应处理器（可修改世界）
+    /// 注册反应器（可修改世界）
     ///
     /// 接受任何实现了 [`Reaction<E>`] 的具名结构体类型。
     /// 推荐将处理器集中到模块的 `install` 函数中，通过 [`.apply()`](WorldBuilder::apply) 装配。
@@ -114,7 +114,7 @@ impl WorldBuilder {
         self
     }
 
-    /// 注册事件观察处理器（只读访问世界）
+    /// 注册观察器（只读访问世界）
     ///
     /// 接受任何实现了 [`Observer<E>`] 的具名结构体类型。
     /// 推荐将处理器集中到模块的 `install` 函数中，通过 [`.apply()`](WorldBuilder::apply) 装配。
@@ -179,7 +179,7 @@ impl WorldBuilder {
 
         World {
             clock,
-            storage: WorldStorage::new(),
+            storage: Storage::new(),
             entities: HashMap::new(),
             allocator: EntityAllocator::new(),
             domains: self.domains,
@@ -213,7 +213,7 @@ mod tests {
     #[derive(Clone)]
     struct Pos;
     impl crate::Component for Pos {}
-    impl crate::State for Pos {}
+    impl crate::Reality for Pos {}
 
     struct NopDomain;
     impl Domain for NopDomain {

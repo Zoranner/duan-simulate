@@ -1,8 +1,8 @@
 //! 域上下文
 //!
 //! [`DomainContext<D>`] 是域 `compute()` 的唯一数据入口，提供：
-//! - 类型安全的组件读取（仅限 `D::Reads` 中声明的意图/状态类型）
-//! - 类型安全的组件写入（仅限 `D::Writes` 中声明的状态类型）
+//! - 类型安全的组件读取（仅限 `D::Reads` 中声明的意图/事实类型）
+//! - 类型安全的组件写入（仅限 `D::Writes` 中声明的事实类型）
 //! - 事件发送、生命周期命令
 //! - 带仿真上下文的统一日志接口
 
@@ -12,8 +12,8 @@ use crate::entity::id::EntityId;
 use crate::entity::{Entity, PendingSpawn};
 use crate::event::{Event, EventBuffer};
 use crate::runtime::timers::TimeClock;
-use crate::snapshot::WorldSnapshot;
-use crate::storage::WorldStorage;
+use crate::snapshot::Snapshot;
+use crate::storage::Storage;
 use crate::{Component, ComponentSet};
 use std::any::TypeId;
 use std::marker::PhantomData;
@@ -27,9 +27,9 @@ use std::marker::PhantomData;
 /// - `get_mut<T: InWrites<D>>` → 写入活跃存储（当前帧）
 pub struct DomainContext<'w, D: Domain> {
     /// 当前帧活跃存储（仅写 Writes 类型）
-    pub(crate) storage: &'w mut WorldStorage,
+    pub(crate) storage: &'w mut Storage,
     /// 上帧快照（仅读 Reads 类型）
-    pub(crate) snapshot: &'w WorldSnapshot,
+    pub(crate) snapshot: &'w Snapshot,
     pub(crate) pending_spawns: &'w mut Vec<PendingSpawn>,
     pub(crate) pending_destroys: &'w mut Vec<EntityId>,
     pub(crate) events: &'w mut EventBuffer,
@@ -71,7 +71,7 @@ impl<'w, D: Domain> DomainContext<'w, D> {
 
     /// 遍历快照中所有拥有组件 T 的实体（只读，上帧值）
     ///
-    /// 读取的是意图或状态（`Intent` / `State`）的上帧快照，不受本帧其他域写入影响。
+    /// 读取的是意图或事实（`Intent` / `Reality`）的上帧快照，不受本帧其他域写入影响。
     /// 若 `T` 未在 `D::Reads` 中声明，会在运行时 panic。
     pub fn each<T: Component>(&self) -> impl Iterator<Item = (EntityId, &T)> {
         Self::assert_read_declared::<T>();
@@ -120,7 +120,7 @@ impl<'w, D: Domain> DomainContext<'w, D> {
 
     // ──── 事件 ──────────────────────────────────────────────────────────
 
-    /// 发出领域事实事件
+    /// 发出事件（README：事件 / Event）
     ///
     /// 事件将在帧末分发给所有通过 [`WorldBuilder::on`](crate::WorldBuilder::on) 或
     /// [`WorldBuilder::observe`](crate::WorldBuilder::observe) 注册的处理器。

@@ -6,31 +6,31 @@
 //!
 //! ```rust,ignore
 //! #[derive(Component)]
-//! #[duan(memory)]
-//! pub struct SoldierMemory { pub path_index: usize }
+//! #[duan(belief)]
+//! pub struct SoldierBelief { pub path_index: usize }
 //!
 //! #[derive(Component)]
 //! #[duan(intent)]
 //! pub struct MovementOrder { pub target_x: f64 }
 //!
 //! #[derive(Component)]
-//! #[duan(state)]
+//! #[duan(reality)]
 //! pub struct Position { pub x: f64, pub y: f64 }
 //! ```
 //!
 //! # 现阶段推荐用法
 //!
-//! 请使用 [`memory!`](crate::memory)、[`intent!`](crate::intent)、[`state!`](crate::state)
-//! 便捷宏声明语义，等价于手写 `impl Component + impl EntityWritable + impl Memory/Intent/State`：
+//! 请使用 [`belief!`](crate::belief)、[`intent!`](crate::intent)、[`reality!`](crate::reality)
+//! 便捷宏声明语义，等价于手写 `impl Component + impl EntityWritable + impl Belief/Intent/Reality`：
 //!
 //! ```rust,ignore
-//! duan::memory!(SoldierMemory);
+//! duan::belief!(SoldierBelief);
 //! duan::intent!(MovementOrder);
-//! duan::state!(Position, Velocity, Health);
+//! duan::reality!(Position, Velocity, Health);
 //! ```
 //!
 //! # 演进路线
 //!
-//! 1. 当前：宏（`memory!` / `intent!` / `state!`）
-//! 2. 目标：proc-macro derive（`#[derive(Component)]` + `#[duan(memory|intent|state)]`）
+//! 1. 当前：宏（`belief!` / `intent!` / `reality!`）
+//! 2. 目标：proc-macro derive（`#[derive(Component)]` + `#[duan(belief|intent|reality)]`）
 //! 3. 宏保留作为简单场景的快捷写法

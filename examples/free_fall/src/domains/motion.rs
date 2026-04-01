@@ -11,12 +11,12 @@
 //!    ```
 //! 3. 地面碰撞检测与弹性响应：
 //!    若 `y_new ≤ 0` 且 `vy_new < 0`，贴地并按弹性系数反转速度。
-//! 4. 更新 [`DidBounce`] 状态（Ball::tick() 下帧经快照感知）。
+//! 4. 更新 [`DidBounce`] 事实（Ball::tick() 下帧经快照感知）。
 //! 5. 发出 [`GroundCollisionEvent`]（由 handlers 模块中的 Observer 消费）。
 //!
 //! # 为什么合并而不拆分？
 //!
-//! 框架规定每个 State 组件只能由**唯一**的域写入。积分和碰撞修正都需要写入
+//! 框架规定每个 Reality（事实）组件只能由**唯一**的域写入。积分和碰撞修正都需要写入
 //! `Position` 和 `Velocity`，因此它们必须属于同一个权威域。
 //! 将它们硬拆为两个域会引发调度器写冲突（Scheduler write-conflict panic）。
 
@@ -38,14 +38,14 @@ impl MotionDomain {
 
 impl Domain for MotionDomain {
     type Writes = (Position, Velocity, DidBounce);
-    /// Reads 同时包含 State（Collider / StaticBody）和 Intent（Elasticity）
+    /// Reads 同时包含 Reality（Collider / StaticBody）和 Intent（Elasticity）
     type Reads = (Collider, StaticBody, Elasticity);
     type After = ();
 
     fn compute(&mut self, ctx: &mut DomainContext<Self>, delta_time: f64) {
         let gravity = self.gravity;
 
-        // 地面弹性系数（State，来自静态体的 Collider，快照只读）
+        // 地面弹性系数（Reality，来自静态体的 Collider，快照只读）
         let ground_restitution = ctx
             .entities::<StaticBody>()
             .find_map(|id| ctx.get::<Collider>(id))

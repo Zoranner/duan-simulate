@@ -10,4 +10,4 @@ impl Radar {
     }
 }
 
-duan::state!(Radar);
+duan::reality!(Radar);

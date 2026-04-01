@@ -2,7 +2,7 @@
 //!
 //! ```text
 //! Phase 1  clock.tick(delta_time)        时间推进
-//! Phase 2  冻结 WorldSnapshot            实体 tick（每实体调用 Entity::tick）
+//! Phase 2  冻结 Snapshot                 实体 tick（每实体调用 Entity::tick）
 //! Phase 3  Domain::compute              域计算（按调度顺序）
 //! Phase 4  事件分发                      按类型分发到 Reaction / Observer
 //! Phase 5  生命周期管理                  批量执行 spawn/destroy，清理已销毁实体
@@ -14,7 +14,7 @@ use crate::entity::context::EntityContext;
 use crate::entity::id::EntityId;
 use crate::entity::PendingSpawn;
 use crate::event::ArcEvent;
-use crate::snapshot::WorldSnapshot;
+use crate::snapshot::Snapshot;
 
 use super::World;
 
@@ -78,7 +78,7 @@ pub(crate) fn run(world: &mut World, delta_time: f64) {
 // ──── Phase 2：Entity tick ────────────────────────────────────────────────
 
 fn do_entity_ticks(world: &mut World, delta_time: f64) {
-    let snapshot = WorldSnapshot::build(&world.storage);
+    let snapshot = Snapshot::build(&world.storage);
 
     type TickEntry = (EntityId, fn(&mut EntityContext));
     let active: Vec<TickEntry> = world
@@ -133,7 +133,7 @@ fn do_entity_ticks(world: &mut World, delta_time: f64) {
 // ──── Phase 3：Domain compute ─────────────────────────────────────────────
 
 fn do_domain_compute(world: &mut World, delta_time: f64) {
-    let snapshot = WorldSnapshot::build(&world.storage);
+    let snapshot = Snapshot::build(&world.storage);
 
     let order = world.scheduler.execution_order.clone();
 
@@ -182,7 +182,7 @@ fn do_domain_compute(world: &mut World, delta_time: f64) {
 
 // ──── Phase 4：事件分发 ───────────────────────────────────────────────────
 
-/// 将本帧事实事件按类型分发到反应器和观察器。
+/// 将本帧事件按类型分发到反应器与观察器。
 ///
 /// 分发顺序：先依次执行所有反应器（可修改世界），再依次执行所有观察器（只读）。
 /// 同一事件类型的多个处理器按注册顺序调用。

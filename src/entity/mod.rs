@@ -10,17 +10,17 @@
 //! # 示例
 //!
 //! ```rust,ignore
-//! use duan::{Entity, EntityContext, Component, State, state};
+//! use duan::{Entity, EntityContext, Component, Reality};
 //!
 //! #[derive(Clone, Default)]
 //! pub struct Health { pub current: f64, pub max: f64 }
-//! state!(Health);
+//! duan::reality!(Health);
 //!
 //! pub struct Soldier;
 //!
 //! impl Entity for Soldier {
 //!     fn tick(ctx: &mut EntityContext) {
-//!         // 从快照读取生命值（状态 State：上帧值）
+//!         // 从快照读取生命值（事实 Reality：上帧值）
 //!         if let Some(hp) = ctx.snapshot().get::<Health>(ctx.id()) {
 //!             if hp.current <= 0.0 {
 //!                 ctx.destroy(ctx.id());
@@ -37,7 +37,7 @@
 pub mod context;
 pub mod id;
 
-use crate::storage::WorldStorage;
+use crate::storage::Storage;
 use crate::Component;
 use id::EntityId;
 
@@ -73,17 +73,17 @@ pub trait Entity: 'static {
 ///
 /// 将一组组件应用到世界存储中。支持 `()` 和 1-12 元素的组件元组。
 pub trait ComponentBundle {
-    fn apply(self, id: EntityId, storage: &mut WorldStorage);
+    fn apply(self, id: EntityId, storage: &mut Storage);
 }
 
 impl ComponentBundle for () {
-    fn apply(self, _id: EntityId, _storage: &mut WorldStorage) {}
+    fn apply(self, _id: EntityId, _storage: &mut Storage) {}
 }
 
 macro_rules! impl_component_bundle {
     ($($T:ident: $idx:tt),+) => {
         impl<$($T: Component),+> ComponentBundle for ($($T,)+) {
-            fn apply(self, id: EntityId, storage: &mut WorldStorage) {
+            fn apply(self, id: EntityId, storage: &mut Storage) {
                 $(storage.insert::<$T>(id, self.$idx);)+
             }
         }
@@ -144,7 +144,7 @@ pub(crate) fn dispatch_tick<E: Entity>(ctx: &mut context::EntityContext) {
 
 // ──── 待处理操作 ──────────────────────────────────────────────────────────
 
-type ApplyFn = Box<dyn FnOnce(EntityId, &mut WorldStorage) + Send>;
+type ApplyFn = Box<dyn FnOnce(EntityId, &mut Storage) + Send>;
 
 /// 待 spawn 的实体（框架内部）
 pub(crate) struct PendingSpawn {

@@ -1,12 +1,12 @@
 //! 域（Domain）
 //!
-//! 域是**状态**（`State`）数据的权威，是仿真的核心计算单元。
+//! 域是**事实**（`Reality`）组件的权威，是仿真的核心计算单元（README：域 / Domain）。
 //!
 //! # 设计哲学
 //!
-//! 「域是状态数据的权威。实体是意志的主体。」
+//! 「域裁定事实。实体表达意图。」（与 README 一致。）
 //!
-//! - 每种状态（`State`）类型只能由一个域独占写入（构建期冲突检测）
+//! - 每种事实（`Reality`）类型只能由一个域独占写入（构建期冲突检测）
 //! - 域的计算依赖由类型系统而非字符串声明，Build 时静态分析
 //! - 域读取世界快照（上帧值），写入当前帧活跃存储
 //!
@@ -17,7 +17,7 @@
 //!
 //! #[derive(Clone, Default)]
 //! pub struct Velocity { pub vx: f64, pub vy: f64 }
-//! duan::state!(Velocity);
+//! duan::reality!(Velocity);
 //!
 //! pub struct MotionDomain { pub gravity: f64 }
 //!
@@ -51,8 +51,8 @@ use std::any::TypeId;
 ///
 /// 将 `compute_dyn` 所需的多个可变引用打包，避免参数过多。
 pub(crate) struct ComputeResources<'a> {
-    pub storage: &'a mut crate::storage::WorldStorage,
-    pub snapshot: &'a crate::snapshot::WorldSnapshot,
+    pub storage: &'a mut crate::storage::Storage,
+    pub snapshot: &'a crate::snapshot::Snapshot,
     pub pending_spawns: &'a mut Vec<crate::entity::PendingSpawn>,
     pub pending_destroys: &'a mut Vec<crate::entity::id::EntityId>,
     pub events: &'a mut crate::event::EventBuffer,
@@ -104,13 +104,13 @@ impl_domain_set!(D1, D2, D3, D4, D5, D6, D7, D8);
 ///
 /// 通过三个关联类型声明数据所有权和执行依赖，框架在 `build()` 时静态分析：
 ///
-/// - `Writes`：独占写入的 State 类型集合（同一 State 只能有一个域写入）
-/// - `Reads`：从世界快照读取的 Intent/State 类型集合
+/// - `Writes`：独占写入的 Reality 类型集合（同一 Reality 只能有一个域写入）
+/// - `Reads`：从世界快照读取的 Intent/Reality 类型集合
 /// - `After`：必须在本域之前完成计算的域集合
 pub trait Domain: Send + Sync + Sized + 'static {
-    /// 本域独占写入的 State 类型集合
+    /// 本域独占写入的 Reality 类型集合
     type Writes: ComponentSet;
-    /// 本域从快照读取的 Intent/State 类型集合
+    /// 本域从快照读取的 Intent/Reality 类型集合
     type Reads: ComponentSet;
     /// 必须在本域之前完成的前置域集合
     type After: DomainSet;

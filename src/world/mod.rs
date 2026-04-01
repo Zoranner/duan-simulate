@@ -19,7 +19,7 @@ use crate::entity::{
 use crate::event::{AnyObserver, AnyReaction, EventBuffer};
 use crate::runtime::scheduler::Scheduler;
 use crate::runtime::timers::{TimeClock, Timer, TimerCallback, TimerManager};
-use crate::storage::WorldStorage;
+use crate::storage::Storage;
 
 // ──── World ───────────────────────────────────────────────────────────────
 
@@ -28,7 +28,7 @@ use crate::storage::WorldStorage;
 /// 顶层容器，驱动 5 阶段仿真循环。通过 [`World::builder()`] 构建。
 pub struct World {
     pub(crate) clock: TimeClock,
-    pub(crate) storage: WorldStorage,
+    pub(crate) storage: Storage,
     pub(crate) entities: HashMap<EntityId, EntityRecord>,
     pub(crate) allocator: EntityAllocator,
     pub(crate) domains: Vec<Box<dyn AnyDomain>>,
@@ -111,7 +111,7 @@ impl World {
 
     /// 读取实体的组件（只读）
     ///
-    /// 主要用于宿主层（游戏循环、UI 展示、测试断言）读取实体状态。
+    /// 主要用于宿主层（游戏循环、UI 展示、测试断言）读取实体组件（含事实等）。
     /// 域和实体的业务逻辑应优先使用各自的 Context API。
     pub fn get<T: crate::Component>(&self, id: EntityId) -> Option<&T> {
         self.storage.get::<T>(id)
@@ -120,7 +120,7 @@ impl World {
     /// 宿主侧检查实体组件（可变）
     ///
     /// 仅用于调试、测试和外部工具场景。
-    /// 业务逻辑必须通过域（[`crate::DomainContext`]）或实体（[`crate::EntityContext`]）上下文修改状态。
+    /// 业务逻辑必须通过域（[`crate::DomainContext`]）或实体（[`crate::EntityContext`]）上下文修改世界；此处仅用于调试与外部工具。
     pub fn inspect_mut<T: crate::Component>(&mut self, id: EntityId) -> Option<&mut T> {
         self.storage.get_mut::<T>(id)
     }

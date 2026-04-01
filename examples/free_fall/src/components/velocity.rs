@@ -1,4 +1,4 @@
-/// 速度（State：由运动域积分）
+/// 速度（事实 Reality：由运动域积分）
 #[derive(Debug, Clone, Default)]
 pub struct Velocity {
     pub vx: f64,
@@ -11,4 +11,4 @@ impl Velocity {
     }
 }
 
-duan::state!(Velocity);
+duan::reality!(Velocity);

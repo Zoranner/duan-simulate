@@ -1,4 +1,4 @@
-/// 碰撞体参数（State：弹性系数）
+/// 碰撞体参数（事实 Reality：弹性系数）
 #[derive(Debug, Clone)]
 pub struct Collider {
     /// 弹性系数（0.0 = 完全非弹性，1.0 = 完全弹性）
@@ -11,4 +11,4 @@ impl Collider {
     }
 }
 
-duan::state!(Collider);
+duan::reality!(Collider);

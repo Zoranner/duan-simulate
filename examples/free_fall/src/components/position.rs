@@ -1,4 +1,4 @@
-/// 位置（State：由域写入，实体只读）
+/// 位置（事实 Reality：由域写入，实体只读）
 #[derive(Debug, Clone, Default)]
 pub struct Position {
     pub x: f64,
@@ -11,4 +11,4 @@ impl Position {
     }
 }
 
-duan::state!(Position);
+duan::reality!(Position);

@@ -4,7 +4,7 @@
 //! 1. `World::builder().domain(...).apply(handlers::install(&simulation_output)).build()` 构建仿真世界
 //! 2. `world.spawn_with::<Ball>(...)` 生成带运行时组件的实体
 //! 3. `world.step(delta_time)` 推进仿真；事件由注册的 Observer 自动处理
-//! 4. `world.get::<Position>(id)` 读取实体组件状态
+//! 4. `world.get::<Position>(id)` 读取实体事实等组件
 //!
 //! # 两阶段设计
 //!
@@ -58,7 +58,7 @@ fn main() {
         Collider::new(0.8),
     ));
 
-    // 小球：从初始高度自由落体；BounceCount Memory 由 Ball::bundle() 提供默认值
+    // 小球：从初始高度自由落体；BounceCount（认知 Belief）由 Ball::bundle() 提供默认值
     let ball_id = world.spawn_with::<Ball>((
         Position::new(0.0, BALL_INITIAL_HEIGHT),
         Velocity::new(0.0, 0.0),

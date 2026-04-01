@@ -14,4 +14,4 @@ impl Faction {
     }
 }
 
-duan::state!(Faction);
+duan::reality!(Faction);

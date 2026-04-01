@@ -25,4 +25,4 @@ impl Weapon {
     }
 }
 
-duan::state!(Weapon);
+duan::reality!(Weapon);

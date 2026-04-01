@@ -11,4 +11,4 @@ impl Position {
     }
 }
 
-duan::state!(Position);
+duan::reality!(Position);

@@ -141,7 +141,7 @@ impl<T: Component> AnyStorage for ComponentStorage<T> {
     }
 
     fn clone_for_snapshot_box(&self) -> Option<Box<dyn AnyStorage>> {
-        if T::KIND == ComponentKind::Memory {
+        if T::KIND == ComponentKind::Belief {
             return None;
         }
         Some(self.clone_box())
@@ -156,17 +156,17 @@ impl<T: Component> AnyStorage for ComponentStorage<T> {
     }
 }
 
-// ──── WorldStorage：TypeId 管理所有 ComponentStorage ─────────────────────
+// ──── Storage：TypeId 管理所有 ComponentStorage ───────────────────────────
 
-/// 世界组件存储
+/// 世界组件存储（README：存储 / `Storage`）
 ///
 /// 以 TypeId 为键管理所有类型的 ComponentStorage，
 /// 提供统一的类型安全 get/insert/remove 接口。
-pub struct WorldStorage {
+pub struct Storage {
     storages: HashMap<TypeId, Box<dyn AnyStorage>>,
 }
 
-impl WorldStorage {
+impl Storage {
     pub fn new() -> Self {
         Self {
             storages: HashMap::new(),
@@ -234,7 +234,7 @@ impl WorldStorage {
             .flatten()
     }
 
-    /// 克隆当前存储作为快照（Memory 类型由调用方选择性排除）
+    /// 克隆当前存储作为快照（Belief 类型由调用方选择性排除）
     pub fn clone_all(&self) -> Self {
         Self {
             storages: self
@@ -245,7 +245,7 @@ impl WorldStorage {
         }
     }
 
-    /// 克隆快照可见的所有存储（自动排除 `Memory`）
+    /// 克隆快照可见的所有存储（自动排除 `Belief`）
     pub fn clone_for_snapshot(&self) -> Self {
         Self {
             storages: self
@@ -261,7 +261,7 @@ impl WorldStorage {
     }
 }
 
-impl Default for WorldStorage {
+impl Default for Storage {
     fn default() -> Self {
         Self::new()
     }
@@ -311,26 +311,26 @@ mod tests {
 
     #[test]
     fn test_world_storage() {
-        let mut ws = WorldStorage::new();
+        let mut storage = Storage::new();
         let id = make_id(5);
 
-        ws.insert(id, Pos { x: 3.0, y: 4.0 });
-        assert_eq!(ws.get::<Pos>(id), Some(&Pos { x: 3.0, y: 4.0 }));
+        storage.insert(id, Pos { x: 3.0, y: 4.0 });
+        assert_eq!(storage.get::<Pos>(id), Some(&Pos { x: 3.0, y: 4.0 }));
 
-        ws.get_mut::<Pos>(id).unwrap().x = 99.0;
-        assert_eq!(ws.get::<Pos>(id).unwrap().x, 99.0);
+        storage.get_mut::<Pos>(id).unwrap().x = 99.0;
+        assert_eq!(storage.get::<Pos>(id).unwrap().x, 99.0);
 
-        ws.remove_component::<Pos>(id);
-        assert_eq!(ws.get::<Pos>(id), None);
+        storage.remove_component::<Pos>(id);
+        assert_eq!(storage.get::<Pos>(id), None);
     }
 
     #[test]
     fn test_world_storage_clone() {
-        let mut ws = WorldStorage::new();
+        let mut storage = Storage::new();
         let id = make_id(1);
-        ws.insert(id, Pos { x: 1.0, y: 2.0 });
+        storage.insert(id, Pos { x: 1.0, y: 2.0 });
 
-        let cloned = ws.clone_all();
+        let cloned = storage.clone_all();
         assert_eq!(cloned.get::<Pos>(id), Some(&Pos { x: 1.0, y: 2.0 }));
     }
 }

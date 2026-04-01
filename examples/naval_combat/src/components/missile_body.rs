@@ -2,4 +2,4 @@
 #[derive(Debug, Clone)]
 pub struct MissileBody;
 
-duan::state!(MissileBody);
+duan::reality!(MissileBody);

@@ -7,13 +7,13 @@
 //! - 实体：[`Entity`]、[`EntityContext`]、[`EntityId`]、[`ComponentBundle`]
 //! - 域：[`Domain`]、[`DomainContext`]
 //! - 事件：[`Event`]、[`Reaction`]、[`Observer`]
-//! - 组件语义：[`Component`]、[`Memory`]、[`Intent`]、[`State`]、[`EntityWritable`]
+//! - 组件语义：[`Component`]、[`Belief`]、[`Intent`]、[`Reality`]、[`EntityWritable`]
 //!
 //! 宏（`#[macro_export]`，从 crate 根直接可用，无需 prelude）：
-//! [`memory!`](crate::memory)、[`intent!`](crate::intent)、[`state!`](crate::state)
+//! [`belief!`](crate::belief)、[`intent!`](crate::intent)、[`reality!`](crate::reality)
 //!
-//! 高级场景（定时器、快照、日志等）请直接从 `duan::` 导入：
-//! [`Timer`](crate::Timer)、[`WorldSnapshot`](crate::WorldSnapshot)、
+//! 高级场景（定时器、快照、存储、日志等）请直接从 `duan::` 导入：
+//! [`Timer`](crate::Timer)、[`Snapshot`](crate::Snapshot)、[`Storage`](crate::Storage)、
 //! [`LogSink`](crate::LogSink) 等。
 
 // 世界
@@ -32,4 +32,4 @@ pub use crate::domain::Domain;
 pub use crate::event::{Event, Observer, Reaction};
 
 // 组件语义
-pub use crate::component::{Component, EntityWritable, Intent, Memory, State};
+pub use crate::component::{Belief, Component, EntityWritable, Intent, Reality};

@@ -24,4 +24,4 @@ impl Seeker {
     }
 }
 
-duan::state!(Seeker);
+duan::reality!(Seeker);

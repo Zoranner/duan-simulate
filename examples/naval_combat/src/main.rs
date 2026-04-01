@@ -238,7 +238,7 @@ fn main() {
             s.missile_ids.retain(|&id| world.is_alive(id));
         }
 
-        // 收集舰船状态快照
+        // 收集舰船事实与位置等快照数据
         let mut ships = Vec::with_capacity(total_ships);
         for (i, id) in ship_ids.iter().enumerate() {
             let name = &ship_names[i];

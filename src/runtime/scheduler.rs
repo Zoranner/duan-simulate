@@ -4,7 +4,7 @@
 //!
 //! # 分析内容
 //!
-//! 1. **写入冲突检测**：两个域声明写入同一 State 类型 → `build()` 时 panic
+//! 1. **写入冲突检测**：两个域声明写入同一 Reality 类型 → `build()` 时 panic
 //! 2. **循环依赖检测**：`After` 形成环 → `build()` 时 panic
 //! 3. **拓扑排序**：按 `After` 依赖关系生成执行顺序（Kahn 算法）
 //!
@@ -38,7 +38,7 @@ impl Scheduler {
     ///
     /// # Panics
     ///
-    /// - 两个域声明写入同一 State 类型
+    /// - 两个域声明写入同一 Reality 类型
     /// - `After` 依赖形成循环
     pub(crate) fn build(infos: &[DomainInfo]) -> Self {
         // 1. 检测写入冲突
@@ -48,7 +48,7 @@ impl Scheduler {
                 if let Some(&prev_idx) = write_owners.get(&type_id) {
                     panic!(
                         "写入冲突：域 #{idx} 和域 #{prev_idx} 同时声明写入组件 {type_id:?}。\
-                         每个 State 类型只能由唯一的域写入。"
+                         每个 Reality 类型只能由唯一的域写入。"
                     );
                 }
                 write_owners.insert(type_id, idx);
@@ -184,8 +184,8 @@ mod tests {
     #[test]
     #[should_panic(expected = "写入冲突")]
     fn test_scheduler_write_conflict() {
-        struct StateX;
-        let tid = TypeId::of::<StateX>();
+        struct RealityX;
+        let tid = TypeId::of::<RealityX>();
         let infos = vec![
             make_info(TypeId::of::<DomainA>(), vec![tid], vec![]),
             make_info(TypeId::of::<DomainB>(), vec![tid], vec![]),
