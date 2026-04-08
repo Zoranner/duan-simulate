@@ -76,6 +76,22 @@ impl World {
         id
     }
 
+    /// 生成实体，通过闭包构造额外组件（支持依赖 EntityId 的初始化）
+    ///
+    /// 与 [`spawn_with`](World::spawn_with) 的区别：闭包在分配 EntityId 后调用，
+    /// 可在组件构造时使用 `id`（如 `id.local_index()`）。
+    ///
+    /// 主要用于 Reaction 中需要将 EntityId 编码进组件的场景。
+    pub fn spawn_with_fn<E: Entity, B: ComponentBundle, F>(&mut self, f: F) -> EntityId
+    where
+        F: FnOnce(EntityId) -> B,
+    {
+        let id = self.spawn::<E>();
+        let extra = f(id);
+        extra.apply(id, &mut self.storage);
+        id
+    }
+
     /// 销毁实体（立即执行）
     ///
     /// 实体组件从存储移除，定时器取消，实体记录标记为 Destroyed。
@@ -123,6 +139,15 @@ impl World {
     /// 业务逻辑必须通过域（[`crate::DomainContext`]）或实体（[`crate::EntityContext`]）上下文修改世界；此处仅用于调试与外部工具。
     pub fn inspect_mut<T: crate::Component>(&mut self, id: EntityId) -> Option<&mut T> {
         self.storage.get_mut::<T>(id)
+    }
+
+    /// 遍历所有持有组件 T 的实体 ID
+    ///
+    /// 读取当前帧活跃存储（非快照）。
+    /// 主要用于 Reaction 中查找特定组件的实体（如单例）；
+    /// 域逻辑应使用 [`crate::DomainContext::entities`]。
+    pub fn iter_entities<T: crate::Component>(&self) -> impl Iterator<Item = EntityId> + '_ {
+        self.storage.iter::<T>().map(|(id, _)| id)
     }
 
     /// 检查实体是否存活
