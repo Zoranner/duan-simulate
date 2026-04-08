@@ -1,7 +1,9 @@
 use std::sync::{Arc, Mutex};
 
 use duan::{Reaction, World, WorldBuilder};
-use naval_combat::components::{Faction, MissileBody, Position, Seeker, Velocity};
+use naval_combat::components::{
+    Faction, MissileBody, Position, SeekerConfig, SeekerState, Velocity,
+};
 use naval_combat::entities::Missile;
 use naval_combat::events::{FireEvent, MissileExpiredEvent};
 
@@ -40,7 +42,8 @@ impl Reaction<FireEvent> for OnFire {
         let missile_id = world.spawn_with::<Missile>((
             Position::new(ev.launch_x, ev.launch_y),
             Velocity::towards(ev.dir_x, ev.dir_y, ev.missile_speed),
-            Seeker::new(ev.target_id, ev.shooter_id, ev.damage, ev.missile_range),
+            SeekerConfig::new(ev.target_id, ev.shooter_id, ev.damage, ev.missile_range),
+            SeekerState::default(),
             MissileBody,
             Faction { team: faction_team },
         ));
@@ -51,8 +54,10 @@ impl Reaction<FireEvent> for OnFire {
         s.missile_ids.push(missile_id);
         let shooter_name = s.log.get_name(ev.shooter_id);
         let target_name = s.log.get_name(ev.target_id);
-        s.log
-            .register_name(missile_id, format!("导弹({}→{})", shooter_name, target_name));
+        s.log.register_name(
+            missile_id,
+            format!("导弹({}→{})", shooter_name, target_name),
+        );
         s.log.log(
             t,
             LogEntry::Fire {

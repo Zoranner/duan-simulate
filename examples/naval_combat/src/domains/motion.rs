@@ -3,17 +3,17 @@
 //! 每帧执行：
 //! 1. **舰船转向**：读取**意图** `Helm`（`Intent`，上帧快照），以 `turn_rate` 限速逐渐转向期望航向
 //! 2. **位置积分**：对所有有**事实** `Velocity` 的实体做欧拉积分
-//! 3. **导弹里程**：累计**事实** `Seeker` 的飞行距离
+//! 3. **导弹里程**：累计**事实** `SeekerState` 的飞行距离
 
 use duan::{Domain, DomainContext};
 
-use crate::components::{Helm, Position, Seeker, Velocity};
+use crate::components::{Helm, Position, SeekerState, Velocity};
 
 /// 运动域
 pub struct MotionDomain;
 
 impl Domain for MotionDomain {
-    type Writes = (Position, Velocity, Seeker);
+    type Writes = (Position, Velocity, SeekerState);
     type Reads = (Helm,);
     type After = ();
 
@@ -59,7 +59,7 @@ impl Domain for MotionDomain {
 
             // ── 3. 导弹飞行里程 ──────────────────────────────────────────
             let speed = (vx * vx + vy * vy).sqrt();
-            if let Some(seeker) = ctx.get_mut::<Seeker>(id) {
+            if let Some(seeker) = ctx.get_mut::<SeekerState>(id) {
                 seeker.traveled += speed * delta_time;
             }
         }

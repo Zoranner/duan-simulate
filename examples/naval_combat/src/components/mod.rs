@@ -14,6 +14,6 @@ pub use helm::Helm;
 pub use missile_body::MissileBody;
 pub use position::Position;
 pub use radar::Radar;
-pub use seeker::Seeker;
+pub use seeker::{SeekerConfig, SeekerState};
 pub use velocity::Velocity;
 pub use weapon::Weapon;

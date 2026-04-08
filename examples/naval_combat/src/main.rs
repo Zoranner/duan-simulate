@@ -45,7 +45,6 @@ struct Archetype {
     turn_rate: f64,
 }
 
-
 fn main() {
     let archetypes = [
         Archetype {
@@ -182,7 +181,11 @@ fn main() {
             Helm::new(arch.turn_rate),
         ));
 
-        simulation_output.lock().unwrap().log.register_name(id, &name);
+        simulation_output
+            .lock()
+            .unwrap()
+            .log
+            .register_name(id, &name);
         ship_ids.push(id);
         ship_names.push(name);
         ship_teams.push(0);
@@ -214,7 +217,11 @@ fn main() {
             Helm::new(arch.turn_rate),
         ));
 
-        simulation_output.lock().unwrap().log.register_name(id, &name);
+        simulation_output
+            .lock()
+            .unwrap()
+            .log
+            .register_name(id, &name);
         ship_ids.push(id);
         ship_names.push(name);
         ship_teams.push(1);

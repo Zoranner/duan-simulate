@@ -14,7 +14,10 @@
 //! |-----------|------|---------------|
 //! | **认知** | `Belief` | （本示例未使用） |
 //! | **意图** | `Intent` | `Helm`：舰船在 `Ship::tick()` 中写入期望航向，`MotionDomain` 从快照只读 |
-//! | **事实** | `Reality` | `Position`、`Velocity`、`Health`、`Faction`、`Weapon`、`Seeker` 等；由域或初始生成设定 |
+//! | **事实** | `Reality` | `Position`、`Velocity`、`Health`、`Faction`、`Radar`、`Weapon`、`SeekerConfig`、`SeekerState` 等；由域或初始生成设定 |
+//!
+//! `Faction` 和 `Radar` 虽然是固有属性，但因为需要被其他实体（通过快照）和域读取，
+//! 所以声明为 `Reality`。`Belief` 仅适用于实体私有、对外完全封闭的数据。
 
 pub mod components;
 pub mod domains;

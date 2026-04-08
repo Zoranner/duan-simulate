@@ -5,7 +5,7 @@
 
 use duan::{Domain, DomainContext, EntityId};
 
-use crate::components::{Health, MissileBody, Position, Seeker};
+use crate::components::{Health, MissileBody, Position, SeekerConfig, SeekerState};
 use crate::domains::{CombatDomain, MotionDomain};
 use crate::events::{HitEvent, MissileExpiredEvent};
 
@@ -17,24 +17,17 @@ pub struct CollisionDomain;
 
 impl Domain for CollisionDomain {
     type Writes = (Health,);
-    type Reads = (Position, MissileBody, Seeker);
+    type Reads = (Position, MissileBody, SeekerConfig, SeekerState);
     type After = (MotionDomain, CombatDomain);
 
     fn compute(&mut self, ctx: &mut DomainContext<Self>, _delta_time: f64) {
-        // 从快照中收集导弹列表（有 MissileBody + Seeker）
+        // 从快照中收集导弹列表（有 MissileBody + SeekerConfig）
         let missiles: Vec<(EntityId, f64, f64, EntityId, f64, f64)> = ctx
             .each::<MissileBody>()
             .filter_map(|(id, _)| {
                 let pos = ctx.get::<Position>(id)?;
-                let seeker = ctx.get::<Seeker>(id)?;
-                Some((
-                    id,
-                    pos.x,
-                    pos.y,
-                    seeker.target_id,
-                    seeker.damage,
-                    seeker.max_range,
-                ))
+                let cfg = ctx.get::<SeekerConfig>(id)?;
+                Some((id, pos.x, pos.y, cfg.target_id, cfg.damage, cfg.max_range))
             })
             .collect();
 
@@ -47,7 +40,7 @@ impl Domain for CollisionDomain {
         for (missile_id, mx, my, target_id, damage, max_range) in missiles {
             // 检查是否超出射程
             let traveled = ctx
-                .get::<Seeker>(missile_id)
+                .get::<SeekerState>(missile_id)
                 .map(|s| s.traveled)
                 .unwrap_or(0.0);
 
