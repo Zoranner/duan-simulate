@@ -153,6 +153,7 @@ impl_component_set!(A, B, C, D, E, F, G, H, I);
 impl_component_set!(A, B, C, D, E, F, G, H, I, J);
 impl_component_set!(A, B, C, D, E, F, G, H, I, J, K);
 impl_component_set!(A, B, C, D, E, F, G, H, I, J, K, L);
+impl_component_set!(A, B, C, D, E, F, G, H, I, J, K, L, M);
 
 // ──── 便捷宏 ──────────────────────────────────────────────────────────────
 
