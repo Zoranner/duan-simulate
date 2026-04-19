@@ -37,10 +37,10 @@ impl MotionDomain {
 }
 
 impl Domain for MotionDomain {
-    type Writes = (Position, Velocity, DidBounce);
+    type Writes = duan::component_set!(Position, Velocity, DidBounce);
     /// Reads 同时包含 Reality（Collider / StaticBody）和 Intent（Elasticity）
-    type Reads = (Collider, StaticBody, Elasticity);
-    type After = ();
+    type Reads = duan::component_set!(Collider, StaticBody, Elasticity);
+    type After = duan::domain_set!();
 
     fn compute(&mut self, ctx: &mut DomainContext<Self>, delta_time: f64) {
         let gravity = self.gravity;

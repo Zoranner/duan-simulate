@@ -217,9 +217,9 @@ mod tests {
 
     struct NopDomain;
     impl Domain for NopDomain {
-        type Writes = (Pos,);
-        type Reads = ();
-        type After = ();
+        type Writes = crate::component_set!(Pos);
+        type Reads = crate::component_set!();
+        type After = crate::domain_set!();
         fn compute(&mut self, _ctx: &mut DomainContext<Self>, _delta_time: f64) {}
     }
 

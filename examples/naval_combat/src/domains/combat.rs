@@ -15,9 +15,9 @@ use crate::events::{FireEvent, ShipDestroyedEvent};
 pub struct CombatDomain;
 
 impl Domain for CombatDomain {
-    type Writes = (Weapon,);
-    type Reads = (Position, Faction, Radar, Health);
-    type After = (MotionDomain,);
+    type Writes = duan::component_set!(Weapon);
+    type Reads = duan::component_set!(Position, Faction, Radar, Health);
+    type After = duan::domain_set!(MotionDomain);
 
     fn compute(&mut self, ctx: &mut DomainContext<Self>, delta_time: f64) {
         // ── 1. 更新武器冷却 ────────────────────────────────────────────────

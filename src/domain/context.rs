@@ -14,7 +14,8 @@ use crate::event::{Event, EventBuffer};
 use crate::runtime::timers::TimeClock;
 use crate::snapshot::Snapshot;
 use crate::storage::Storage;
-use crate::{Component, ComponentSet};
+use crate::type_set::TypeSet;
+use crate::Component;
 use std::any::TypeId;
 use std::marker::PhantomData;
 

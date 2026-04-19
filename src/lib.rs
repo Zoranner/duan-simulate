@@ -46,9 +46,9 @@
 //!
 //! struct GravityDomain;
 //! impl Domain for GravityDomain {
-//!     type Writes = (Position,);
-//!     type Reads  = (Position,);
-//!     type After  = ();
+//!     type Writes = duan::component_set!(Position);
+//!     type Reads  = duan::component_set!(Position);
+//!     type After  = duan::domain_set!();
 //!     fn compute(&mut self, ctx: &mut DomainContext<Self>, delta_time: f64) {
 //!         let ids: Vec<_> = ctx.each::<Position>().map(|(id, _)| id).collect();
 //!         for id in ids {
@@ -118,6 +118,8 @@ pub mod event;
 pub mod prelude;
 pub mod snapshot;
 pub mod storage;
+#[doc(hidden)]
+pub mod type_set;
 pub mod world;
 
 // ──── 执行机制模块（pub，高级用户）──────────────────────────────────────────

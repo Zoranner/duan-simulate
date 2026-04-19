@@ -16,9 +16,9 @@ const HIT_RADIUS: f64 = 12.0;
 pub struct CollisionDomain;
 
 impl Domain for CollisionDomain {
-    type Writes = (Health,);
-    type Reads = (Position, MissileBody, SeekerConfig, SeekerState);
-    type After = (MotionDomain, CombatDomain);
+    type Writes = duan::component_set!(Health);
+    type Reads = duan::component_set!(Position, MissileBody, SeekerConfig, SeekerState);
+    type After = duan::domain_set!(MotionDomain, CombatDomain);
 
     fn compute(&mut self, ctx: &mut DomainContext<Self>, _delta_time: f64) {
         // 从快照中收集导弹列表（有 MissileBody + SeekerConfig）

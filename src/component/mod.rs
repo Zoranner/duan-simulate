@@ -40,7 +40,7 @@
 //! impl Belief for SoldierBelief {}
 //! ```
 
-use std::any::TypeId;
+use crate::type_set::{TypeSet, TypeSetCons, TypeSetEnd};
 
 /// 组件语义分类
 ///
@@ -107,53 +107,45 @@ pub trait Reality: Component {}
 /// 类型级组件集合
 ///
 /// 用于 [`Domain`](crate::Domain) 的 `Writes` 和 `Reads` 关联类型。
-/// 支持 `()` 和最多 12 元素的组件元组。
-pub trait ComponentSet: 'static {
-    /// 返回集合中所有组件的 TypeId（用于调度器分析）
-    fn type_ids() -> Vec<TypeId>
-    where
-        Self: Sized;
+/// 推荐通过 [`component_set!`](crate::component_set) 宏构造，避免 tuple 方案的元素数量上限。
+pub trait ComponentSet: TypeSet {}
+
+/// 组件集合的递归边界约束
+pub trait ComponentSetBound: TypeSet {}
+
+impl ComponentSetBound for TypeSetEnd {}
+
+impl<Head: Component, Tail> ComponentSetBound for TypeSetCons<Head, Tail> where
+    Tail: ComponentSetBound + TypeSet
+{
 }
 
-impl ComponentSet for () {
-    fn type_ids() -> Vec<TypeId> {
-        vec![]
-    }
-}
+impl<T> ComponentSet for T where T: TypeSet + ComponentSetBound {}
 
 /// 编译期集合成员检测（标记 trait）
 ///
-/// 由于 stable Rust 不支持不重叠 blanket impl，`Contains<T>` 不自动为 tuple 实现。
-/// 框架转而通过 [`ComponentSet::type_ids()`] 在运行期（构建时）验证集合成员关系。
-///
-/// 如需编译期检查，可为特定 tuple 手动实现此 trait（高级用法）。
+/// 框架当前仍通过 [`TypeSet::type_ids()`] 在构建时验证声明集合，
+/// 此 trait 保留给高级场景的额外编译期约束扩展。
 pub trait Contains<T: Component>: ComponentSet {}
 
-// ──── ComponentSet 的 tuple 展开（最多 12 元素）────────────────────────
-
-macro_rules! impl_component_set {
-    ($($T:ident),+) => {
-        impl<$($T: Component),+> ComponentSet for ($($T,)+) {
-            fn type_ids() -> Vec<TypeId> {
-                vec![ $(TypeId::of::<$T>()),+ ]
-            }
-        }
+/// 构造无上限的类型级组件集合
+///
+/// # 用法
+///
+/// ```rust,ignore
+/// type Writes = duan::component_set!(Position, Velocity, Health);
+/// type Reads = duan::component_set!(IntentOrder);
+/// type Empty = duan::component_set!();
+/// ```
+#[macro_export]
+macro_rules! component_set {
+    () => {
+        $crate::type_set::TypeSetEnd
+    };
+    ($head:ty $(, $tail:ty)* $(,)?) => {
+        $crate::type_set::TypeSetCons<$head, $crate::component_set!($($tail),*)>
     };
 }
-
-impl_component_set!(A);
-impl_component_set!(A, B);
-impl_component_set!(A, B, C);
-impl_component_set!(A, B, C, D);
-impl_component_set!(A, B, C, D, E);
-impl_component_set!(A, B, C, D, E, F);
-impl_component_set!(A, B, C, D, E, F, G);
-impl_component_set!(A, B, C, D, E, F, G, H);
-impl_component_set!(A, B, C, D, E, F, G, H, I);
-impl_component_set!(A, B, C, D, E, F, G, H, I, J);
-impl_component_set!(A, B, C, D, E, F, G, H, I, J, K);
-impl_component_set!(A, B, C, D, E, F, G, H, I, J, K, L);
-impl_component_set!(A, B, C, D, E, F, G, H, I, J, K, L, M);
 
 // ──── 便捷宏 ──────────────────────────────────────────────────────────────
 
@@ -203,4 +195,49 @@ macro_rules! reality {
         })*
         $(impl $crate::Reality for $t {})*
     };
+}
+
+#[cfg(test)]
+mod tests {
+    #[derive(Clone)]
+    struct C1;
+    #[derive(Clone)]
+    struct C2;
+    #[derive(Clone)]
+    struct C3;
+    #[derive(Clone)]
+    struct C4;
+    #[derive(Clone)]
+    struct C5;
+    #[derive(Clone)]
+    struct C6;
+    #[derive(Clone)]
+    struct C7;
+    #[derive(Clone)]
+    struct C8;
+    #[derive(Clone)]
+    struct C9;
+    #[derive(Clone)]
+    struct C10;
+    #[derive(Clone)]
+    struct C11;
+    #[derive(Clone)]
+    struct C12;
+    #[derive(Clone)]
+    struct C13;
+    #[derive(Clone)]
+    struct C14;
+    #[derive(Clone)]
+    struct C15;
+
+    reality!(C1, C2, C3, C4, C5, C6, C7, C8, C9, C10, C11, C12, C13, C14, C15);
+
+    #[test]
+    fn test_component_set_macro_supports_large_lists() {
+        let ids = <crate::component_set!(
+            C1, C2, C3, C4, C5, C6, C7, C8, C9, C10, C11, C12, C13, C14, C15
+        ) as crate::type_set::TypeSet>::type_ids();
+
+        assert_eq!(ids.len(), 15);
+    }
 }

@@ -515,9 +515,9 @@ mod tests {
         pub emit_value: u32,
     }
     impl Domain for EmitDomain {
-        type Writes = ();
-        type Reads = ();
-        type After = ();
+        type Writes = crate::component_set!();
+        type Reads = crate::component_set!();
+        type After = crate::domain_set!();
         fn compute(
             &mut self,
             ctx: &mut crate::domain::context::DomainContext<Self>,

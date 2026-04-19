@@ -22,9 +22,9 @@
 //! pub struct MotionDomain { pub gravity: f64 }
 //!
 //! impl Domain for MotionDomain {
-//!     type Writes = (Velocity,);
-//!     type Reads = (Velocity,);
-//!     type After = ();
+//!     type Writes = duan::component_set!(Velocity);
+//!     type Reads = duan::component_set!(Velocity);
+//!     type After = duan::domain_set!();
 //!
 //!     fn compute(&mut self, ctx: &mut DomainContext<Self>, delta_time: f64) {
 //!         let updates: Vec<_> = ctx
@@ -42,6 +42,7 @@
 
 pub mod context;
 
+use crate::type_set::{TypeSet, TypeSetCons, TypeSetEnd};
 use crate::ComponentSet;
 use std::any::TypeId;
 
@@ -66,37 +67,38 @@ pub(crate) struct ComputeResources<'a> {
 /// 类型级域集合
 ///
 /// 用于 [`Domain::After`] 关联类型，声明依赖的前置域。
-pub trait DomainSet: 'static {
-    /// 返回集合中所有域的 TypeId（用于调度器构建 DAG）
-    fn type_ids() -> Vec<TypeId>
-    where
-        Self: Sized;
+/// 推荐通过 [`domain_set!`](crate::domain_set) 宏构造，避免 tuple 方案的元素数量上限。
+pub trait DomainSet: TypeSet {}
+
+/// 域集合的递归边界约束
+pub trait DomainSetBound: TypeSet {}
+
+impl DomainSetBound for TypeSetEnd {}
+
+impl<Head: Domain, Tail> DomainSetBound for TypeSetCons<Head, Tail> where
+    Tail: DomainSetBound + TypeSet
+{
 }
 
-impl DomainSet for () {
-    fn type_ids() -> Vec<TypeId> {
-        vec![]
-    }
-}
+impl<T> DomainSet for T where T: TypeSet + DomainSetBound {}
 
-macro_rules! impl_domain_set {
-    ($($D:ident),+) => {
-        impl<$($D: Domain),+> DomainSet for ($($D,)+) {
-            fn type_ids() -> Vec<TypeId> {
-                vec![ $(TypeId::of::<$D>()),+ ]
-            }
-        }
+/// 构造无上限的类型级域集合
+///
+/// # 用法
+///
+/// ```rust,ignore
+/// type After = duan::domain_set!(MotionDomain, CombatDomain);
+/// type NoDeps = duan::domain_set!();
+/// ```
+#[macro_export]
+macro_rules! domain_set {
+    () => {
+        $crate::type_set::TypeSetEnd
+    };
+    ($head:ty $(, $tail:ty)* $(,)?) => {
+        $crate::type_set::TypeSetCons<$head, $crate::domain_set!($($tail),*)>
     };
 }
-
-impl_domain_set!(D1);
-impl_domain_set!(D1, D2);
-impl_domain_set!(D1, D2, D3);
-impl_domain_set!(D1, D2, D3, D4);
-impl_domain_set!(D1, D2, D3, D4, D5);
-impl_domain_set!(D1, D2, D3, D4, D5, D6);
-impl_domain_set!(D1, D2, D3, D4, D5, D6, D7);
-impl_domain_set!(D1, D2, D3, D4, D5, D6, D7, D8);
 
 // ──── Domain trait ────────────────────────────────────────────────────────
 
@@ -187,5 +189,66 @@ impl<D: Domain> AnyDomain for D {
             _phantom: std::marker::PhantomData,
         };
         self.compute(&mut ctx, delta_time);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    macro_rules! define_component {
+        ($name:ident) => {
+            #[derive(Clone)]
+            struct $name;
+            impl crate::Component for $name {}
+            impl crate::Reality for $name {}
+        };
+    }
+
+    define_component!(W1);
+    define_component!(W2);
+    define_component!(W3);
+    define_component!(W4);
+    define_component!(W5);
+    define_component!(W6);
+    define_component!(W7);
+    define_component!(W8);
+    define_component!(W9);
+    define_component!(W10);
+
+    macro_rules! define_domain {
+        ($domain:ident, $write:ident, $after:ty) => {
+            struct $domain;
+            impl Domain for $domain {
+                type Writes = crate::component_set!($write);
+                type Reads = crate::component_set!();
+                type After = $after;
+
+                fn compute(&mut self, _ctx: &mut context::DomainContext<Self>, _delta_time: f64) {}
+            }
+        };
+    }
+
+    define_domain!(D1, W1, crate::domain_set!());
+    define_domain!(D2, W2, crate::domain_set!(D1));
+    define_domain!(D3, W3, crate::domain_set!(D1, D2));
+    define_domain!(D4, W4, crate::domain_set!(D1, D2, D3));
+    define_domain!(D5, W5, crate::domain_set!(D1, D2, D3, D4));
+    define_domain!(D6, W6, crate::domain_set!(D1, D2, D3, D4, D5));
+    define_domain!(D7, W7, crate::domain_set!(D1, D2, D3, D4, D5, D6));
+    define_domain!(D8, W8, crate::domain_set!(D1, D2, D3, D4, D5, D6, D7));
+    define_domain!(D9, W9, crate::domain_set!(D1, D2, D3, D4, D5, D6, D7, D8));
+    define_domain!(
+        D10,
+        W10,
+        crate::domain_set!(D1, D2, D3, D4, D5, D6, D7, D8, D9)
+    );
+
+    #[test]
+    fn test_domain_set_macro_supports_large_lists() {
+        let ids =
+            <crate::domain_set!(D1, D2, D3, D4, D5, D6, D7, D8, D9, D10) as crate::type_set::TypeSet>::type_ids();
+
+        assert_eq!(ids.len(), 10);
     }
 }

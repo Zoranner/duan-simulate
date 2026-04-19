@@ -13,9 +13,9 @@ use crate::components::{Helm, Position, SeekerState, Velocity};
 pub struct MotionDomain;
 
 impl Domain for MotionDomain {
-    type Writes = (Position, Velocity, SeekerState);
-    type Reads = (Helm,);
-    type After = ();
+    type Writes = duan::component_set!(Position, Velocity, SeekerState);
+    type Reads = duan::component_set!(Helm);
+    type After = duan::domain_set!();
 
     fn compute(&mut self, ctx: &mut DomainContext<Self>, delta_time: f64) {
         // ── 1. 舰船转向（读意图 Helm，写事实 Velocity）──────────────────────
