@@ -1,0 +1,3 @@
+[submodule "packages/duan-core"]
+	path = packages/duan-core
+	url = https://github.com/Zoranner/duan-simulate.git

@@ -1,0 +1,55 @@
+scenario:
+  id: naval_combat_demo
+  package: examples.naval-combat
+
+packages:
+  - id: duan.kinematics
+    version: 0.1.0
+  - id: examples.naval-combat.components
+    version: 0.1.0
+  - id: examples.naval-combat.domains
+    version: 0.1.0
+  - id: examples.naval-combat.entities
+    version: 0.1.0
+  - id: examples.naval-combat.reactions
+    version: 0.1.0
+
+domains:
+  - type: examples.naval-combat.domains.motion
+  - type: examples.naval-combat.domains.combat
+  - type: examples.naval-combat.domains.collision
+
+reactions:
+  - type: examples.naval-combat.reactions.on-fire
+  - type: examples.naval-combat.reactions.on-hit
+  - type: examples.naval-combat.reactions.on-missile-expired
+  - type: examples.naval-combat.reactions.on-ship-destroyed
+
+entities:
+  - id: blue_01
+    type: examples.naval-combat.entities.ship
+    components:
+      examples.naval-combat.components.faction: { team: 0 }
+      duan.kinematics.position-2: { x: 80.0, y: 120.0 }
+      duan.kinematics.velocity-2: { vx: 18.0, vy: 0.0 }
+      examples.naval-combat.components.health: { current: 100.0, max: 100.0 }
+      examples.naval-combat.components.radar: { range: 260.0 }
+      examples.naval-combat.components.weapon:
+        range: 180.0
+        damage: 25.0
+        missile_speed: 80.0
+        fire_cooldown: 1.5
+
+  - id: red_01
+    type: examples.naval-combat.entities.ship
+    components:
+      examples.naval-combat.components.faction: { team: 1 }
+      duan.kinematics.position-2: { x: 720.0, y: 360.0 }
+      duan.kinematics.velocity-2: { vx: -16.0, vy: 0.0 }
+      examples.naval-combat.components.health: { current: 100.0, max: 100.0 }
+      examples.naval-combat.components.radar: { range: 260.0 }
+      examples.naval-combat.components.weapon:
+        range: 180.0
+        damage: 25.0
+        missile_speed: 80.0
+        fire_cooldown: 1.5
