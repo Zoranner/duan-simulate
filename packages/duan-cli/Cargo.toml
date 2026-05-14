@@ -1,0 +1,21 @@
+[package]
+name = "duan-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Command line automation surface for the DUAN platform"
+
+[[bin]]
+name = "duan"
+path = "src/main.rs"
+
+[dependencies]
+clap.workspace = true
+duan-package.workspace = true
+duan-runner-generator.workspace = true
+duan-scenario.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

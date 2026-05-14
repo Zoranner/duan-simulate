@@ -1,0 +1,9 @@
+{
+  "id": "examples.free-fall.entities.ground",
+  "kind": "entity",
+  "components": [
+    "duan.kinematics.position-2",
+    "examples.free-fall.components.static-body",
+    "examples.free-fall.components.collider"
+  ]
+}

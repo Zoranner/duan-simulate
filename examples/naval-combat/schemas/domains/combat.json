@@ -1,0 +1,5 @@
+{
+  "id": "examples.naval-combat.domains.combat",
+  "kind": "domain",
+  "description": "Selects targets and emits fire intents for armed ships."
+}

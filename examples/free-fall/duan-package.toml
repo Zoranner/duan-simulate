@@ -1,0 +1,18 @@
+[duan.package]
+id = "examples.free-fall.components"
+version = "0.1.0"
+name = "Free Fall Components"
+
+[duan.rust]
+crate = "examples-free-fall-components"
+
+[provides.components]
+"examples.free-fall.components.static-body" = "schemas/components/static-body.json"
+"examples.free-fall.components.collider" = "schemas/components/collider.json"
+
+[provides.domains]
+"examples.free-fall.domains.motion" = "schemas/domains/motion.json"
+
+[provides.entities]
+"examples.free-fall.entities.ground" = "schemas/entities/ground.json"
+"examples.free-fall.entities.ball" = "schemas/entities/ball.json"

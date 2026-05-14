@@ -1,0 +1,5 @@
+{
+  "id": "examples.naval-combat.reactions.on-missile-expired",
+  "kind": "reaction",
+  "description": "Destroys missiles that have exceeded their useful lifetime."
+}

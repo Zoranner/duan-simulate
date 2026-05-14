@@ -1,5 +1,13 @@
 # duan-editor
 
-Editor package placeholder.
+Static authoring shell for DUAN packages and scenarios.
 
-The editor reads package schemas, edits scenario manifests, triggers runner builds, and displays runs, events, snapshots, and metrics.
+This package is a Bun/Vite frontend entry only. It stays outside the root Rust workspace and edits schema/scenario authoring data, not simulation algorithms.
+
+## Commands
+
+```bash
+bun install
+bun run dev
+bun run build
+```

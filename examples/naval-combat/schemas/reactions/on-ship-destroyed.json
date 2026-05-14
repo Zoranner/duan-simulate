@@ -1,0 +1,5 @@
+{
+  "id": "examples.naval-combat.reactions.on-ship-destroyed",
+  "kind": "reaction",
+  "description": "Handles ship destruction after health reaches zero."
+}

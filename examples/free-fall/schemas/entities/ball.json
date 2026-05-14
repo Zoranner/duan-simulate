@@ -1,0 +1,8 @@
+{
+  "id": "examples.free-fall.entities.ball",
+  "kind": "entity",
+  "components": [
+    "duan.kinematics.position-2",
+    "duan.kinematics.velocity-2"
+  ]
+}

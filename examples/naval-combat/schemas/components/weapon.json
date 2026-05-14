@@ -1,0 +1,54 @@
+{
+  "id": "examples.naval-combat.components.weapon",
+  "kind": "component",
+  "fields": {
+    "range": {
+      "type": "float",
+      "default": 180.0,
+      "unit": "m",
+      "range": {
+        "min": 0.0,
+        "max": 2000.0
+      },
+      "editor": {
+        "label": "Weapon Range"
+      }
+    },
+    "damage": {
+      "type": "float",
+      "default": 25.0,
+      "unit": "hp",
+      "range": {
+        "min": 0.0,
+        "max": 1000.0
+      },
+      "editor": {
+        "label": "Damage"
+      }
+    },
+    "missile_speed": {
+      "type": "float",
+      "default": 80.0,
+      "unit": "m/s",
+      "range": {
+        "min": 0.0,
+        "max": 1000.0
+      },
+      "editor": {
+        "label": "Missile Speed"
+      }
+    },
+    "fire_cooldown": {
+      "type": "float",
+      "default": 1.5,
+      "unit": "s",
+      "range": {
+        "min": 0.0,
+        "max": 60.0
+      },
+      "editor": {
+        "label": "Fire Cooldown"
+      }
+    }
+  }
+}

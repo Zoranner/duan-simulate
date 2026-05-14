@@ -4,6 +4,8 @@ DUAN Platform is the aggregation repository for the Rust-first simulation packag
 
 The repository does not make scenario logic into a DSL. Simulation behavior stays in Rust crates. Scenario files only assemble packages, entities, component values, domains, reactions, run options, and outputs.
 
+See [DUAN Package Authoring](docs/package-authoring.md) for the first-pass package metadata and schema conventions.
+
 ## Layout
 
 ```text

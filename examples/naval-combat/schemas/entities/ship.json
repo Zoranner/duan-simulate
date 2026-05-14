@@ -1,0 +1,12 @@
+{
+  "id": "examples.naval-combat.entities.ship",
+  "kind": "entity",
+  "components": [
+    "examples.naval-combat.components.faction",
+    "duan.kinematics.position-2",
+    "duan.kinematics.velocity-2",
+    "examples.naval-combat.components.health",
+    "examples.naval-combat.components.radar",
+    "examples.naval-combat.components.weapon"
+  ]
+}

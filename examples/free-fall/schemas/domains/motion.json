@@ -1,0 +1,5 @@
+{
+  "id": "examples.free-fall.domains.motion",
+  "kind": "domain",
+  "description": "Applies free-fall motion rules from the Rust package."
+}

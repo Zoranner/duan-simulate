@@ -1,0 +1,30 @@
+{
+  "id": "examples.naval-combat.components.health",
+  "kind": "component",
+  "fields": {
+    "current": {
+      "type": "float",
+      "default": 100.0,
+      "unit": "hp",
+      "range": {
+        "min": 0.0,
+        "max": 1000.0
+      },
+      "editor": {
+        "label": "Current Health"
+      }
+    },
+    "max": {
+      "type": "float",
+      "default": 100.0,
+      "unit": "hp",
+      "range": {
+        "min": 1.0,
+        "max": 1000.0
+      },
+      "editor": {
+        "label": "Max Health"
+      }
+    }
+  }
+}

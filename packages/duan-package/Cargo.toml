@@ -1,0 +1,12 @@
+[package]
+name = "duan-package"
+version = "0.1.0"
+edition = "2021"
+description = "DUAN package metadata, schema, and assembly-time registry"
+license = "MIT"
+repository = "https://github.com/zoranner/duan-simulate"
+
+[dependencies]
+duan-scenario = { workspace = true }
+serde = { version = "1", features = ["derive"] }
+toml.workspace = true

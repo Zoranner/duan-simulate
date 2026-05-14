@@ -1,0 +1,5 @@
+{
+  "id": "examples.naval-combat.reactions.on-fire",
+  "kind": "reaction",
+  "description": "Spawns a missile when a ship fires."
+}

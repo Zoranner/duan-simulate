@@ -1,0 +1,27 @@
+[workspace]
+members = [
+    "packages/duan-package",
+    "packages/duan-scenario",
+    "packages/duan-runner-generator",
+    "packages/duan-cli",
+]
+exclude = ["packages/duan-core"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/zoranner/duan-simulate"
+
+[workspace.dependencies]
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_yaml = "0.9"
+tempfile = "3"
+thiserror = "1"
+toml = "0.8"
+
+duan-package = { path = "packages/duan-package" }
+duan-runner-generator = { path = "packages/duan-runner-generator" }
+duan-scenario = { path = "packages/duan-scenario" }

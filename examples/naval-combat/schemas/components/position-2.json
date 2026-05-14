@@ -1,0 +1,30 @@
+{
+  "id": "duan.kinematics.position-2",
+  "kind": "component",
+  "fields": {
+    "x": {
+      "type": "float",
+      "default": 0.0,
+      "unit": "m",
+      "range": {
+        "min": 0.0,
+        "max": 1000.0
+      },
+      "editor": {
+        "label": "X Position"
+      }
+    },
+    "y": {
+      "type": "float",
+      "default": 0.0,
+      "unit": "m",
+      "range": {
+        "min": 0.0,
+        "max": 1000.0
+      },
+      "editor": {
+        "label": "Y Position"
+      }
+    }
+  }
+}

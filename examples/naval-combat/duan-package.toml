@@ -1,0 +1,28 @@
+[duan.package]
+id = "examples.naval-combat"
+version = "0.1.0"
+name = "DUAN Naval Combat Example"
+
+[duan.rust]
+crate = "examples-naval-combat"
+entry = "examples_naval_combat::package"
+
+[provides.components]
+"examples.naval-combat.components.faction" = "schemas/components/faction.json"
+"examples.naval-combat.components.health" = "schemas/components/health.json"
+"examples.naval-combat.components.radar" = "schemas/components/radar.json"
+"examples.naval-combat.components.weapon" = "schemas/components/weapon.json"
+
+[provides.domains]
+"examples.naval-combat.domains.motion" = "schemas/domains/motion.json"
+"examples.naval-combat.domains.combat" = "schemas/domains/combat.json"
+"examples.naval-combat.domains.collision" = "schemas/domains/collision.json"
+
+[provides.entities]
+"examples.naval-combat.entities.ship" = "schemas/entities/ship.json"
+
+[provides.reactions]
+"examples.naval-combat.reactions.on-fire" = "schemas/reactions/on-fire.json"
+"examples.naval-combat.reactions.on-hit" = "schemas/reactions/on-hit.json"
+"examples.naval-combat.reactions.on-missile-expired" = "schemas/reactions/on-missile-expired.json"
+"examples.naval-combat.reactions.on-ship-destroyed" = "schemas/reactions/on-ship-destroyed.json"
