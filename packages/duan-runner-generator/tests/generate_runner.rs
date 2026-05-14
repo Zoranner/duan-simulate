@@ -16,7 +16,6 @@ fn writes_deterministic_runner_project_files() {
             index: "sparse+https://registry.example.test/api/v1/crates/".to_string(),
         },
         scenario_path: "scenario/free-fall.yaml".to_string(),
-        runner_path: "duan_runner::run_scenario".to_string(),
         dependencies: vec![
             CrateDependency::registry("free-fall-package", "0.1.0", "duan-private"),
             CrateDependency::registry("duan-scenario", "0.1.0", "duan-private"),
@@ -44,6 +43,7 @@ edition = "2021"
 [dependencies]
 duan = { version = "0.1.0", registry = "duan-private" }
 duan-package = { version = "0.1.0", registry = "duan-private" }
+duan-runner = { version = "0.1.0", registry = "duan-private" }
 duan-scenario = { version = "0.1.0", registry = "duan-private" }
 free-fall-package = { version = "0.1.0", registry = "duan-private" }
 "#
@@ -74,20 +74,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .install(duan_kinematics::package())?
         .install(free_fall_package::package())?;
 
-    run_scenario(scenario, registry, "duan_runner::run_scenario")?;
+    let report = duan_runner::Runner::new(registry).run(&scenario)?;
+    println!("{report:?}");
     Ok(())
 }
 
-fn run_scenario(
-    _scenario: duan_scenario::Manifest,
-    _registry: duan_package::Registry,
-    runner_path: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    Err(format!(
-        "runner execution is not implemented in generated runner stub `{runner_path}`"
-    )
-    .into())
-}
 "#
     );
 }

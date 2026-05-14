@@ -14,6 +14,37 @@ pub enum PackageError {
         source: String,
     },
     ParseMetadata(String),
+    InvalidSchemaPath {
+        item_id: String,
+        schema_path: String,
+    },
+    ReadSchema {
+        item_id: String,
+        schema_path: String,
+        path: PathBuf,
+        source: String,
+    },
+    ParseSchema {
+        item_id: String,
+        schema_path: String,
+        source: String,
+    },
+    MissingSchemaField {
+        item_id: String,
+        schema_path: String,
+        field: &'static str,
+    },
+    SchemaIdMismatch {
+        item_id: String,
+        schema_path: String,
+        actual_id: String,
+    },
+    SchemaKindMismatch {
+        item_id: String,
+        schema_path: String,
+        expected_kind: &'static str,
+        actual_kind: String,
+    },
     DuplicatePackage(PackageId),
     DuplicateItem(ItemId),
     MissingItem {
@@ -54,6 +85,56 @@ impl fmt::Display for PackageError {
                 )
             }
             Self::ParseMetadata(source) => write!(f, "failed to parse package metadata: {source}"),
+            Self::InvalidSchemaPath {
+                item_id,
+                schema_path,
+            } => write!(
+                f,
+                "invalid schema path `{schema_path}` for package item `{item_id}`"
+            ),
+            Self::ReadSchema {
+                item_id,
+                schema_path,
+                path,
+                source,
+            } => write!(
+                f,
+                "failed to read schema `{schema_path}` for package item `{item_id}` at `{}`: {source}",
+                path.display()
+            ),
+            Self::ParseSchema {
+                item_id,
+                schema_path,
+                source,
+            } => write!(
+                f,
+                "failed to parse schema `{schema_path}` for package item `{item_id}`: {source}"
+            ),
+            Self::MissingSchemaField {
+                item_id,
+                schema_path,
+                field,
+            } => write!(
+                f,
+                "schema `{schema_path}` for package item `{item_id}` is missing `{field}`"
+            ),
+            Self::SchemaIdMismatch {
+                item_id,
+                schema_path,
+                actual_id,
+            } => write!(
+                f,
+                "schema `{schema_path}` for package item `{item_id}` declares id `{actual_id}`"
+            ),
+            Self::SchemaKindMismatch {
+                item_id,
+                schema_path,
+                expected_kind,
+                actual_kind,
+            } => write!(
+                f,
+                "schema `{schema_path}` for package item `{item_id}` declares kind `{actual_kind}`, expected `{expected_kind}`"
+            ),
             Self::DuplicatePackage(id) => write!(f, "duplicate package `{id}`"),
             Self::DuplicateItem(id) => write!(f, "duplicate package item `{id}`"),
             Self::MissingItem { location, item_id } => {

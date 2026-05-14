@@ -277,12 +277,19 @@ fn delivery_readme(runner_name: impl AsRef<str>, scenario_name: impl AsRef<str>)
 fn run_package(command: PackageCommand) -> Result<()> {
     match command {
         PackageCommand::Inspect(args) => {
-            let metadata = PackageMetadata::load_from_path(&args.path).map_err(|source| {
-                CliError::ReadPackage {
+            let (metadata, base_path) =
+                PackageMetadata::load_with_base_path(&args.path).map_err(|source| {
+                    CliError::ReadPackage {
+                        path: args.path.clone(),
+                        source: Box::new(source),
+                    }
+                })?;
+            metadata
+                .validate_schema_files(&base_path)
+                .map_err(|source| CliError::ReadPackage {
                     path: args.path.clone(),
-                    source,
-                }
-            })?;
+                    source: Box::new(source),
+                })?;
             println!("package: {}", metadata.package_id());
             println!("version: {}", metadata.package_version());
             println!("crate: {}", metadata.rust_crate());
@@ -330,7 +337,6 @@ fn runner_project_from_manifest(
             index: registry_index,
         },
         scenario_path: scenario_path.display().to_string(),
-        runner_path: "duan_runner::run_scenario".to_string(),
         dependencies,
         installs,
     }

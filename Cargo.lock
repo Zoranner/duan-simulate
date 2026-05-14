@@ -134,7 +134,17 @@ version = "0.1.0"
 dependencies = [
  "duan-scenario",
  "serde",
+ "serde_json",
  "toml",
+]
+
+[[package]]
+name = "duan-runner"
+version = "0.1.0"
+dependencies = [
+ "duan-package",
+ "duan-scenario",
+ "thiserror",
 ]
 
 [[package]]

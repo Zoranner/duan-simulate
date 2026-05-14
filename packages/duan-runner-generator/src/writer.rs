@@ -30,7 +30,6 @@ fn validate_project(project: &RunnerProject) -> Result<()> {
     validate_not_empty("registry name", &project.registry.name)?;
     validate_not_empty("registry index", &project.registry.index)?;
     validate_not_empty("scenario path", &project.scenario_path)?;
-    validate_not_empty("runner path", &project.runner_path)?;
 
     for dependency in &project.dependencies {
         validate_not_empty("dependency crate name", &dependency.name)?;
@@ -63,7 +62,7 @@ fn render_cargo_toml(project: &RunnerProject) -> String {
     output.push_str("edition = \"2021\"\n\n");
     output.push_str("[dependencies]\n");
 
-    for dependency in sorted_dependencies(&project.dependencies) {
+    for dependency in sorted_dependencies_with_runner(project) {
         output.push_str(&format!(
             "{} = {{ version = {:?}, registry = {:?} }}\n",
             dependency.name, dependency.version, dependency.registry
@@ -113,29 +112,25 @@ fn render_main_rs(project: &RunnerProject) -> String {
         output.push('\n');
     }
 
-    output.push_str(&format!(
-        "    run_scenario(scenario, registry, {:?})?;\n",
-        project.runner_path
-    ));
+    output.push_str("    let report = duan_runner::Runner::new(registry).run(&scenario)?;\n");
+    output.push_str("    println!(\"{report:?}\");\n");
     output.push_str("    Ok(())\n");
     output.push_str("}\n\n");
-    output.push_str("fn run_scenario(\n");
-    output.push_str("    _scenario: duan_scenario::Manifest,\n");
-    output.push_str("    _registry: duan_package::Registry,\n");
-    output.push_str("    runner_path: &str,\n");
-    output.push_str(") -> Result<(), Box<dyn std::error::Error>> {\n");
-    output.push_str("    Err(format!(\n");
-    output.push_str(
-        "        \"runner execution is not implemented in generated runner stub `{runner_path}`\"\n",
-    );
-    output.push_str("    )\n");
-    output.push_str("    .into())\n");
-    output.push_str("}\n");
     output
 }
 
-fn sorted_dependencies(dependencies: &[CrateDependency]) -> Vec<&CrateDependency> {
-    let mut sorted: Vec<_> = dependencies.iter().collect();
+fn sorted_dependencies_with_runner(project: &RunnerProject) -> Vec<CrateDependency> {
+    let mut sorted = project.dependencies.clone();
+    if !sorted
+        .iter()
+        .any(|dependency| dependency.name == "duan-runner")
+    {
+        sorted.push(CrateDependency::registry(
+            "duan-runner",
+            project.version.clone(),
+            project.registry.name.clone(),
+        ));
+    }
     sorted.sort_by(|left, right| left.name.cmp(&right.name));
     sorted
 }

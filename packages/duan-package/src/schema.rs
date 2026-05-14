@@ -9,6 +9,7 @@ pub struct Schema {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct FieldSchema {
+    #[serde(rename = "type", alias = "kind")]
     kind: PrimitiveKind,
     default: Option<PrimitiveValue>,
     range: Option<Range>,
@@ -17,6 +18,7 @@ pub struct FieldSchema {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum PrimitiveKind {
     Bool,
     Integer,

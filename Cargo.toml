@@ -2,6 +2,7 @@
 members = [
     "packages/duan-package",
     "packages/duan-scenario",
+    "packages/duan-runner",
     "packages/duan-runner-generator",
     "packages/duan-cli",
 ]
@@ -23,5 +24,6 @@ thiserror = "1"
 toml = "0.8"
 
 duan-package = { path = "packages/duan-package" }
+duan-runner = { path = "packages/duan-runner" }
 duan-runner-generator = { path = "packages/duan-runner-generator" }
 duan-scenario = { path = "packages/duan-scenario" }

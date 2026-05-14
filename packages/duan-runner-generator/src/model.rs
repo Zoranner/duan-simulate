@@ -4,7 +4,6 @@ pub struct RunnerProject {
     pub version: String,
     pub registry: RegistryConfig,
     pub scenario_path: String,
-    pub runner_path: String,
     pub dependencies: Vec<CrateDependency>,
     pub installs: Vec<PackageInstall>,
 }

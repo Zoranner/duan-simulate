@@ -65,13 +65,17 @@ fn runner_generate_writes_project_without_building_it() {
 
     let cargo_toml = fs::read_to_string(out_dir.join("Cargo.toml")).expect("read Cargo.toml");
     assert!(cargo_toml.contains("name = \"free-fall-demo-runner\""));
+    assert!(
+        cargo_toml.contains("duan-runner = { version = \"0.1.0\", registry = \"duan-private\" }")
+    );
     assert!(cargo_toml.contains(
         "examples-free-fall-components = { version = \"0.1.0\", registry = \"duan-private\" }"
     ));
 
     let main_rs = fs::read_to_string(out_dir.join("src/main.rs")).expect("read main.rs");
-    assert!(main_rs.contains("run_scenario(scenario, registry, \"duan_runner::run_scenario\")?;"));
-    assert!(main_rs.contains("runner execution is not implemented in generated runner stub"));
+    assert!(main_rs.contains("let report = duan_runner::Runner::new(registry).run(&scenario)?;"));
+    assert!(main_rs.contains("println!(\"{report:?}\");"));
+    assert!(!main_rs.contains("runner execution is not implemented in generated runner stub"));
 }
 
 #[test]
@@ -113,6 +117,52 @@ fn package_inspect_reads_metadata_from_file() {
     assert!(
         String::from_utf8_lossy(&output.stdout).contains("crate: examples-free-fall-components\n")
     );
+}
+
+#[test]
+fn package_inspect_rejects_invalid_schema_metadata() {
+    let tempdir = tempfile::tempdir().expect("create tempdir");
+    let package_dir = tempdir.path();
+    fs::write(
+        package_dir.join("duan-package.toml"),
+        r#"
+[duan.package]
+id = "demo.package"
+version = "0.1.0"
+name = "Demo Package"
+
+[duan.rust]
+crate = "demo-package"
+
+[provides.components]
+"demo.component" = "schemas/component.json"
+"#,
+    )
+    .expect("write package metadata");
+    fs::create_dir_all(package_dir.join("schemas")).expect("create schemas dir");
+    fs::write(
+        package_dir.join("schemas/component.json"),
+        r#"
+{
+  "id": "demo.component",
+  "kind": "entity"
+}
+"#,
+    )
+    .expect("write schema");
+
+    let package_arg = package_dir.to_string_lossy().into_owned();
+    let output = duan()
+        .args(["package", "inspect", &package_arg])
+        .output()
+        .expect("run duan package inspect");
+
+    assert!(!output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("demo.component"));
+    assert!(stderr.contains("schemas/component.json"));
+    assert!(stderr.contains("component"));
+    assert!(stderr.contains("entity"));
 }
 
 #[test]

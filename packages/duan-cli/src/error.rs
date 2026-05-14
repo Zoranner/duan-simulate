@@ -28,7 +28,7 @@ pub enum CliError {
     #[error("failed to inspect package path `{}`: {source}", path.display())]
     ReadPackage {
         path: PathBuf,
-        source: duan_package::PackageError,
+        source: Box<duan_package::PackageError>,
     },
 
     #[error(

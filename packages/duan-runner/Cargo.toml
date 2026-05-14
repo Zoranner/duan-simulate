@@ -1,0 +1,12 @@
+[package]
+name = "duan-runner"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Planned-only DUAN scenario runner and audit report"
+
+[dependencies]
+duan-package.workspace = true
+duan-scenario.workspace = true
+thiserror.workspace = true
