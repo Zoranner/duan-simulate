@@ -1,3 +1,24 @@
 [submodule "packages/duan-core"]
 	path = packages/duan-core
-	url = https://github.com/Zoranner/duan-simulate.git
+	url = ../duan-core.git
+[submodule "packages/duan-package"]
+	path = packages/duan-package
+	url = ../duan-package.git
+[submodule "packages/duan-scenario"]
+	path = packages/duan-scenario
+	url = ../duan-scenario.git
+[submodule "packages/duan-runner-generator"]
+	path = packages/duan-runner-generator
+	url = ../duan-runner-generator.git
+[submodule "packages/duan-runner"]
+	path = packages/duan-runner
+	url = ../duan-runner.git
+[submodule "packages/duan-cli"]
+	path = packages/duan-cli
+	url = ../duan-cli.git
+[submodule "packages/duan-editor"]
+	path = packages/duan-editor
+	url = ../duan-editor.git
+[submodule "packages/duan-build"]
+	path = packages/duan-build
+	url = ../duan-build.git
