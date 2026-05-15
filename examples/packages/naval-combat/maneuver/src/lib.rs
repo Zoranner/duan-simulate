@@ -4,4 +4,4 @@ mod package;
 
 pub use components::{Heading, Position2, Velocity2};
 pub use domains::{CollisionDomain, MotionDomain};
-pub use package::{package, PACKAGE_ID};
+pub use package::package;

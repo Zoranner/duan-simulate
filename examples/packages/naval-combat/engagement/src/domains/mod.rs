@@ -1,3 +1,3 @@
 mod combat;
 
-pub use combat::CombatDomain;
+pub use combat::{ApplyDamage, CombatDomain, FireRequested, HitResolved};

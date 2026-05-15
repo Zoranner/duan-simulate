@@ -1,9 +1,29 @@
-use duan::{Domain, DomainContext};
-use duan_macros::domain;
+use duan::{Domain, DomainContext, EntityId, Reaction, World};
+use duan_macros::{domain, reaction, Event};
 use example_naval_core::{Faction, Health, Radar};
 use example_naval_motion::Position2;
 
-use crate::{FireRequested, Weapon};
+use crate::Weapon;
+
+#[derive(Event, Debug)]
+#[event(id = "fire-requested", label = "Fire Requested")]
+pub struct FireRequested {
+    pub shooter_id: EntityId,
+    pub target_id: EntityId,
+    pub launch_x: f64,
+    pub launch_y: f64,
+    pub dir_x: f64,
+    pub dir_y: f64,
+    pub missile_speed: f64,
+    pub damage: f64,
+}
+
+#[derive(Event, Debug)]
+#[event(id = "hit-resolved", label = "Hit Resolved")]
+pub struct HitResolved {
+    pub target_id: EntityId,
+    pub damage: f64,
+}
 
 pub struct CombatDomain;
 
@@ -109,6 +129,17 @@ impl Domain for CombatDomain {
                 missile_speed,
                 damage,
             });
+        }
+    }
+}
+
+pub struct ApplyDamage;
+
+#[reaction(id = "apply-damage", label = "Apply Damage", event = HitResolved)]
+impl Reaction<HitResolved> for ApplyDamage {
+    fn react(&mut self, event: &HitResolved, world: &mut World) {
+        if let Some(health) = world.inspect_mut::<Health>(event.target_id) {
+            health.current = (health.current - event.damage).max(0.0);
         }
     }
 }
