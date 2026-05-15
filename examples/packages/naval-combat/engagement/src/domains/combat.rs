@@ -1,6 +1,6 @@
 use duan::{Domain, DomainContext};
-use examples_naval_combat_maneuver::Position2;
-use examples_naval_combat_platform::{Faction, Health, Radar};
+use example_naval_core::{Faction, Health, Radar};
+use example_naval_motion::Position2;
 
 use crate::{FireRequested, Weapon};
 

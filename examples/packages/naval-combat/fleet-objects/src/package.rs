@@ -1,7 +1,7 @@
 use duan_catalog::{EntityDescriptor, ItemId, Package, PackageId};
-use examples_naval_combat_engagement::Weapon;
-use examples_naval_combat_maneuver::{Position2, Velocity2};
-use examples_naval_combat_platform::{Faction, Health, Radar};
+use example_naval_combat::Weapon;
+use example_naval_core::{Faction, Health, Radar};
+use example_naval_motion::{Position2, Velocity2};
 
 use crate::Ship;
 

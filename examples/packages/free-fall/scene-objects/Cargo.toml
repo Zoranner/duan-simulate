@@ -1,5 +1,5 @@
 [package]
-name = "examples-free-fall-scene-objects"
+name = "example-freefall-objects"
 version = "0.1.0"
 edition = "2021"
 publish = false
@@ -8,4 +8,4 @@ include = ["src/**", "README.md"]
 [dependencies]
 duan = { path = "../../../../packages/duan-core" }
 duan-catalog = { path = "../../../../packages/duan-catalog" }
-examples-free-fall-body = { path = "../body" }
+example-freefall-physics = { path = "../body" }

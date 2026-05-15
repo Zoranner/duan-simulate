@@ -1,5 +1,7 @@
 target/
 examples/packages/**/Cargo.lock
+examples/scenarios/**/.duan/
+examples/scenarios/**/runs/
 .duan/build/
 .duan/cache/
 *.log

@@ -1,5 +1,5 @@
 [package]
-name = "examples-naval-combat-engagement"
+name = "example-naval-combat"
 version = "0.1.0"
 edition = "2021"
 publish = false
@@ -8,5 +8,5 @@ include = ["src/**", "README.md"]
 [dependencies]
 duan = { path = "../../../../packages/duan-core" }
 duan-catalog = { path = "../../../../packages/duan-catalog" }
-examples-naval-combat-maneuver = { path = "../maneuver" }
-examples-naval-combat-platform = { path = "../platform" }
+example-naval-motion = { path = "../maneuver" }
+example-naval-core = { path = "../platform" }

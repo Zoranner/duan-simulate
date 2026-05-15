@@ -1,5 +1,5 @@
 [package]
-name = "examples-naval-combat-maneuver"
+name = "example-naval-motion"
 version = "0.1.0"
 edition = "2021"
 publish = false

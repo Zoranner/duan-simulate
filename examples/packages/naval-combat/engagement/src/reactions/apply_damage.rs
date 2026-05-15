@@ -1,5 +1,5 @@
 use duan::{Reaction, World};
-use examples_naval_combat_platform::Health;
+use example_naval_core::Health;
 
 use crate::HitResolved;
 

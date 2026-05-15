@@ -1,5 +1,5 @@
 use duan::Entity;
-use examples_free_fall_body::{Position2, Velocity2};
+use example_freefall_physics::{Position2, Velocity2};
 
 pub struct Ball;
 

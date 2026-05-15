@@ -71,4 +71,4 @@ The repository root is a product and documentation collection. It does not need 
 
 Example simulation capabilities live under `examples/packages/` as ordinary Cargo packages. Scenario examples should converge on `examples/scenarios/<name>/scenario.duan` project directories, which can later hold package locks, assets, run outputs, and generated `.duan/**` caches.
 
-DUAN packages are Rust Cargo packages. The Cargo `package.name` is the DUAN package id, for example `example-freefall-physics`. Package item ids use `<package-id>/<local-name>`, for example `example-freefall-physics/position-2`.
+DUAN packages are Rust Cargo packages. The Cargo `package.name` is the DUAN package id, for example `example-freefall-physics`. Package item ids use `<package-id>/<id>`, for example `example-freefall-physics/position-2`.

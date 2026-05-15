@@ -1,5 +1,5 @@
 [package]
-name = "examples-free-fall-body"
+name = "example-freefall-physics"
 version = "0.1.0"
 edition = "2021"
 publish = false

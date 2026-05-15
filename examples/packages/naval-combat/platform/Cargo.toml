@@ -1,5 +1,5 @@
 [package]
-name = "examples-naval-combat-platform"
+name = "example-naval-core"
 version = "0.1.0"
 edition = "2021"
 publish = false

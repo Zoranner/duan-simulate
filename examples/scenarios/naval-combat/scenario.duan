@@ -1,0 +1,47 @@
+scenario:
+  id: naval_combat_demo
+  package: example-naval-scenario
+
+packages:
+  - id: example-naval-core
+    version: 0.1.0
+  - id: example-naval-motion
+    version: 0.1.0
+  - id: example-naval-combat
+    version: 0.1.0
+  - id: example-naval-fleet
+    version: 0.1.0
+
+domains:
+  - type: example-naval-motion/motion
+  - type: example-naval-motion/collision
+  - type: example-naval-combat/combat
+
+entities:
+  - id: blue_01
+    type: example-naval-fleet/ship
+    components:
+      example-naval-core/faction: { team: 0 }
+      example-naval-motion/position-2: { x: 80.0, y: 120.0 }
+      example-naval-motion/velocity-2: { vx: 18.0, vy: 0.0 }
+      example-naval-core/health: { current: 100.0, max: 100.0 }
+      example-naval-core/radar: { range: 260.0 }
+      example-naval-combat/weapon:
+        range: 180.0
+        damage: 25.0
+        missile_speed: 80.0
+        fire_cooldown: 1.5
+
+  - id: red_01
+    type: example-naval-fleet/ship
+    components:
+      example-naval-core/faction: { team: 1 }
+      example-naval-motion/position-2: { x: 720.0, y: 360.0 }
+      example-naval-motion/velocity-2: { vx: -16.0, vy: 0.0 }
+      example-naval-core/health: { current: 100.0, max: 100.0 }
+      example-naval-core/radar: { range: 260.0 }
+      example-naval-combat/weapon:
+        range: 180.0
+        damage: 25.0
+        missile_speed: 80.0
+        fire_cooldown: 1.5
