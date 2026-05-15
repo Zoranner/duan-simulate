@@ -1,0 +1,64 @@
+{
+  "id": "free-fall",
+  "name": "free-fall",
+  "title": "Free Fall Package",
+  "description": "Read-only fixture for a minimal gravity simulation package.",
+  "version": "0.1.0",
+  "entryScenarioId": "free-fall-baseline",
+  "domain": "physics",
+  "tags": ["fixture", "gravity", "read-only"],
+  "components": [
+    {
+      "name": "Transform",
+      "description": "World-space position for a falling body.",
+      "fields": [
+        {
+          "name": "position_y",
+          "type": "f32",
+          "unit": "m",
+          "default": 10
+        }
+      ]
+    },
+    {
+      "name": "Velocity",
+      "description": "Linear velocity along the vertical axis.",
+      "fields": [
+        {
+          "name": "velocity_y",
+          "type": "f32",
+          "unit": "m/s",
+          "default": 0
+        }
+      ]
+    },
+    {
+      "name": "Gravity",
+      "description": "Constant acceleration applied during each fixed step.",
+      "fields": [
+        {
+          "name": "acceleration_y",
+          "type": "f32",
+          "unit": "m/s^2",
+          "default": -9.81
+        }
+      ]
+    }
+  ],
+  "systems": [
+    {
+      "name": "ApplyGravity",
+      "phase": "fixed",
+      "reads": ["Gravity"],
+      "writes": ["Velocity"],
+      "description": "Integrates vertical acceleration into velocity."
+    },
+    {
+      "name": "IntegratePosition",
+      "phase": "fixed",
+      "reads": ["Velocity"],
+      "writes": ["Transform"],
+      "description": "Moves the body according to current velocity."
+    }
+  ]
+}

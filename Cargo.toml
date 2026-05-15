@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "packages/duan-kinematics",
     "packages/duan-package",
     "packages/duan-scenario",
     "packages/duan-runner",

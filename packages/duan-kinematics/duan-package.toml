@@ -1,0 +1,11 @@
+[duan.package]
+id = "duan.kinematics"
+version = "0.1.0"
+name = "DUAN Kinematics Components"
+
+[duan.rust]
+crate = "duan-kinematics"
+
+[provides.components]
+"duan.kinematics.position-2" = "schemas/components/position-2.json"
+"duan.kinematics.velocity-2" = "schemas/components/velocity-2.json"

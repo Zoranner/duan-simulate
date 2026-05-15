@@ -80,7 +80,7 @@ fn runner_generate_writes_project_without_building_it() {
 
 #[test]
 fn package_inspect_reads_metadata_from_directory() {
-    let package_dir = workspace_path("examples/free-fall");
+    let package_dir = workspace_path("examples/free-fall/components");
     let package_arg = package_dir.to_string_lossy().into_owned();
 
     let output = duan()
@@ -95,13 +95,13 @@ fn package_inspect_reads_metadata_from_directory() {
     );
     assert_eq!(
         String::from_utf8_lossy(&output.stdout),
-        "package: examples.free-fall.components\nversion: 0.1.0\ncrate: examples-free-fall-components\nprovides: 5\n"
+        "package: examples.free-fall.components\nversion: 0.1.0\ncrate: examples-free-fall-components\nprovides: 2\n"
     );
 }
 
 #[test]
 fn package_inspect_reads_metadata_from_file() {
-    let package_file = workspace_path("examples/free-fall/duan-package.toml");
+    let package_file = workspace_path("examples/free-fall/components/duan-package.toml");
     let package_arg = package_file.to_string_lossy().into_owned();
 
     let output = duan()

@@ -1,0 +1,10 @@
+[duan.package]
+id = "examples.free-fall.domains"
+version = "0.1.0"
+name = "Free Fall Domains"
+
+[duan.rust]
+crate = "examples-free-fall-domains"
+
+[provides.domains]
+"examples.free-fall.domains.motion" = "schemas/motion.json"

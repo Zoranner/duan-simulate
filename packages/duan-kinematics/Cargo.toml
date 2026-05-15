@@ -1,0 +1,11 @@
+[package]
+name = "duan-kinematics"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "DUAN shared kinematics component metadata"
+
+[package.metadata.duan]
+metadata = "duan-package.toml"
+schemas = "schemas"

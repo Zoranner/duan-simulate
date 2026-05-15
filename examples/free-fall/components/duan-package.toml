@@ -1,0 +1,11 @@
+[duan.package]
+id = "examples.free-fall.components"
+version = "0.1.0"
+name = "Free Fall Components"
+
+[duan.rust]
+crate = "examples-free-fall-components"
+
+[provides.components]
+"examples.free-fall.components.static-body" = "schemas/static-body.json"
+"examples.free-fall.components.collider" = "schemas/collider.json"

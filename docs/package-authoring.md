@@ -17,28 +17,42 @@ For example:
 
 ```toml
 [duan.package]
-id = "examples.naval-combat"
+id = "examples.naval-combat.components"
 version = "0.1.0"
-name = "DUAN Naval Combat Example"
+name = "Naval Combat Components"
 
 [duan.rust]
-crate = "examples-naval-combat"
-entry = "examples_naval_combat::package"
+crate = "examples-naval-combat-components"
 
 [provides.components]
-"examples.naval-combat.components.health" = "schemas/components/health.json"
-
-[provides.domains]
-"examples.naval-combat.domains.combat" = "schemas/domains/combat.json"
-
-[provides.entities]
-"examples.naval-combat.entities.ship" = "schemas/entities/ship.json"
-
-[provides.reactions]
-"examples.naval-combat.reactions.on-hit" = "schemas/reactions/on-hit.json"
+"examples.naval-combat.components.health" = "schemas/health.json"
 ```
 
 The `provides` mappings are an index. They do not define the runtime implementation. Generated runners still link the Rust crate and call the Rust registration entry.
+
+## Single Package And Split Packages
+
+One `duan-package.toml` describes one DUAN package id. It should not index items that the scenario declares as separate packages. If a scenario lists `examples.free-fall.components`, `examples.free-fall.domains`, and `examples.free-fall.entities`, each package gets its own directory, metadata file, and schema set.
+
+Use a single package only when the crate and runtime registration are intentionally shipped as one package id. Split packages when item ownership is separate, when a scenario depends on only part of a model, or when shared packages are reused by multiple examples. A scenario bundle directory such as `examples/free-fall/` may contain `scenario.yaml` and package subdirectories, but it should not keep a root `duan-package.toml` that suggests the bundle is itself a package.
+
+Shared component identities must come from one package. The baseline 2D motion component schemas live in `packages/duan-kinematics`:
+
+```toml
+[duan.package]
+id = "duan.kinematics"
+version = "0.1.0"
+name = "DUAN Kinematics Components"
+
+[duan.rust]
+crate = "duan-kinematics"
+
+[provides.components]
+"duan.kinematics.position-2" = "schemas/components/position-2.json"
+"duan.kinematics.velocity-2" = "schemas/components/velocity-2.json"
+```
+
+Example packages should reference `duan.kinematics.position-2` and `duan.kinematics.velocity-2` from scenarios and entity schemas instead of copying those schemas into each example package.
 
 ## Component Schema Shape
 
@@ -80,8 +94,8 @@ If a scenario needs a new algorithm, state transition, event, or command behavio
 
 The example folders include first-pass metadata:
 
-- `examples/free-fall/schemas/` documents the components used by `examples/free-fall/scenario.yaml`.
-- `examples/naval-combat/duan-package.toml` indexes the naval combat package items.
-- `examples/naval-combat/schemas/` documents the naval combat components, domains, entity, and reactions used by `examples/naval-combat/scenario.yaml`.
+- `packages/duan-kinematics/duan-package.toml` indexes shared 2D position and velocity component schemas.
+- `examples/free-fall/components/`, `examples/free-fall/domains/`, and `examples/free-fall/entities/` each contain one package metadata file and local schemas.
+- `examples/naval-combat/components/`, `examples/naval-combat/domains/`, `examples/naval-combat/entities/`, and `examples/naval-combat/reactions/` each contain one package metadata file and local schemas.
 
 These files are examples for editor and scenario tooling. They are not a replacement for crate code or generated runner validation.

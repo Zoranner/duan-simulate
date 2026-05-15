@@ -1,0 +1,52 @@
+{
+  "id": "free-fall-baseline",
+  "name": "Free Fall Baseline",
+  "packageId": "free-fall",
+  "description": "A single body starts 10 meters above the ground with zero velocity.",
+  "durationSeconds": 1,
+  "timestepSeconds": 0.0166667,
+  "entities": [
+    {
+      "id": "body-001",
+      "archetype": "falling-body",
+      "label": "Falling body",
+      "components": {
+        "Transform": {
+          "position_y": 10
+        },
+        "Velocity": {
+          "velocity_y": 0
+        },
+        "Gravity": {
+          "acceleration_y": -9.81
+        }
+      }
+    }
+  ],
+  "events": [
+    {
+      "atSeconds": 0,
+      "label": "Scenario loaded",
+      "description": "Fixture data is available in the editor only."
+    },
+    {
+      "atSeconds": 1,
+      "label": "Expected sample point",
+      "description": "Runner output is not generated because the CLI is not connected."
+    }
+  ],
+  "expectations": [
+    {
+      "label": "CLI connection",
+      "value": "not connected"
+    },
+    {
+      "label": "Runner generation",
+      "value": "not generated"
+    },
+    {
+      "label": "Mode",
+      "value": "read-only fixture browsing"
+    }
+  ]
+}

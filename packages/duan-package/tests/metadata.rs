@@ -58,7 +58,7 @@ entry = "duan_kinematics::install"
 
 #[test]
 fn metadata_loads_from_package_file_path() {
-    let package_path = workspace_path("examples/free-fall/duan-package.toml");
+    let package_path = workspace_path("examples/free-fall/components/duan-package.toml");
 
     let metadata = PackageMetadata::load_from_path(&package_path).expect("load metadata");
 
@@ -69,7 +69,7 @@ fn metadata_loads_from_package_file_path() {
 
 #[test]
 fn metadata_loads_duan_package_toml_from_directory() {
-    let package_dir = workspace_path("examples/free-fall");
+    let package_dir = workspace_path("examples/free-fall/components");
 
     let metadata = PackageMetadata::load_from_path(package_dir).expect("load metadata");
 
