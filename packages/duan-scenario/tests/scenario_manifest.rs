@@ -2,11 +2,11 @@ use duan_scenario::{load_yaml_str, Manifest, ManifestError, Value};
 
 #[test]
 fn loads_free_fall_example_manifest() {
-    let manifest = load_yaml_str(include_str!("../../../examples/free-fall/scenario.yaml"))
+    let manifest = load_yaml_str(include_str!("../../../examples/scenarios/free-fall.duan"))
         .expect("free-fall scenario should load");
 
     assert_eq!(manifest.scenario.id, "free_fall_demo");
-    assert_eq!(manifest.packages.len(), 4);
+    assert_eq!(manifest.packages.len(), 3);
     assert_eq!(manifest.domains.len(), 1);
     assert_eq!(manifest.entities.len(), 2);
 
@@ -17,7 +17,7 @@ fn loads_free_fall_example_manifest() {
         .expect("ball entity");
     let position = ball
         .components
-        .get("duan.kinematics.position-2")
+        .get("examples-free-fall-body/position-2")
         .expect("position component");
     assert_eq!(
         position.get("y"),
@@ -27,13 +27,15 @@ fn loads_free_fall_example_manifest() {
 
 #[test]
 fn loads_naval_combat_example_manifest() {
-    let manifest = load_yaml_str(include_str!("../../../examples/naval-combat/scenario.yaml"))
-        .expect("naval-combat scenario should load");
+    let manifest = load_yaml_str(include_str!(
+        "../../../examples/scenarios/naval-combat.duan"
+    ))
+    .expect("naval-combat scenario should load");
 
     assert_eq!(manifest.scenario.id, "naval_combat_demo");
-    assert_eq!(manifest.packages.len(), 5);
+    assert_eq!(manifest.packages.len(), 4);
     assert_eq!(manifest.domains.len(), 3);
-    assert_eq!(manifest.reactions.len(), 4);
+    assert_eq!(manifest.reactions.len(), 0);
     assert_eq!(manifest.entities.len(), 2);
 }
 
@@ -42,25 +44,25 @@ fn reports_structural_validation_errors() {
     let yaml = r#"
 scenario:
   id: invalid_demo
-  package: examples.invalid
+  package: examples-invalid
 
 packages:
-  - id: duan.kinematics
+  - id: examples-motion
     version: 0.1.0
 
 domains:
-  - type: examples.invalid.domains.motion
+  - type: examples-missing/domain
   - type: Bad_Item
 
 entities:
   - id: ball
-    type: examples.invalid.entities.ball
+    type: examples-invalid/entities.ball
     components:
-      duan.kinematics.position-2: { x: 0.0, y: 10.0 }
-      examples.invalid.components.mass: 1.0
+      examples-motion/position-2: { x: 0.0, y: 10.0 }
+      examples-invalid/components.mass: 1.0
       invalid_component: true
   - id: ball
-    type: duan.kinematics.body
+    type: examples-motion/body
 
 run:
   output_dir: ../runs
@@ -85,7 +87,7 @@ outputs:
         "{rendered}"
     );
     assert!(
-        rendered.contains("missing package dependency for `examples.invalid.domains.motion`"),
+        rendered.contains("missing package dependency for `examples-missing/domain`"),
         "{rendered}"
     );
     assert!(
@@ -112,19 +114,19 @@ fn manifest_value_keeps_nested_yaml_shape() {
         r#"
 scenario:
   id: value_demo
-  package: examples.value
+  package: examples-value
 
 packages:
-  - id: examples.value.components
+  - id: examples-value-components
     version: 0.1.0
-  - id: examples.value.entities
+  - id: examples-value-entities
     version: 0.1.0
 
 entities:
   - id: actor
-    type: examples.value.entities.actor
+    type: examples-value-entities/actor
     components:
-      examples.value.components.payload:
+      examples-value-components/payload:
         enabled: true
         tags: [alpha, beta]
         nested:
@@ -133,7 +135,7 @@ entities:
     )
     .expect("value manifest should load");
 
-    let payload = &manifest.entities[0].components["examples.value.components.payload"];
+    let payload = &manifest.entities[0].components["examples-value-components/payload"];
     assert_eq!(payload.get("enabled"), Some(&Value::Bool(true)));
     assert!(matches!(payload.get("tags"), Some(Value::Sequence(values)) if values.len() == 2));
     let nested_count = payload.get("nested").and_then(|value| value.get("count"));

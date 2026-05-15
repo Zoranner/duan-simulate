@@ -19,4 +19,6 @@ pub use package::{
     PackageDependency, PackageItem, PackageItemKind, RegistrationDescriptor,
 };
 pub use registry::Registry;
-pub use schema::{EditorMetadata, FieldSchema, PrimitiveKind, PrimitiveValue, Range, Schema, Unit};
+pub use schema::{
+    DisplayMetadata, FieldSchema, PrimitiveKind, PrimitiveValue, Range, Schema, Unit,
+};

@@ -14,7 +14,7 @@ fn workspace_path(path: &str) -> PathBuf {
 
 #[test]
 fn scenario_validate_accepts_example_manifest() {
-    let scenario = workspace_path("examples/free-fall/scenario.yaml");
+    let scenario = workspace_path("examples/scenarios/free-fall.duan");
     let scenario_arg = scenario.to_string_lossy().into_owned();
 
     let output = duan()
@@ -38,7 +38,7 @@ fn runner_generate_writes_project_without_building_it() {
     let tempdir = tempfile::tempdir().expect("create tempdir");
     let out_dir = tempdir.path().join("runner");
     let out_arg = out_dir.to_string_lossy().into_owned();
-    let scenario = workspace_path("examples/free-fall/scenario.yaml");
+    let scenario = workspace_path("examples/scenarios/free-fall.duan");
     let scenario_arg = scenario.to_string_lossy().into_owned();
 
     let output = duan()
@@ -69,7 +69,7 @@ fn runner_generate_writes_project_without_building_it() {
         cargo_toml.contains("duan-runner = { version = \"0.1.0\", registry = \"duan-private\" }")
     );
     assert!(cargo_toml.contains(
-        "examples-free-fall-components = { version = \"0.1.0\", registry = \"duan-private\" }"
+        "examples-free-fall-body = { version = \"0.1.0\", registry = \"duan-private\" }"
     ));
 
     let main_rs = fs::read_to_string(out_dir.join("src/main.rs")).expect("read main.rs");
@@ -80,7 +80,9 @@ fn runner_generate_writes_project_without_building_it() {
 
 #[test]
 fn package_inspect_reads_metadata_from_directory() {
-    let package_dir = workspace_path("examples/free-fall/components");
+    let tempdir = tempfile::tempdir().expect("create tempdir");
+    write_free_fall_body_cache(tempdir.path());
+    let package_dir = tempdir.path();
     let package_arg = package_dir.to_string_lossy().into_owned();
 
     let output = duan()
@@ -95,13 +97,15 @@ fn package_inspect_reads_metadata_from_directory() {
     );
     assert_eq!(
         String::from_utf8_lossy(&output.stdout),
-        "package: examples.free-fall.components\nversion: 0.1.0\ncrate: examples-free-fall-components\nprovides: 2\n"
+        "package: examples-free-fall-body\nversion: 0.1.0\ncrate: examples-free-fall-body\nprovides: 4\n"
     );
 }
 
 #[test]
 fn package_inspect_reads_metadata_from_file() {
-    let package_file = workspace_path("examples/free-fall/components/duan-package.toml");
+    let tempdir = tempfile::tempdir().expect("create tempdir");
+    write_free_fall_body_cache(tempdir.path());
+    let package_file = tempdir.path().join("duan.toml");
     let package_arg = package_file.to_string_lossy().into_owned();
 
     let output = duan()
@@ -114,9 +118,7 @@ fn package_inspect_reads_metadata_from_file() {
         "stderr: {}",
         String::from_utf8_lossy(&output.stderr)
     );
-    assert!(
-        String::from_utf8_lossy(&output.stdout).contains("crate: examples-free-fall-components\n")
-    );
+    assert!(String::from_utf8_lossy(&output.stdout).contains("crate: examples-free-fall-body\n"));
 }
 
 #[test]
@@ -124,10 +126,10 @@ fn package_inspect_rejects_invalid_schema_metadata() {
     let tempdir = tempfile::tempdir().expect("create tempdir");
     let package_dir = tempdir.path();
     fs::write(
-        package_dir.join("duan-package.toml"),
+        package_dir.join("duan.toml"),
         r#"
 [duan.package]
-id = "demo.package"
+id = "demo-package"
 version = "0.1.0"
 name = "Demo Package"
 
@@ -135,7 +137,7 @@ name = "Demo Package"
 crate = "demo-package"
 
 [provides.components]
-"demo.component" = "schemas/component.json"
+"demo-package/component" = "schemas/component.json"
 "#,
     )
     .expect("write package metadata");
@@ -144,7 +146,7 @@ crate = "demo-package"
         package_dir.join("schemas/component.json"),
         r#"
 {
-  "id": "demo.component",
+  "id": "demo-package/component",
   "kind": "entity"
 }
 "#,
@@ -159,7 +161,7 @@ crate = "demo-package"
 
     assert!(!output.status.success());
     let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(stderr.contains("demo.component"));
+    assert!(stderr.contains("demo-package/component"));
     assert!(stderr.contains("schemas/component.json"));
     assert!(stderr.contains("component"));
     assert!(stderr.contains("entity"));
@@ -198,7 +200,7 @@ fn runner_build_rejects_missing_path_argument() {
 fn deliver_copies_runner_scenario_and_writes_readme() {
     let tempdir = tempfile::tempdir().expect("create tempdir");
     let runner = tempdir.path().join("runner.exe");
-    let scenario = tempdir.path().join("scenario.yaml");
+    let scenario = tempdir.path().join("scenario.duan");
     let out_dir = tempdir.path().join("delivery");
     fs::write(&runner, "runner-binary").expect("write runner");
     fs::write(&scenario, "scenario: demo").expect("write scenario");
@@ -229,13 +231,13 @@ fn deliver_copies_runner_scenario_and_writes_readme() {
         "runner-binary"
     );
     assert_eq!(
-        fs::read_to_string(out_dir.join("scenario/scenario.yaml"))
+        fs::read_to_string(out_dir.join("scenario/scenario.duan"))
             .expect("read delivered scenario"),
         "scenario: demo"
     );
     assert!(out_dir.join("runs").is_dir());
     let readme = fs::read_to_string(out_dir.join("README.md")).expect("read delivery README");
-    assert!(readme.contains("scenario/scenario.yaml"));
+    assert!(readme.contains("scenario/scenario.duan"));
     assert!(readme.contains("客户可以修改 scenario"));
     assert!(readme.contains("不可修改 Rust 逻辑"));
     assert!(readme.contains("不可修改 package set"));
@@ -245,7 +247,7 @@ fn deliver_copies_runner_scenario_and_writes_readme() {
 fn deliver_error_mentions_scenario_runner_and_out_paths() {
     let tempdir = tempfile::tempdir().expect("create tempdir");
     let runner = tempdir.path().join("missing-runner.exe");
-    let scenario = tempdir.path().join("scenario.yaml");
+    let scenario = tempdir.path().join("scenario.duan");
     let out_dir = tempdir.path().join("delivery");
     let runner_arg = runner.to_string_lossy().into_owned();
     let scenario_arg = scenario.to_string_lossy().into_owned();
@@ -278,4 +280,66 @@ fn run_is_explicitly_not_implemented_and_fails() {
     assert!(String::from_utf8_lossy(&output.stderr).contains(
         "not implemented: run runner execution is not implemented yet; use runner build and deliver"
     ));
+}
+
+fn write_free_fall_body_cache(package_dir: &std::path::Path) {
+    fs::write(
+        package_dir.join("duan.toml"),
+        r#"
+[duan.package]
+id = "examples-free-fall-body"
+version = "0.1.0"
+name = "Free Fall Body"
+
+[duan.rust]
+crate = "examples-free-fall-body"
+
+[provides.components]
+"examples-free-fall-body/position-2" = "schemas/position-2.json"
+"examples-free-fall-body/velocity-2" = "schemas/velocity-2.json"
+"examples-free-fall-body/static-body" = "schemas/static-body.json"
+"examples-free-fall-body/collider" = "schemas/collider.json"
+"#,
+    )
+    .expect("write generated package cache metadata");
+
+    write_schema(
+        package_dir,
+        "schemas/position-2.json",
+        "examples-free-fall-body/position-2",
+        "component",
+    );
+    write_schema(
+        package_dir,
+        "schemas/velocity-2.json",
+        "examples-free-fall-body/velocity-2",
+        "component",
+    );
+    write_schema(
+        package_dir,
+        "schemas/static-body.json",
+        "examples-free-fall-body/static-body",
+        "component",
+    );
+    write_schema(
+        package_dir,
+        "schemas/collider.json",
+        "examples-free-fall-body/collider",
+        "component",
+    );
+}
+
+fn write_schema(package_dir: &std::path::Path, relative_path: &str, id: &str, kind: &str) {
+    let path = package_dir.join(relative_path);
+    fs::create_dir_all(path.parent().expect("schema parent")).expect("create schema dir");
+    fs::write(
+        path,
+        format!(
+            r#"{{
+  "id": "{id}",
+  "kind": "{kind}"
+}}"#
+        ),
+    )
+    .expect("write generated schema cache");
 }

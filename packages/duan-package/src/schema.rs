@@ -14,7 +14,7 @@ pub struct FieldSchema {
     default: Option<PrimitiveValue>,
     range: Option<Range>,
     unit: Option<Unit>,
-    editor: Option<EditorMetadata>,
+    display: Option<DisplayMetadata>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -45,7 +45,7 @@ pub struct Range {
 pub struct Unit(String);
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct EditorMetadata {
+pub struct DisplayMetadata {
     label: Option<String>,
     description: Option<String>,
     order: Option<i32>,
@@ -79,7 +79,7 @@ impl FieldSchema {
             default: None,
             range: None,
             unit: None,
-            editor: None,
+            display: None,
         }
     }
 
@@ -98,8 +98,8 @@ impl FieldSchema {
         self
     }
 
-    pub fn editor(mut self, metadata: EditorMetadata) -> Self {
-        self.editor = Some(metadata);
+    pub fn display(mut self, metadata: DisplayMetadata) -> Self {
+        self.display = Some(metadata);
         self
     }
 
@@ -119,8 +119,8 @@ impl FieldSchema {
         self.unit.as_ref()
     }
 
-    pub fn editor_metadata(&self) -> Option<&EditorMetadata> {
-        self.editor.as_ref()
+    pub fn display_metadata(&self) -> Option<&DisplayMetadata> {
+        self.display.as_ref()
     }
 }
 
@@ -148,7 +148,7 @@ impl Unit {
     }
 }
 
-impl EditorMetadata {
+impl DisplayMetadata {
     pub fn new() -> Self {
         Self::default()
     }

@@ -1,0 +1,10 @@
+[package]
+name = "examples-free-fall-body"
+version = "0.1.0"
+edition = "2021"
+publish = false
+include = ["src/**", "README.md"]
+
+[dependencies]
+duan = { path = "../../../../packages/duan-core" }
+duan-package = { path = "../../../../packages/duan-package" }

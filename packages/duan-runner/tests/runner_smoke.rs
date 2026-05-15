@@ -10,26 +10,26 @@ fn id(value: &str) -> ItemId {
 }
 
 fn tiny_registry() -> Registry {
-    let package = Package::builder(PackageId::new("tiny.motion").unwrap())
+    let package = Package::builder(PackageId::new("tiny-motion").unwrap())
         .component(ComponentDescriptor::new(
-            id("tiny.motion.position"),
+            id("tiny-motion/position"),
             Schema::default(),
         ))
         .component(ComponentDescriptor::new(
-            id("tiny.motion.velocity"),
+            id("tiny-motion/velocity"),
             Schema::default(),
         ))
         .component(ComponentDescriptor::new(
-            id("tiny.motion.mass"),
+            id("tiny-motion/mass"),
             Schema::default(),
         ))
         .entity(
-            EntityDescriptor::new(id("tiny.motion.body"))
-                .component(id("tiny.motion.position"))
-                .component(id("tiny.motion.velocity")),
+            EntityDescriptor::new(id("tiny-motion/body"))
+                .component(id("tiny-motion/position"))
+                .component(id("tiny-motion/velocity")),
         )
-        .domain(id("tiny.motion.kinematics"))
-        .reaction(id("tiny.motion.integrate"))
+        .domain(id("tiny-motion/kinematics"))
+        .reaction(id("tiny-motion/integrate"))
         .build();
 
     Registry::new().install(package).unwrap()
@@ -42,23 +42,23 @@ fn planned_only_runner_reports_tiny_scenario_audit() {
         r#"
 scenario:
   id: tiny_demo
-  package: tiny.motion
+  package: tiny-motion
 
 packages:
-  - id: tiny.motion
+  - id: tiny-motion
     version: 0.1.0
 
 domains:
-  - type: tiny.motion.kinematics
+  - type: tiny-motion/kinematics
 
 reactions:
-  - type: tiny.motion.integrate
+  - type: tiny-motion/integrate
 
 entities:
   - id: ball
-    type: tiny.motion.body
+    type: tiny-motion/body
     components:
-      tiny.motion.position: { x: 1.0, y: 2.0 }
+      tiny-motion/position: { x: 1.0, y: 2.0 }
 
 run:
   delta_time: 0.25
@@ -87,14 +87,14 @@ fn planned_only_runner_propagates_missing_item_errors() {
         r#"
 scenario:
   id: missing_demo
-  package: tiny.motion
+  package: tiny-motion
 
 packages:
-  - id: tiny.motion
+  - id: tiny-motion
     version: 0.1.0
 
 domains:
-  - type: tiny.motion.missing-domain
+  - type: tiny-motion/missing-domain
 "#,
     )
     .unwrap();
@@ -105,7 +105,7 @@ domains:
         error,
         PackageError::MissingItem {
             location: "domains[0].type".to_owned(),
-            item_id: id("tiny.motion.missing-domain"),
+            item_id: id("tiny-motion/missing-domain"),
         }
     );
 }
@@ -117,17 +117,17 @@ fn planned_only_runner_propagates_unsupported_component_override_errors() {
         r#"
 scenario:
   id: unsupported_override_demo
-  package: tiny.motion
+  package: tiny-motion
 
 packages:
-  - id: tiny.motion
+  - id: tiny-motion
     version: 0.1.0
 
 entities:
   - id: ball
-    type: tiny.motion.body
+    type: tiny-motion/body
     components:
-      tiny.motion.mass: 3.0
+      tiny-motion/mass: 3.0
 "#,
     )
     .unwrap();
@@ -138,8 +138,8 @@ entities:
         error,
         PackageError::UnsupportedComponentOverride {
             entity_id: "ball".to_owned(),
-            entity_type: id("tiny.motion.body"),
-            component_id: id("tiny.motion.mass"),
+            entity_type: id("tiny-motion/body"),
+            component_id: id("tiny-motion/mass"),
         }
     );
 }

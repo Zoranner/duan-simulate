@@ -1,5 +1,0 @@
-{
-  "id": "examples.naval-combat.reactions.on-hit",
-  "kind": "reaction",
-  "description": "Applies weapon damage to the impacted target."
-}

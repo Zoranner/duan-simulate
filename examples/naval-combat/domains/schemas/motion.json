@@ -1,5 +1,0 @@
-{
-  "id": "examples.naval-combat.domains.motion",
-  "kind": "domain",
-  "description": "Integrates position from velocity for ships and missiles."
-}

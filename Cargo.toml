@@ -1,11 +1,17 @@
 [workspace]
 members = [
-    "packages/duan-kinematics",
     "packages/duan-package",
     "packages/duan-scenario",
     "packages/duan-runner",
     "packages/duan-runner-generator",
     "packages/duan-cli",
+    "examples/packages/free-fall/body",
+    "examples/packages/free-fall/gravity",
+    "examples/packages/free-fall/scene-objects",
+    "examples/packages/naval-combat/platform",
+    "examples/packages/naval-combat/maneuver",
+    "examples/packages/naval-combat/engagement",
+    "examples/packages/naval-combat/fleet-objects",
 ]
 exclude = ["packages/duan-core"]
 resolver = "2"

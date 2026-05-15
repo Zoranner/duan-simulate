@@ -1,0 +1,38 @@
+scenario:
+  id: free_fall_demo
+  package: examples-scenarios-free-fall
+
+packages:
+  - id: examples-free-fall-body
+    version: 0.1.0
+  - id: examples-free-fall-gravity
+    version: 0.1.0
+  - id: examples-free-fall-scene-objects
+    version: 0.1.0
+
+domains:
+  - type: examples-free-fall-gravity/field
+    factory: earth
+
+entities:
+  - id: ground
+    type: examples-free-fall-scene-objects/ground
+    components:
+      examples-free-fall-body/position-2: { x: 0.0, y: 0.0 }
+      examples-free-fall-body/static-body: {}
+      examples-free-fall-body/collider: { restitution: 0.8 }
+
+  - id: ball
+    type: examples-free-fall-scene-objects/ball
+    components:
+      examples-free-fall-body/position-2: { x: 0.0, y: 10.0 }
+      examples-free-fall-body/velocity-2: { vx: 0.0, vy: 0.0 }
+
+run:
+  delta_time: 0.01
+  max_time: 20.0
+
+outputs:
+  frames: runs/free_fall/frames.jsonl
+  events: runs/free_fall/events.jsonl
+  metrics: runs/free_fall/metrics.json

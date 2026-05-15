@@ -19,7 +19,7 @@ pub struct VersionReqText(String);
 impl PackageId {
     pub fn new(value: impl Into<String>) -> PackageResult<Self> {
         let value = value.into();
-        validate_dotted_id(&value)?;
+        validate_name(&value)?;
         Ok(Self(value))
     }
 
@@ -31,7 +31,7 @@ impl PackageId {
 impl ItemId {
     pub fn new(value: impl Into<String>) -> PackageResult<Self> {
         let value = value.into();
-        validate_dotted_id(&value)?;
+        validate_item_id(&value)?;
         Ok(Self(value))
     }
 
@@ -72,22 +72,32 @@ impl fmt::Display for VersionReqText {
     }
 }
 
-fn validate_dotted_id(value: &str) -> PackageResult<()> {
-    if value.is_empty() {
+fn validate_item_id(value: &str) -> PackageResult<()> {
+    let Some((package_id, local_name)) = value.split_once('/') else {
+        return Err(PackageError::InvalidId(value.to_owned()));
+    };
+
+    if !valid_segment(package_id) || !valid_segment(local_name) {
         return Err(PackageError::InvalidId(value.to_owned()));
     }
 
-    for segment in value.split('.') {
-        if segment.is_empty() || !valid_segment(segment) {
-            return Err(PackageError::InvalidId(value.to_owned()));
-        }
+    Ok(())
+}
+
+fn validate_name(value: &str) -> PackageResult<()> {
+    if value.is_empty() || !valid_segment(value) {
+        return Err(PackageError::InvalidId(value.to_owned()));
     }
 
     Ok(())
 }
 
 fn valid_segment(segment: &str) -> bool {
-    if segment.starts_with('-') || segment.ends_with('-') || segment.contains("--") {
+    if segment.is_empty()
+        || segment.starts_with('-')
+        || segment.ends_with('-')
+        || segment.contains("--")
+    {
         return false;
     }
 

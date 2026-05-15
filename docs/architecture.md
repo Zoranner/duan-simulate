@@ -16,4 +16,6 @@ The platform layer adds package-facing APIs around the core:
 
 Package distribution is based on a private Cargo registry. DUAN does not need a separate default package service.
 
-The editor can download `.crate` packages, read `duan-package.toml` and `schemas/`, then generate a runner that statically links selected packages.
+The editor can download `.crate` packages and read generated install caches derived from Rust package registration and schema APIs. Source packages do not hand-author `duan.toml` or `schemas/` as facts; those files are cache artifacts for inspection, validation, and delivery packaging.
+
+Generated runners statically link selected Cargo packages. Runtime behavior remains compiled Rust.

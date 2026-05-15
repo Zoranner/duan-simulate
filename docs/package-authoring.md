@@ -1,86 +1,117 @@
 # DUAN Package Authoring
 
-DUAN package authoring is Rust-first. The Rust crate is the authoritative source for runtime behavior, type definitions, factories, and registration. `duan-package.toml` and `schemas/` are metadata for editors, scenario assembly, validation, and delivery packaging.
+DUAN package authoring is Rust-first. A DUAN package is an ordinary Cargo package. Runtime behavior, Rust types, factories, item registration, schema shape, and display metadata are authored in `src/**`.
 
-Scenario manifests are not a DSL. They select package items and provide initial values. Algorithms, scheduling behavior, domain computation, reaction handling, spawning, and event handling stay in Rust.
+Scenario manifests are not a DSL. They select package items and provide initial values. Algorithms, scheduling behavior, domain computation, reaction handling, spawning, event emission, and event reaction stay in Rust.
 
-## Package Files
+## Package Identity
 
-A DUAN package should include:
-
-- `Cargo.toml`: the Rust crate identity, dependencies, version, and package include list.
-- `src/**`: components, domains, entities, reactions, and the Rust `package()` registration entry.
-- `duan-package.toml`: package metadata that maps stable DUAN item ids to schema files.
-- `schemas/**`: editor-readable descriptions of component fields and installable package items.
-
-For example:
+The DUAN package id is the Cargo `package.name`. Do not duplicate it in `[package.metadata.duan]`, `duan.toml`, `build.rs`, or a generated environment variable.
 
 ```toml
-[duan.package]
-id = "examples.naval-combat.components"
+[package]
+name = "examples-naval-combat-platform"
 version = "0.1.0"
-name = "Naval Combat Components"
-
-[duan.rust]
-crate = "examples-naval-combat-components"
-
-[provides.components]
-"examples.naval-combat.components.health" = "schemas/health.json"
+edition = "2021"
 ```
 
-The `provides` mappings are an index. They do not define the runtime implementation. Generated runners still link the Rust crate and call the Rust registration entry.
+Package item ids use `<package-id>/<local-name>`.
 
-## Single Package And Split Packages
-
-One `duan-package.toml` describes one DUAN package id. It should not index items that the scenario declares as separate packages. If a scenario lists `examples.free-fall.components`, `examples.free-fall.domains`, and `examples.free-fall.entities`, each package gets its own directory, metadata file, and schema set.
-
-Use a single package only when the crate and runtime registration are intentionally shipped as one package id. Split packages when item ownership is separate, when a scenario depends on only part of a model, or when shared packages are reused by multiple examples. A scenario bundle directory such as `examples/free-fall/` may contain `scenario.yaml` and package subdirectories, but it should not keep a root `duan-package.toml` that suggests the bundle is itself a package.
-
-Shared component identities must come from one package. The baseline 2D motion component schemas live in `packages/duan-kinematics`:
-
-```toml
-[duan.package]
-id = "duan.kinematics"
-version = "0.1.0"
-name = "DUAN Kinematics Components"
-
-[duan.rust]
-crate = "duan-kinematics"
-
-[provides.components]
-"duan.kinematics.position-2" = "schemas/components/position-2.json"
-"duan.kinematics.velocity-2" = "schemas/components/velocity-2.json"
+```rust
+pub const ITEM_ID: &str = concat!(env!("CARGO_PKG_NAME"), "/health");
 ```
 
-Example packages should reference `duan.kinematics.position-2` and `duan.kinematics.velocity-2` from scenarios and entity schemas instead of copying those schemas into each example package.
+The item id does not include a type segment such as `component`, `entity`, or `domain`. Item kind comes from the registration API:
 
-## Component Schema Shape
+```rust
+Package::builder(PackageId::new(env!("CARGO_PKG_NAME")).expect("valid package id"))
+    .component(ComponentDescriptor::new(ItemId::new(Health::ITEM_ID).unwrap(), Health::schema()))
+    .domain(ItemId::new(MotionDomain::ITEM_ID).unwrap())
+    .entity(EntityDescriptor::new(ItemId::new(Ship::ITEM_ID).unwrap()))
+    .event(ItemId::new(HitResolved::ITEM_ID).unwrap())
+    .reaction(ItemId::new(ApplyDamage::ITEM_ID).unwrap())
+    .build()
+```
 
-The first schema version is intentionally small. A component schema records the item id, the item kind, and field metadata that an editor can use to render controls and validate obvious mistakes before a runner is built.
+## Source Layout
 
-```json
-{
-  "id": "examples.naval-combat.components.weapon",
-  "kind": "component",
-  "fields": {
-    "range": {
-      "type": "float",
-      "default": 180.0,
-      "unit": "m",
-      "range": {
-        "min": 0.0,
-        "max": 2000.0
-      }
+A source package should include:
+
+- `Cargo.toml`: Cargo package identity, version, and dependencies.
+- `src/lib.rs`: public exports for generated runners and dependent packages.
+- `src/package.rs`: the package registration entry.
+- `src/components/**`, `src/entities/**`, `src/domains/**`, `src/events/**`, `src/reactions/**`: named Rust modules when the package owns those capabilities.
+
+Do not hand-author `duan.toml` or `schemas/**` inside the source package. Those are generated cache files produced by install/publish tooling from the Rust registration and schema APIs.
+
+## Schema And Display Metadata
+
+Schemas are authored in Rust next to the type they describe:
+
+```rust
+impl Health {
+    pub const ITEM_ID: &str = concat!(env!("CARGO_PKG_NAME"), "/health");
+
+    pub fn schema() -> Schema {
+        Schema::new()
+            .field(
+                "current",
+                FieldSchema::new(PrimitiveKind::Float)
+                    .default(PrimitiveValue::Float(100.0))
+                    .range(Range::new(Some(0.0), None))
+                    .display(DisplayMetadata::new().label("Current").control("number")),
+            )
+            .field(
+                "max",
+                FieldSchema::new(PrimitiveKind::Float)
+                    .default(PrimitiveValue::Float(100.0))
+                    .range(Range::new(Some(1.0), None))
+                    .display(DisplayMetadata::new().label("Max").control("number")),
+            )
     }
-  }
 }
 ```
 
-Supported field examples in the initial metadata set are `integer`, `float`, `bool`, and `text`. `default`, `unit`, and `range` are descriptive metadata for authoring tools; Rust code remains responsible for final parsing and behavior.
+The first schema version records item id, item kind, primitive field metadata, defaults, ranges, units, and display metadata for authoring tools. Rust code remains responsible for final parsing and behavior.
+
+## Generated Install Cache
+
+After a package is installed or published, tooling may generate a metadata cache:
+
+```toml
+[duan.package]
+id = "examples-naval-combat-platform"
+version = "0.1.0"
+name = "Naval Combat Platform"
+
+[duan.rust]
+crate = "examples-naval-combat-platform"
+
+[provides.components]
+"examples-naval-combat-platform/health" = "schemas/health.json"
+```
+
+That cache exists so editors, validators, delivery packagers, and offline tools can inspect packages without treating Rust source files as the cache format. It is not the source of truth.
+
+## Split Packages
+
+Split packages by capability ownership and release boundary, not by mechanical file type. A package may contain components, entities, domains, events, and reactions together when they are shipped as one capability. Separate packages when scenarios need to depend on them independently or when reuse boundaries differ.
+
+In this repository:
+
+- `examples/packages/free-fall/body` owns body state components.
+- `examples/packages/free-fall/gravity` owns the gravity domain.
+- `examples/packages/free-fall/scene-objects` owns free-fall entity templates.
+- `examples/packages/naval-combat/platform` owns shared platform components.
+- `examples/packages/naval-combat/maneuver` owns movement components and domains.
+- `examples/packages/naval-combat/engagement` owns weapons, combat events, combat domain, and damage reaction.
+- `examples/packages/naval-combat/fleet-objects` owns fleet entity templates.
+
+Framework crates under `packages/` provide platform mechanisms. Example simulation capabilities stay under `examples/packages/` unless they are deliberately extracted into separately versioned product crates.
 
 ## Scenario Assembly Boundary
 
-`scenario.yaml` should only assemble existing Rust package capabilities:
+`*.duan` scenario manifests should only assemble existing Rust package capabilities:
 
 - package dependencies and versions;
 - domains and reactions to install;
@@ -89,13 +120,3 @@ Supported field examples in the initial metadata set are `integer`, `float`, `bo
 - run options and output paths.
 
 If a scenario needs a new algorithm, state transition, event, or command behavior, add it to a Rust package first, expose it through `package()`, then reference the item id from the scenario.
-
-## Example Metadata
-
-The example folders include first-pass metadata:
-
-- `packages/duan-kinematics/duan-package.toml` indexes shared 2D position and velocity component schemas.
-- `examples/free-fall/components/`, `examples/free-fall/domains/`, and `examples/free-fall/entities/` each contain one package metadata file and local schemas.
-- `examples/naval-combat/components/`, `examples/naval-combat/domains/`, `examples/naval-combat/entities/`, and `examples/naval-combat/reactions/` each contain one package metadata file and local schemas.
-
-These files are examples for editor and scenario tooling. They are not a replacement for crate code or generated runner validation.

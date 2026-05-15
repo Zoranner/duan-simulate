@@ -1,50 +1,68 @@
 use duan_package::{
-    ComponentDescriptor, EditorMetadata, EntityDescriptor, FieldSchema, ItemId, Package,
+    ComponentDescriptor, DisplayMetadata, EntityDescriptor, FieldSchema, ItemId, Package,
     PackageDependency, PackageId, PrimitiveKind, PrimitiveValue, Range, Registry, Schema, Unit,
     VersionReqText,
 };
 
 #[test]
-fn ids_accept_lowercase_dotted_kebab_segments() {
+fn ids_accept_cargo_package_names_and_slash_item_names() {
     assert_eq!(
-        PackageId::new("duan.kinematics").unwrap().as_str(),
-        "duan.kinematics"
+        PackageId::new("examples-motion").unwrap().as_str(),
+        "examples-motion"
     );
     assert_eq!(
-        ItemId::new("duan.kinematics.position-2").unwrap().as_str(),
-        "duan.kinematics.position-2"
+        ItemId::new("examples-motion/position-2").unwrap().as_str(),
+        "examples-motion/position-2"
     );
 }
 
 #[test]
-fn ids_reject_empty_uppercase_and_empty_segments() {
+fn package_ids_reject_non_cargo_package_names() {
     for value in [
         "",
-        "Duan.kinematics",
-        "duan..kinematics",
-        ".duan",
-        "duan.",
-        "duan.physics_2",
-        "duan.-physics",
-        "duan.physics-",
-        "duan.physics--body",
+        "Examples-motion",
+        "duan/kinematics",
+        "duan.physics",
+        "duan_physics",
+        "-duan",
+        "duan-",
+        "duan--physics",
     ] {
         assert!(PackageId::new(value).is_err(), "{value} should be invalid");
+    }
+}
+
+#[test]
+fn item_ids_reject_invalid_package_or_local_names() {
+    for value in [
+        "",
+        "Examples-motion/position",
+        "duan-motion",
+        "duan-motion.position",
+        "duan-motion//position",
+        "/position",
+        "duan-motion/",
+        "duan-motion/position/x",
+        "duan/physics_2",
+        "duan/-physics",
+        "duan/physics-",
+        "duan/physics--body",
+    ] {
         assert!(ItemId::new(value).is_err(), "{value} should be invalid");
     }
 }
 
 #[test]
 fn registry_rejects_duplicate_items_across_packages() {
-    let component_id = ItemId::new("duan.kinematics.position").unwrap();
-    let first = Package::builder(PackageId::new("duan.kinematics").unwrap())
+    let component_id = ItemId::new("examples-motion/position").unwrap();
+    let first = Package::builder(PackageId::new("examples-motion").unwrap())
         .version("0.1.0")
         .component(ComponentDescriptor::new(
             component_id.clone(),
             Schema::default(),
         ))
         .build();
-    let second = Package::builder(PackageId::new("duan.motion").unwrap())
+    let second = Package::builder(PackageId::new("duan-motion").unwrap())
         .version("0.1.0")
         .component(ComponentDescriptor::new(
             component_id.clone(),
@@ -61,8 +79,8 @@ fn registry_rejects_duplicate_items_across_packages() {
 
 #[test]
 fn registry_rejects_duplicate_items_inside_same_package() {
-    let component_id = ItemId::new("duan.kinematics.position").unwrap();
-    let package = Package::builder(PackageId::new("duan.kinematics").unwrap())
+    let component_id = ItemId::new("examples-motion/position").unwrap();
+    let package = Package::builder(PackageId::new("examples-motion").unwrap())
         .version("0.1.0")
         .component(ComponentDescriptor::new(
             component_id.clone(),
@@ -82,13 +100,13 @@ fn registry_rejects_duplicate_items_inside_same_package() {
 
 #[test]
 fn registry_supports_package_lookup_and_item_lookup() {
-    let package_id = PackageId::new("duan.kinematics").unwrap();
-    let component_id = ItemId::new("duan.kinematics.position").unwrap();
-    let entity_id = ItemId::new("duan.kinematics.body").unwrap();
-    let domain_id = ItemId::new("duan.kinematics.integrator").unwrap();
-    let event_id = ItemId::new("duan.kinematics.collision").unwrap();
-    let reaction_id = ItemId::new("duan.kinematics.bounce").unwrap();
-    let observer_id = ItemId::new("duan.kinematics.trace").unwrap();
+    let package_id = PackageId::new("examples-motion").unwrap();
+    let component_id = ItemId::new("examples-motion/position").unwrap();
+    let entity_id = ItemId::new("examples-motion/body").unwrap();
+    let domain_id = ItemId::new("examples-motion/integrator").unwrap();
+    let event_id = ItemId::new("examples-motion/collision").unwrap();
+    let reaction_id = ItemId::new("examples-motion/bounce").unwrap();
+    let observer_id = ItemId::new("examples-motion/trace").unwrap();
 
     let package = Package::builder(package_id.clone())
         .version("0.1.0")
@@ -118,11 +136,11 @@ fn registry_supports_package_lookup_and_item_lookup() {
 #[test]
 fn package_records_dependency_declarations() {
     let dependency = PackageDependency::new(
-        PackageId::new("duan.kinematics").unwrap(),
+        PackageId::new("examples-motion").unwrap(),
         VersionReqText::new("^0.1").unwrap(),
     );
 
-    let package = Package::builder(PackageId::new("duan.motion").unwrap())
+    let package = Package::builder(PackageId::new("duan-motion").unwrap())
         .version("0.1.0")
         .dependency(dependency.clone())
         .build();
@@ -139,8 +157,8 @@ fn schema_metadata_roundtrips_through_component_registration() {
                 .default(PrimitiveValue::Float(12.5))
                 .range(Range::new(Some(0.0), Some(100.0)))
                 .unit(Unit::new("m/s"))
-                .editor(
-                    EditorMetadata::new()
+                .display(
+                    DisplayMetadata::new()
                         .label("Speed")
                         .description("Initial speed")
                         .order(1),
@@ -150,8 +168,8 @@ fn schema_metadata_roundtrips_through_component_registration() {
             "enabled",
             FieldSchema::new(PrimitiveKind::Bool).default(PrimitiveValue::Bool(true)),
         );
-    let component_id = ItemId::new("duan.kinematics.velocity").unwrap();
-    let package = Package::builder(PackageId::new("duan.kinematics").unwrap())
+    let component_id = ItemId::new("examples-motion/velocity").unwrap();
+    let package = Package::builder(PackageId::new("examples-motion").unwrap())
         .version("0.1.0")
         .component(ComponentDescriptor::new(
             component_id.clone(),
@@ -169,7 +187,7 @@ fn schema_metadata_roundtrips_through_component_registration() {
             .schema()
             .field_schema("speed")
             .unwrap()
-            .editor_metadata()
+            .display_metadata()
             .unwrap()
             .label_text(),
         Some("Speed")
@@ -178,13 +196,13 @@ fn schema_metadata_roundtrips_through_component_registration() {
 
 #[test]
 fn registry_supports_chain_install_for_generated_runners() {
-    let package = Package::builder(PackageId::new("duan.kinematics").unwrap())
+    let package = Package::builder(PackageId::new("examples-motion").unwrap())
         .version("0.1.0")
         .build();
 
     let registry = Registry::new().install(package).unwrap();
 
     assert!(registry
-        .package(&PackageId::new("duan.kinematics").unwrap())
+        .package(&PackageId::new("examples-motion").unwrap())
         .is_some());
 }

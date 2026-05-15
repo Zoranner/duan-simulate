@@ -1,5 +1,0 @@
-{
-  "id": "examples.naval-combat.domains.collision",
-  "kind": "domain",
-  "description": "Resolves missile impact and expiration checks."
-}

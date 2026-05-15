@@ -6,7 +6,7 @@ use serde::Deserialize;
 
 use crate::{PackageError, PackageResult};
 
-pub const PACKAGE_METADATA_FILE: &str = "duan-package.toml";
+pub const PACKAGE_METADATA_FILE: &str = "duan.toml";
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
 pub struct PackageMetadata {

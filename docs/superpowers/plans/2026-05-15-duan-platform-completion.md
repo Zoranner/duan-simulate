@@ -4,7 +4,7 @@
 
 **Goal:** Complete the DUAN visual world authoring platform design in staged, verifiable increments.
 
-**Architecture:** Keep `duan-core` as the Rust-first hot runtime and build platform capabilities around it: `duan-package` defines package metadata, schemas, registry, and factories; `duan-scenario` parses and validates manifests; `duan-runner-generator` writes thin static runner crates; `duan-cli` exposes the stable automation surface; `duan-editor` is introduced only after the package/scenario/runner contract is executable. Work must preserve the design rule that scenario manifests assemble Rust capabilities and never become a DSL.
+**Architecture:** Keep `duan-core` as the Rust-first hot runtime and build platform capabilities around it: `duan-package` defines package registration, schemas, registry, factories, and generated metadata cache readers; `duan-scenario` parses and validates manifests; `duan-runner-generator` writes thin static runner crates; `duan-cli` exposes the stable automation surface; `duan-editor` is introduced only after the package/scenario/runner contract is executable. Work must preserve the design rule that scenario manifests assemble Rust capabilities and never become a DSL.
 
 **Tech Stack:** Rust 2021/2024, `duan-core`, Serde, TOML/YAML parsing, Cargo workspaces, Criterion benchmarks, Bun for any future editor frontend.
 
@@ -16,7 +16,8 @@
 - Outer repository currently has no root `Cargo.toml`; only placeholder package directories exist for platform crates.
 - Rust verification after code edits must include `cargo fmt --all` and `cargo clippy --all-targets --all-features -- -D warnings`.
 - Cargo commands that build or write `target/` must be run directly in this environment. Do not set `CARGO_TARGET_DIR`.
-- Package item ids use lowercase dotted segments and kebab names, for example `duan.kinematics.position-2`.
+- Package ids use Cargo package names, and item ids use `<package-id>/<local-name>`, for example `examples-free-fall-body/position-2`.
+- `duan.toml` and `schemas/**` are generated install/cache artifacts. Rust `package()` registration and type-local schema/display metadata are the source of truth.
 - Static generated runner is the highest-performance path. Native ABI and external processes remain future work.
 
 ## Phase Map
@@ -62,7 +63,7 @@ Owned files:
 Tasks:
 
 - [ ] Implement `PackageId`, `ItemId`, and `VersionReqText` as validated string newtypes.
-- [ ] Implement schema data types for fields, primitive values, defaults, ranges, units, and editor metadata.
+- [ ] Implement schema data types for fields, primitive values, defaults, ranges, units, and display metadata.
 - [ ] Implement `Package` builder with component/entity/domain/event/reaction/observer registration records.
 - [ ] Implement `Registry` with install, duplicate item detection, package lookup, and item lookup.
 - [ ] Add tests for valid ids, invalid ids, duplicate items, dependency declarations, and schema metadata round-trip.
@@ -79,13 +80,13 @@ Owned files:
 - `packages/duan-scenario/src/validation.rs`
 - `packages/duan-scenario/src/error.rs`
 - `packages/duan-scenario/tests/scenario_manifest.rs`
-- `examples/free-fall/scenario.yaml`
-- `examples/naval-combat/scenario.yaml`
+- `examples/scenarios/free-fall.duan`
+- `examples/scenarios/naval-combat.duan`
 
 Tasks:
 
 - [ ] Define strongly typed manifest structs for `scenario`, `packages`, `domains`, `reactions`, `entities`, `run`, `outputs`, and `experiments`.
-- [ ] Support YAML loading first because existing examples already use `scenario.yaml`.
+- [ ] Support YAML loading first because existing examples already use `scenario.duan`.
 - [ ] Store component initial values as structured values, not strings.
 - [ ] Validate duplicate entity ids, missing package dependencies, invalid item ids, unknown component references, and invalid run/output paths.
 - [ ] Add tests for the free-fall and naval-combat example manifests.
@@ -159,11 +160,11 @@ Owned files:
 Tasks:
 
 - [ ] Implement `duan package inspect <path>`.
-- [ ] Implement `duan scenario validate <scenario.yaml>`.
-- [ ] Implement `duan runner generate <scenario.yaml>`.
-- [ ] Implement `duan runner build <scenario.yaml> --release` as a Cargo invocation wrapper.
-- [ ] Implement `duan run <scenario.yaml>`.
-- [ ] Implement `duan deliver <scenario.yaml> --target <target>` as a directory packager after runner generation exists.
+- [ ] Implement `duan scenario validate <scenario.duan>`.
+- [ ] Implement `duan runner generate <scenario.duan>`.
+- [ ] Implement `duan runner build <scenario.duan> --release` as a Cargo invocation wrapper.
+- [ ] Implement `duan run <scenario.duan>`.
+- [ ] Implement `duan deliver <scenario.duan> --target <target>` as a directory packager after runner generation exists.
 - [ ] Ensure all errors mention package id, crate name, crate version, registry, scenario path, or generated file path where applicable.
 
 ### Phase 7: Example Migration
@@ -173,15 +174,15 @@ Goal: prove the package/scenario/runner model with the existing free-fall and na
 Owned files:
 - `packages/duan-core/examples/free_fall/**`
 - `packages/duan-core/examples/naval_combat/**`
-- `examples/free-fall/scenario.yaml`
-- `examples/naval-combat/scenario.yaml`
+- `examples/scenarios/free-fall.duan`
+- `examples/scenarios/naval-combat.duan`
 - new example package folders if needed
 
 Tasks:
 
 - [ ] Split reusable kinematics components from example-specific entities.
-- [ ] Add package metadata and schema files for free-fall.
-- [ ] Add package metadata and schema files for naval-combat.
+- [ ] Add Rust package registration and type-local schema/display metadata for free-fall.
+- [ ] Add Rust package registration and type-local schema/display metadata for naval-combat.
 - [ ] Generate runner fixtures for both examples.
 - [ ] Run each example through CLI scenario validation and runner generation.
 - [ ] Keep handwritten Rust examples working.
@@ -215,7 +216,7 @@ Owned files:
 Tasks:
 
 - [ ] Implement `duan deliver`.
-- [ ] Include `runner.exe` or target runner binary, scenario files, assets, schemas, license, README, and writable `runs/`.
+- [ ] Include `runner.exe` or target runner binary, scenario files, assets, generated schema cache, license, README, and writable `runs/`.
 - [ ] Enforce customer-editable boundaries: scenario parameters yes, Rust logic/package set no.
 - [ ] Add build cache keys based on `Cargo.lock`, package set, feature set, target triple, and profile.
 - [ ] Add regression tests for cache invalidation.

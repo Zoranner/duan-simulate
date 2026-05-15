@@ -189,22 +189,16 @@ fn has_package_dependency(item_id: &str, package_ids: &HashSet<String>) -> bool 
     package_ids.iter().any(|package_id| {
         item_id
             .strip_prefix(package_id)
-            .is_some_and(|tail| tail.starts_with('.'))
+            .is_some_and(|tail| tail.starts_with('/'))
     })
 }
 
 fn is_valid_package_id(id: &str) -> bool {
-    let mut segments = id.split('.').peekable();
-
-    if segments.peek().is_none() {
-        return false;
-    }
-
-    segments.all(is_valid_name_segment)
+    is_valid_name_segment(id)
 }
 
 fn is_valid_item_id(id: &str) -> bool {
-    let Some((package, item)) = id.rsplit_once('.') else {
+    let Some((package, item)) = id.split_once('/') else {
         return false;
     };
 
@@ -212,7 +206,11 @@ fn is_valid_item_id(id: &str) -> bool {
 }
 
 fn is_valid_name_segment(segment: &str) -> bool {
-    if segment.is_empty() || segment.starts_with('-') || segment.ends_with('-') {
+    if segment.is_empty()
+        || segment.starts_with('-')
+        || segment.ends_with('-')
+        || segment.contains("--")
+    {
         return false;
     }
 
@@ -241,14 +239,14 @@ mod tests {
 
     #[test]
     fn validates_package_dependency_by_longest_available_prefix_shape() {
-        let package_ids = HashSet::from(["duan.kinematics".to_string()]);
+        let package_ids = HashSet::from(["examples-motion".to_string()]);
 
         assert!(has_package_dependency(
-            "duan.kinematics.position-2",
+            "examples-motion/position-2",
             &package_ids
         ));
         assert!(!has_package_dependency(
-            "duan.other.position-2",
+            "duan-other/position-2",
             &package_ids
         ));
     }

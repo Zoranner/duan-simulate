@@ -15,7 +15,7 @@ fn writes_deterministic_runner_project_files() {
             name: "duan-private".to_string(),
             index: "sparse+https://registry.example.test/api/v1/crates/".to_string(),
         },
-        scenario_path: "scenario/free-fall.yaml".to_string(),
+        scenario_path: "scenario/free-fall.duan".to_string(),
         dependencies: vec![
             CrateDependency::registry("free-fall-package", "0.1.0", "duan-private"),
             CrateDependency::registry("duan-scenario", "0.1.0", "duan-private"),
@@ -23,8 +23,8 @@ fn writes_deterministic_runner_project_files() {
             CrateDependency::registry("duan-package", "0.1.0", "duan-private"),
         ],
         installs: vec![
+            PackageInstall::new("examples-free-fall-body"),
             PackageInstall::new("free-fall-package"),
-            PackageInstall::new("duan-kinematics"),
         ],
     };
 
@@ -67,11 +67,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let scenario_path = std::env::args_os()
         .nth(1)
         .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("scenario/free-fall.yaml"));
+        .unwrap_or_else(|| PathBuf::from("scenario/free-fall.duan"));
 
     let scenario = duan_scenario::load_from_path(&scenario_path)?;
     let registry = duan_package::Registry::new()
-        .install(duan_kinematics::package())?
+        .install(examples_free_fall_body::package())?
         .install(free_fall_package::package())?;
 
     let report = duan_runner::Runner::new(registry).run(&scenario)?;

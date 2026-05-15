@@ -9,26 +9,26 @@ fn id(value: &str) -> ItemId {
 }
 
 fn tiny_registry() -> Registry {
-    let package = Package::builder(PackageId::new("tiny.motion").unwrap())
+    let package = Package::builder(PackageId::new("tiny-motion").unwrap())
         .component(ComponentDescriptor::new(
-            id("tiny.motion.position"),
+            id("tiny-motion/position"),
             Schema::default(),
         ))
         .component(ComponentDescriptor::new(
-            id("tiny.motion.velocity"),
+            id("tiny-motion/velocity"),
             Schema::default(),
         ))
         .component(ComponentDescriptor::new(
-            id("tiny.motion.mass"),
+            id("tiny-motion/mass"),
             Schema::default(),
         ))
         .entity(
-            EntityDescriptor::new(id("tiny.motion.body"))
-                .component(id("tiny.motion.position"))
-                .component(id("tiny.motion.velocity")),
+            EntityDescriptor::new(id("tiny-motion/body"))
+                .component(id("tiny-motion/position"))
+                .component(id("tiny-motion/velocity")),
         )
-        .domain(id("tiny.motion.kinematics"))
-        .reaction(id("tiny.motion.integrate"))
+        .domain(id("tiny-motion/kinematics"))
+        .reaction(id("tiny-motion/integrate"))
         .build();
 
     Registry::new().install(package).unwrap()
@@ -39,23 +39,23 @@ fn tiny_manifest() -> duan_scenario::Manifest {
         r#"
 scenario:
   id: tiny_demo
-  package: tiny.motion
+  package: tiny-motion
 
 packages:
-  - id: tiny.motion
+  - id: tiny-motion
     version: 0.1.0
 
 domains:
-  - type: tiny.motion.kinematics
+  - type: tiny-motion/kinematics
 
 reactions:
-  - type: tiny.motion.integrate
+  - type: tiny-motion/integrate
 
 entities:
   - id: ball
-    type: tiny.motion.body
+    type: tiny-motion/body
     components:
-      tiny.motion.position: { x: 1.0, y: 2.0 }
+      tiny-motion/position: { x: 1.0, y: 2.0 }
 "#,
     )
     .unwrap()
@@ -72,19 +72,19 @@ fn assembly_plan_emits_ordered_steps_for_tiny_scenario() {
         plan.steps(),
         &[
             AssemblyStep::InstallDomain {
-                item_id: id("tiny.motion.kinematics")
+                item_id: id("tiny-motion/kinematics")
             },
             AssemblyStep::InstallReaction {
-                item_id: id("tiny.motion.integrate")
+                item_id: id("tiny-motion/integrate")
             },
             AssemblyStep::BuildWorld,
             AssemblyStep::SpawnEntity {
                 entity_id: "ball".to_owned(),
-                item_id: id("tiny.motion.body")
+                item_id: id("tiny-motion/body")
             },
             AssemblyStep::ApplyComponentOverride {
                 entity_id: "ball".to_owned(),
-                component_id: id("tiny.motion.position")
+                component_id: id("tiny-motion/position")
             },
         ]
     );
@@ -97,14 +97,14 @@ fn assembly_plan_reports_missing_package_item() {
         r#"
 scenario:
   id: missing_demo
-  package: tiny.motion
+  package: tiny-motion
 
 packages:
-  - id: tiny.motion
+  - id: tiny-motion
     version: 0.1.0
 
 domains:
-  - type: tiny.motion.missing-domain
+  - type: tiny-motion/missing-domain
 "#,
     )
     .unwrap();
@@ -115,7 +115,7 @@ domains:
         error,
         PackageError::MissingItem {
             location: "domains[0].type".to_owned(),
-            item_id: id("tiny.motion.missing-domain"),
+            item_id: id("tiny-motion/missing-domain"),
         }
     );
 }
@@ -127,17 +127,17 @@ fn assembly_plan_rejects_component_override_not_supported_by_entity_descriptor()
         r#"
 scenario:
   id: unsupported_override_demo
-  package: tiny.motion
+  package: tiny-motion
 
 packages:
-  - id: tiny.motion
+  - id: tiny-motion
     version: 0.1.0
 
 entities:
   - id: ball
-    type: tiny.motion.body
+    type: tiny-motion/body
     components:
-      tiny.motion.mass: 3.0
+      tiny-motion/mass: 3.0
 "#,
     )
     .unwrap();
@@ -148,8 +148,8 @@ entities:
         error,
         PackageError::UnsupportedComponentOverride {
             entity_id: "ball".to_owned(),
-            entity_type: id("tiny.motion.body"),
-            component_id: id("tiny.motion.mass"),
+            entity_type: id("tiny-motion/body"),
+            component_id: id("tiny-motion/mass"),
         }
     );
 }
