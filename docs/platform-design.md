@@ -1,6 +1,6 @@
 # DUAN Platform Long-Term Design
 
-This document is the long-term design source for the DUAN platform layer. It consolidates the current package, scenario, macro authoring, crate naming, runner, editor, and delivery decisions.
+This document is the long-term design source for the DUAN platform layer. It consolidates the current package, scenario, macro authoring, crate naming, runner, editor, and delivery decisions. It separates implemented state from target state; target APIs below are not implementation claims.
 
 Older design notes under `packages/duan-core/docs/**` remain useful historical context, but they may still describe dotted item ids, hand-written package manifests, and old crate names. When those notes conflict with this document and the outer `docs/**` files, this document is authoritative for platform design.
 
@@ -32,6 +32,29 @@ The runtime keeps these concepts as plain Rust:
 - `Observer::observe`.
 
 Platform code may add package-facing assembly hooks around the runtime, but it must not turn `duan-runtime` into a string-driven ECS or make `World::step` depend on package item id lookup.
+
+## Current Implementation Status
+
+The current repository has these platform pieces in place:
+
+- `packages/duan-core` contains the runtime implementation, and its Cargo package name is still `duan`.
+- `packages/duan-macros` exists and examples use `duan_macros` derive and attribute macros.
+- Example package entry points currently return `duan_catalog::collect_package!()`.
+- `packages/duan-catalog` owns package metadata, descriptors, registry, factories, and package collection support.
+- `packages/duan-scenario` parses and validates scenario manifests.
+- `packages/duan-build` owns the current build-plan facade and writes generated runner projects through `packages/duan-runner-generator`.
+- `packages/duan-runner` is still planned-only execution: `run()` returns `RunStatus::PlannedOnly` and does not drive the runtime world.
+- `packages/duan-cli` has scenario validation, runner generation/build, package inspection, and a basic delivery copy command; `duan run` is not implemented.
+
+These pieces are not closed as product flows yet:
+
+- the user-facing facade crate `duan` under `packages/duan/`;
+- systematic runtime crate renaming to `duan-runtime`;
+- package installation from registries as an end-to-end editor or CLI workflow;
+- scenario-project lock files, installed package caches, build caches, and cache invalidation;
+- runner execution against a real assembled `World`;
+- editor workflows for install, schema-backed editing, build/run, and output inspection;
+- delivery packaging with schemas, license material, reproducible locks, and validated runner outputs.
 
 ## Package Identity
 
@@ -76,9 +99,17 @@ The long-term authoring surface is macro-assisted Rust:
 - Behavior items keep explicit trait implementations and use attributes on the impl block: `#[entity(...)]`, `#[domain(...)]`, `#[reaction(...)]`, and `#[observer(...)]`.
 - Field schema metadata stays near component fields with `#[field(...)]`.
 - Business logic remains normal Rust in `tick`, `compute`, `react`, and `observe`.
-- Package collection is automatic through the current Cargo package.
+- Package collection is automatic through the current Cargo package metadata collector.
 
-The intended package entry point is:
+The current package entry point used by examples is:
+
+```rust
+pub fn package() -> Package {
+    duan_catalog::collect_package!()
+}
+```
+
+After the user-facing facade crate exists, the target API can become:
 
 ```rust
 pub fn package() -> Package {
@@ -169,7 +200,7 @@ Installed package caches should live under `.duan/packages/`, not under a top-le
 
 ## Generated Runner
 
-Generated runners are thin Rust crates created from a scenario project and its package lock state.
+Generated runners are thin Rust crates created from a scenario project and its package lock state. Current tooling can generate a runner project, but execution still goes through `duan-runner` planned-only reporting rather than a real assembled runtime world.
 
 Runner generation owns:
 
@@ -189,7 +220,7 @@ Only package set changes require runner regeneration and rebuild. Changes to ent
 
 DUAN package distribution is based on Cargo registries. DUAN does not need a separate default package download service.
 
-The install flow is:
+The target install flow is:
 
 ```text
 resolve Cargo package
@@ -201,7 +232,7 @@ make schemas available to editor and validator
 regenerate runner when package set changes
 ```
 
-The lock file belongs to the scenario project. It should record enough information to reproduce package resolution and runner generation: package names, versions, registry/source, checksums when available, selected features, and generated cache versions.
+The lock file belongs to the scenario project. It should record enough information to reproduce package resolution and runner generation: package names, versions, registry/source, checksums when available, selected features, and generated cache versions. This is target behavior; current scenario projects do not yet have a closed lock-file and install-cache workflow.
 
 ## Editor Boundary
 
@@ -260,7 +291,7 @@ The target names are:
 - `duan-author`: optional author-facing facade.
 - `duan-catalog`: package item metadata, schemas, collection, and registry.
 - `duan-scenario`: scenario manifest parser and validator.
-- `duan-build`: generated runner creation, Cargo build orchestration, cache keys, and delivery build support.
+- `duan-build`: build-plan facade and generated runner creation, with Cargo build orchestration, cache keys, and delivery build support still pending.
 - `duan-exec`: scenario execution library.
 - `duan-cli`: command line automation.
 - `duan-editor`: visual authoring and inspection application.
@@ -275,11 +306,11 @@ The implementation should migrate in coherent, verifiable units:
 
 - Keep current runtime behavior stable while platform APIs mature around it.
 - Keep the repository root free of Cargo workspace assumptions until a shared build/release workflow is actually needed.
-- Consolidate runner generation and build orchestration under `duan-build`.
+- Continue consolidating runner generation and build orchestration under `duan-build`; the build-plan facade exists, but Cargo build orchestration and cache keys are still pending.
 - Introduce `duan-exec` when execution has a real library boundary.
 - Rename the runtime package to `duan-runtime` once the outer platform dependency graph is ready.
 - Move flat example scenarios into scenario project directories before package installation and lock files become central.
-- Add macros and automatic package collection only after public metadata traits are stable.
+- Harden the existing `duan-macros` and automatic package collection after public metadata traits are stable.
 
 ## Design Rules
 

@@ -19,13 +19,15 @@ The platform layer adds package-facing APIs around the core:
 - Scenario manifest parsing and validation.
 - Generated runner creation.
 
+Current status: `packages/duan-macros` exists, examples use `duan_macros`, and package entry points currently call `duan_catalog::collect_package!()`. The user-facing facade crate `duan` does not exist yet as a separate package, so `duan::collect_package()` is still a target API, not current usage.
+
 ## Distribution
 
 Package distribution is based on a private Cargo registry. DUAN does not need a separate default package service.
 
-The editor can download `.crate` packages and read generated install caches derived from Rust package registration and schema APIs. Source packages do not hand-author `duan.toml` or `schemas/` as facts; those files are cache artifacts for inspection, validation, and delivery packaging.
+The target editor flow downloads `.crate` packages and reads generated install caches derived from Rust package registration and schema APIs. Source packages do not hand-author `duan.toml` or `schemas/` as facts; those files are cache artifacts for inspection, validation, and delivery packaging. This install/cache/lock/editor flow is not closed in the current implementation.
 
-Generated runners statically link selected Cargo packages. Runtime behavior remains compiled Rust.
+Generated runners statically link selected Cargo packages. Current runner execution is still planned-only: `duan-runner` builds an assembly plan and returns `RunStatus::PlannedOnly` rather than executing an assembled `World`. Runtime behavior should remain compiled Rust when the execution library is completed.
 
 ## Authoring Surface
 

@@ -6,7 +6,7 @@ DUAN package authoring is Rust-first. A DUAN package is an ordinary Cargo packag
 
 Scenario manifests are not a DSL. They select package items and provide initial values. Algorithms, scheduling behavior, domain computation, reaction handling, spawning, event emission, and event reaction stay in Rust.
 
-This document describes the authoring surface for package authors. The example packages use this macro-assisted shape directly: metadata stays beside the Rust declaration, and package entry points collect the current Cargo package.
+This document describes the authoring surface for package authors. The example packages use this macro-assisted shape directly: metadata stays beside the Rust declaration, and package entry points collect the current Cargo package through `duan_catalog::collect_package!()`. The future user-facing facade crate `duan` is a target API, not current implementation.
 
 ## Package Identity
 
@@ -39,7 +39,7 @@ pub fn package() -> Package {
 }
 ```
 
-The package boundary still exists. Cargo package name, version, dependencies, and generated install cache all remain package-scoped. What disappears is the manual registry chain that is easy to forget:
+The package boundary still exists. Cargo package name, version, dependencies, and generated install cache all remain package-scoped. Users should not separately list events, reactions, domains, and entities in `package.rs`; annotated items are collected from the package. What disappears is the manual registry chain that is easy to forget:
 
 ```rust
 Package::builder(...)
@@ -122,8 +122,7 @@ impl GravityField {
     id = "field",
     label = "Gravity Field",
     writes(Position2, Velocity2),
-    reads(Collider, StaticBody),
-    after()
+    reads(Collider, StaticBody)
 )]
 impl Domain for GravityField {
     fn compute(&mut self, ctx: &mut DomainContext<Self>, delta_time: f64) {
@@ -175,7 +174,7 @@ impl Observer<HitResolved> for RecordHitMetrics {
 
 ## Target Example Shape
 
-The free-fall body package should eventually read like this:
+The free-fall body package currently reads like this at the package boundary:
 
 ```rust
 #[derive(Component, Debug, Clone, Default, PartialEq)]
@@ -199,6 +198,14 @@ pub struct Velocity2 {
 }
 
 pub fn package() -> Package {
+    duan_catalog::collect_package!()
+}
+```
+
+After the facade crate exists, the target package boundary can be shortened to:
+
+```rust
+pub fn package() -> Package {
     duan::collect_package()
 }
 ```
@@ -220,8 +227,7 @@ impl GravityField {
     id = "field",
     label = "Gravity Field",
     writes(Position2, Velocity2),
-    reads(Collider, StaticBody),
-    after()
+    reads(Collider, StaticBody)
 )]
 impl Domain for GravityField {
     fn compute(&mut self, ctx: &mut DomainContext<Self>, delta_time: f64) {
@@ -281,8 +287,7 @@ pub struct CombatDomain;
     id = "combat",
     label = "Combat",
     writes(Weapon),
-    reads(Position2, Faction, Health, Radar),
-    after()
+    reads(Position2, Faction, Health, Radar)
 )]
 impl Domain for CombatDomain {
     fn compute(&mut self, ctx: &mut DomainContext<Self>, delta_time: f64) {
@@ -365,10 +370,12 @@ Author-side source packages stay under `examples/packages/**` or in normal Cargo
 
 To make the authoring surface above real, the framework needs these changes:
 
-- Macro crate: keep hardening `duan-macros` for `component`, `field`, `event`, `entity`, `domain`, `reaction`, and `observer`.
+- Macro crate: keep hardening the existing `duan-macros` crate for `component`, `field`, `event`, `entity`, `domain`, `reaction`, and `observer`.
+- Facade crate: introduce a user-facing `duan` crate before documenting `duan::collect_package()` as the current package entry point.
 - Public contracts: add stable metadata traits that macros implement, instead of having macros construct private descriptor internals directly.
 - Item collection: keep distributed package item collection for the current Cargo package so users do not maintain a package item list manually.
 - Explicit escape hatch: keep `Package::builder`, `ComponentDescriptor`, `EntityDescriptor`, and `RegistrationDescriptor` APIs for generated code and advanced users.
 - Diagnostics: make macro errors point at user-owned ids, fields, and impl blocks.
 - Runtime boundary: keep `Domain::compute`, `Entity::tick`, `Reaction::react`, and `Observer::observe` as ordinary Rust methods.
 - Package collection validation: define behavior for tests, generated runners, Windows builds, release builds, and linker dead-code elimination before relying on it for delivery packaging.
+- Scenario flows: close package install, scenario lock, generated cache, runner execution, CLI `run`, editor, and delivery packaging before presenting them as implemented workflows.

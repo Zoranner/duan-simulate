@@ -20,13 +20,13 @@ This document defines the target naming system. It is a design target and does n
 | Target package | Current package | Role |
 | --- | --- | --- |
 | `duan-runtime` | `duan` in `packages/duan-core` | Hot simulation runtime: world, storage, snapshot, entity, domain, event, reaction, scheduler, and command commit. |
-| `duan-macros` | not present | Proc macros for component/event derives and item metadata attributes. |
+| `duan-macros` | `duan-macros` | Proc macros for component/event derives and item metadata attributes. |
 | `duan` | not present | Thin user-facing facade crate. It can live under `packages/duan/` and re-export stable runtime, macro, and authoring APIs. |
 | `duan-author` | not present | Optional author-facing facade that re-exports macros and authoring traits when keeping them out of `duan-runtime` is cleaner. Use only if `duan` should stay smaller than the full authoring surface. |
 | `duan-catalog` | `duan-catalog` | Package item metadata, schemas, descriptors, generated cache readers, package item collection, and assembly-time registry. |
 | `duan-scenario` | `duan-scenario` | Scenario manifest parser and structural validator. |
-| `duan-exec` | `duan-runner` | Scenario execution library. This name should only be used once the crate owns real execution, not just planned-only audit. |
-| `duan-build` | `duan-runner-generator` and current empty `packages/duan-build` | Generated runner creation, Cargo build orchestration, build cache keys, and delivery build support. |
+| `duan-exec` | `duan-runner` | Scenario execution library. Current `duan-runner` is still `PlannedOnly`; this target name should only be used once the crate owns real runtime execution. |
+| `duan-build` | `duan-build` plus `duan-runner-generator` | Generated runner creation, Cargo build orchestration, build cache keys, and delivery build support. Current `duan-build` owns the build-plan facade and delegates runner writing to `duan-runner-generator`; Cargo build orchestration and cache keys are not closed yet. |
 | `duan-cli` | `duan-cli` | Command line automation surface. Its binary can still be named `duan`. |
 | `duan-editor` | `duan-editor` | Visual authoring and inspection application. |
 
@@ -38,8 +38,8 @@ The target dependency direction is:
 
 ```text
 duan-runtime
-duan-macros
-duan -> duan-runtime, duan-macros
+duan-macros -> duan-catalog
+duan -> duan-runtime, duan-macros, duan-catalog
 duan-catalog -> duan-runtime, duan-scenario
 duan-exec -> duan-runtime, duan-catalog, duan-scenario
 duan-build -> duan-catalog, duan-scenario
@@ -47,13 +47,15 @@ duan-cli -> duan-catalog, duan-scenario, duan-exec, duan-build
 duan-editor -> duan-catalog, duan-scenario, duan-build
 ```
 
-`duan-author` is optional. Use it only if re-exporting author-facing macro support directly from `duan-runtime` would pollute the hot runtime crate or create dependency cycles.
+The current macros emit catalog-facing descriptors and package collection hooks, so `duan-macros` depends on the authoring/catalog contract rather than on runtime behavior alone. `duan-author` is optional. Use it only if re-exporting author-facing macro support directly from `duan` would make the facade too broad or create dependency cycles.
 
 ## Current Rename Priorities
 
 Rename in this order when implementation starts:
 
-- `duan-runner-generator` and the empty `packages/duan-build` concept into one `duan-build` crate.
+- Keep `duan-macros` as the current proc-macro crate and harden diagnostics and generated metadata contracts.
+- Introduce the user-facing `duan` facade crate only after its re-export surface is clear; until then, examples should keep using `duan_catalog::collect_package!()` for package collection.
+- Continue moving runner generation and build orchestration behind `duan-build`; the crate now owns the build-plan facade, while `duan-runner-generator` still owns the low-level writer.
 - `duan-runner` to `duan-exec` after it becomes a real execution library.
 - `duan` / `packages/duan-core` to `duan-runtime` after the outer platform dependency graph is stable enough to absorb the submodule rename.
 
