@@ -4,48 +4,97 @@
 
 **Goal:** Complete the DUAN visual world authoring platform design in staged, verifiable increments.
 
-**Architecture:** Keep `duan-core` as the Rust-first hot runtime and build platform capabilities around it: `duan-package` defines package registration, schemas, registry, factories, and generated metadata cache readers; `duan-scenario` parses and validates manifests; `duan-runner-generator` writes thin static runner crates; `duan-cli` exposes the stable automation surface; `duan-editor` is introduced only after the package/scenario/runner contract is executable. Work must preserve the design rule that scenario manifests assemble Rust capabilities and never become a DSL.
+**Architecture:** Keep the core runtime as the Rust-first hot path and build platform capabilities around it. The authoritative long-term design is `docs/platform-design.md`. Target crate names are role-based: `duan-runtime` for runtime, `duan-catalog` for package metadata and registry, `duan-scenario` for manifests, `duan-build` for runner generation/build support, `duan-exec` for execution, `duan-cli` for automation, and `duan-editor` for visual authoring. Current crate names may lag behind this target while migration is staged. Work must preserve the design rule that scenario manifests assemble Rust capabilities and never become a DSL.
 
-**Tech Stack:** Rust 2021/2024, `duan-core`, Serde, TOML/YAML parsing, Cargo workspaces, Criterion benchmarks, Bun for any future editor frontend.
+**Tech Stack:** Rust 2021/2024, `duan-core`, Serde, TOML/YAML parsing, independent Cargo packages, Criterion benchmarks, Bun for any future editor frontend.
 
 ---
 
 ## Current Constraints
 
 - `packages/duan-core` is a git submodule / independent crate and currently has pre-existing `.claude/**` deletions. Do not touch or stage those deletions as part of platform work.
-- Outer repository currently has no root `Cargo.toml`; only placeholder package directories exist for platform crates.
+- Outer repository currently has no root `Cargo.toml`, and that is acceptable. The root is a product/documentation collection, not a required Cargo workspace.
 - Rust verification after code edits must include `cargo fmt --all` and `cargo clippy --all-targets --all-features -- -D warnings`.
 - Cargo commands that build or write `target/` must be run directly in this environment. Do not set `CARGO_TARGET_DIR`.
-- Package ids use Cargo package names, and item ids use `<package-id>/<local-name>`, for example `examples-free-fall-body/position-2`.
-- `duan.toml` and `schemas/**` are generated install/cache artifacts. Rust `package()` registration and type-local schema/display metadata are the source of truth.
+- Package ids use Cargo package names, and item ids use `<package-id>/<local-name>`, for example `example-freefall-physics/position-2`.
+- `duan.toml` and `schemas/**` are generated install/cache artifacts. Rust item annotations and type-local schema/display metadata are the source of truth.
+- Package authors should not maintain hand-written package item lists. The intended authoring surface is item-level metadata collection with explicit builder APIs kept as an escape hatch.
+- Framework crate names should follow `docs/package-naming.md`; every framework crate, including the core runtime, uses a role suffix.
+- Scenario manifests should converge on scenario project directories such as `examples/scenarios/free-fall/scenario.duan`, with `duan.lock`, `assets/`, `runs/`, and generated `.duan/**` caches owned by that project.
 - Static generated runner is the highest-performance path. Native ABI and external processes remain future work.
 
 ## Phase Map
 
 Current baseline status: Phases 0 through 6 have an initial verified implementation in this repository, plus first-pass example metadata, delivery packaging, and a static editor shell. Remaining unchecked items in this plan still represent hardening, deeper example migration, live runner execution, full editor integration, cache invalidation, and future binary package work.
 
-### Phase 0: Workspace And Contract Baseline
+### Phase 0: Repository And Contract Baseline
 
-Goal: make the outer platform repository buildable without changing `duan-core` semantics.
+Goal: make the outer platform repository boundaries explicit without changing `duan-core` semantics.
 
 Owned files:
-- `Cargo.toml`
 - `packages/duan-package/**`
 - `packages/duan-scenario/**`
 - `packages/duan-runner-generator/**`
 - `packages/duan-cli/**`
+- optional package-local `Cargo.toml` files
 - `docs/architecture.md`
 - `docs/registry.md`
 
 Tasks:
 
-- [ ] Create root Cargo workspace with members `packages/duan-package`, `packages/duan-scenario`, `packages/duan-runner-generator`, and `packages/duan-cli`.
-- [ ] Keep `packages/duan-editor` out of the Rust workspace until it has a concrete frontend stack.
-- [ ] Create minimal library/bin crates for the four Rust platform packages.
+- [ ] Keep the repository root free of Cargo workspace assumptions until shared build and release workflows require one.
+- [ ] Keep `packages/duan-editor` independent until it has a concrete frontend stack.
+- [ ] Ensure each Rust framework package has its own clear Cargo boundary.
 - [ ] Add internal path dependencies where needed.
 - [ ] Add smoke tests proving each crate compiles and exposes a tiny public API.
 - [ ] Run `cargo fmt --all`.
 - [ ] Run `cargo clippy --all-targets --all-features -- -D warnings`.
+
+### Phase 0.5: Crate Naming Alignment
+
+Goal: migrate framework and example crate names to the role-based naming system without changing runtime semantics.
+
+Owned files:
+- `Cargo.toml`
+- package `Cargo.toml` files
+- `Cargo.lock`
+- `README.md`
+- `docs/package-naming.md`
+- `docs/package-authoring.md`
+- `docs/architecture.md`
+- tests and scenarios that reference package ids
+
+Tasks:
+
+- [ ] Rename `duan-package` to `duan-catalog`.
+- [ ] Merge `duan-runner-generator` and the empty `duan-build` concept into `duan-build`.
+- [ ] Rename `duan-runner` to `duan-exec` when it owns real execution semantics.
+- [ ] Rename the core runtime package to `duan-runtime`; add a small `packages/duan` facade for the user-facing `duan` crate when the public surface is stable.
+- [ ] Rename example packages from `examples-*` to `example-*` according to `docs/package-naming.md`.
+- [ ] Update scenario package ids and item references after each example package rename.
+- [ ] Keep each rename as a separately verifiable commit unless the workspace is otherwise quiet.
+
+### Phase 0.6: Scenario Project Layout
+
+Goal: move examples from flat scenario files into scenario project directories before package installation, lock files, and delivery packaging depend on paths.
+
+Owned files:
+- `README.md`
+- `docs/platform-design.md`
+- `docs/package-authoring.md`
+- `packages/duan-scenario/tests/scenario_manifest.rs`
+- `packages/duan-cli/tests/cli_smoke.rs`
+- `packages/duan-runner-generator/tests/generate_runner.rs`
+- `examples/scenarios/**`
+
+Tasks:
+
+- [ ] Move `examples/scenarios/free-fall.duan` to `examples/scenarios/free-fall/scenario.duan`.
+- [ ] Move `examples/scenarios/naval-combat.duan` to `examples/scenarios/naval-combat/scenario.duan`.
+- [ ] Add scenario project README files that define `duan.lock`, `assets/`, `runs/`, and `.duan/**` ownership.
+- [ ] Update scenario parser tests and CLI smoke tests to load the new paths.
+- [ ] Update runner generator fixtures to use project-local `scenario.duan`.
+- [ ] Keep installed package caches under `.duan/packages/`, not under project-level `packages/`.
 
 ### Phase 1: Package Registry And Schema Foundation
 
@@ -68,6 +117,7 @@ Tasks:
 - [ ] Implement `Registry` with install, duplicate item detection, package lookup, and item lookup.
 - [ ] Add tests for valid ids, invalid ids, duplicate items, dependency declarations, and schema metadata round-trip.
 - [ ] Document that registry lookup is an assembly-time mechanism and not part of `World::step`.
+- [ ] Define public metadata traits for component, entity, domain, event, reaction, and observer items so future macros do not depend on private descriptor internals.
 
 ### Phase 2: Scenario Manifest Parser And Validator
 
@@ -80,8 +130,8 @@ Owned files:
 - `packages/duan-scenario/src/validation.rs`
 - `packages/duan-scenario/src/error.rs`
 - `packages/duan-scenario/tests/scenario_manifest.rs`
-- `examples/scenarios/free-fall.duan`
-- `examples/scenarios/naval-combat.duan`
+- `examples/scenarios/free-fall/scenario.duan`
+- `examples/scenarios/naval-combat/scenario.duan`
 
 Tasks:
 
@@ -174,8 +224,8 @@ Goal: prove the package/scenario/runner model with the existing free-fall and na
 Owned files:
 - `packages/duan-core/examples/free_fall/**`
 - `packages/duan-core/examples/naval_combat/**`
-- `examples/scenarios/free-fall.duan`
-- `examples/scenarios/naval-combat.duan`
+- `examples/scenarios/free-fall/scenario.duan`
+- `examples/scenarios/naval-combat/scenario.duan`
 - new example package folders if needed
 
 Tasks:
@@ -186,6 +236,27 @@ Tasks:
 - [ ] Generate runner fixtures for both examples.
 - [ ] Run each example through CLI scenario validation and runner generation.
 - [ ] Keep handwritten Rust examples working.
+
+### Phase 7.5: Macro Authoring Surface
+
+Goal: replace package author boilerplate with stable Rust macros while keeping business logic in normal Rust.
+
+Owned files:
+- `packages/duan-package/**`
+- future proc-macro crate
+- `examples/packages/**`
+- `docs/package-authoring.md`
+
+Tasks:
+
+- [ ] Add derive macros for data items: `Component` and `Event`.
+- [ ] Add attributes for behavior impls: `entity`, `domain`, `reaction`, and `observer`.
+- [ ] Add field-level component schema attributes for label, default, range, unit, and control metadata.
+- [ ] Add distributed package item collection so users do not hand-maintain package item lists.
+- [ ] Keep `id` as the package-local stable item id segment and `label` as display text.
+- [ ] Ensure generated item ids never include item kind segments such as `component`, `entity`, or `domain`.
+- [ ] Keep explicit builder and descriptor APIs for generated code and advanced users.
+- [ ] Verify macro diagnostics on duplicate ids, invalid ids, unsupported field metadata, and package collection failures.
 
 ### Phase 8: Editor Foundation
 
@@ -225,7 +296,7 @@ Tasks:
 
 Run these in parallel because their write sets are disjoint:
 
-- Worker A: Phase 0 workspace skeleton and minimal crate setup.
+- Worker A: Phase 0 repository boundary and package-local crate setup.
 - Worker B: Phase 1 `duan-package` id/schema/registry types.
 - Worker C: Phase 2 `duan-scenario` manifest model and parser.
 - Worker D: Phase 5 `duan-runner-generator` deterministic writer model.

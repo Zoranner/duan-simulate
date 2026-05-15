@@ -1,15 +1,49 @@
-# DUAN Platform
+# DUAN
 
-DUAN Platform is the aggregation repository for the Rust-first simulation package system.
+DUAN is a Rust-first simulation platform for complex rule-driven worlds.
 
-The repository does not make scenario logic into a DSL. Simulation behavior stays in Rust crates. Scenario files only assemble packages, entities, component values, domains, reactions, run options, and outputs.
+It is built for systems where many objects evolve over time, rules need clear authority, and repeated runs must stay explainable and reproducible. Entities express intent, domains decide facts, and events record what happened.
 
-See [DUAN Package Authoring](docs/package-authoring.md) for the current Rust package and generated metadata cache conventions.
+DUAN does not turn simulation logic into a DSL. Business behavior stays in Rust packages. Scenario files assemble existing packages, entities, component values, domains, reactions, run options, and outputs.
+
+## Use DUAN
+
+Runtime users write normal Rust:
+
+```rust
+use duan::prelude::*;
+
+#[derive(Clone, Default)]
+struct Position {
+    y: f64,
+}
+duan::reality!(Position);
+
+struct Ball;
+
+impl Entity for Ball {
+    fn bundle() -> impl ComponentBundle + Send + 'static {
+        (Position { y: 10.0 },)
+    }
+}
+```
+
+Package authors expose reusable components, domains, entities, events, and reactions as Cargo packages. Scenario authors assemble those capabilities into `scenario.duan` projects.
+
+## Read More
+
+Start with:
+
+- [Platform design](docs/platform-design.md)
+- [Platform philosophy](docs/platform-philosophy.md)
+- [Package authoring](docs/package-authoring.md)
+- [Scenario projects](docs/scenario-project.md)
+- [Package naming](docs/package-naming.md)
 
 ## Layout
 
 ```text
-duan-platform/
+duan/
 ├── docs/
 ├── packages/
 │   ├── duan-core/
@@ -20,8 +54,10 @@ duan-platform/
 │   └── duan-editor/
 ├── examples/
 │   ├── scenarios/
-│   │   ├── free-fall.duan
-│   │   └── naval-combat.duan
+│   │   ├── free-fall/
+│   │   │   └── scenario.duan
+│   │   └── naval-combat/
+│   │       └── scenario.duan
 │   └── packages/
 │       ├── free-fall/
 │       └── naval-combat/
@@ -29,16 +65,10 @@ duan-platform/
 └── scripts/
 ```
 
-`packages/duan-core` is tracked as an independent package repository. The other package directories provide the package registry/schema layer, scenario manifest layer, runner generator, and CLI. Example simulation capabilities live under `examples/packages/` as ordinary Cargo packages.
+The repository root is a product and documentation collection. It does not need to be a Cargo package or a root Cargo workspace by default.
 
-## Package Model
+`packages/duan-core` is the current runtime implementation and should become `duan-runtime` when naming is aligned. A future `duan` facade package can live under `packages/duan/` as the user-facing Cargo entry point.
 
-DUAN packages are Rust Cargo packages published through a private Cargo registry. The Cargo `package.name` is the DUAN package id, for example `examples-free-fall-body`. Package item ids use `<package-id>/<local-name>`, for example `examples-free-fall-body/position-2`.
+Example simulation capabilities live under `examples/packages/` as ordinary Cargo packages. Scenario examples should converge on `examples/scenarios/<name>/scenario.duan` project directories, which can later hold package locks, assets, run outputs, and generated `.duan/**` caches.
 
-Package source includes:
-
-- `Cargo.toml` for Cargo identity, version, and dependencies.
-- `src/**` for components, entities, domains, events, reactions, schemas, display metadata, and behavior.
-- `package()` as the Rust registration entry used by generated runners.
-
-`duan.toml` and `schemas/` are generated installation/cache artifacts, not hand-written source facts for example packages. Generated runners use Cargo registry dependencies by default. Local path overrides are only for package development.
+DUAN packages are Rust Cargo packages. The Cargo `package.name` is the DUAN package id, for example `example-freefall-physics`. Package item ids use `<package-id>/<local-name>`, for example `example-freefall-physics/position-2`.

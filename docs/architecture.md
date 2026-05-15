@@ -1,12 +1,19 @@
 # DUAN Platform Architecture
 
+The long-term platform design is consolidated in [DUAN Platform Long-Term Design](platform-design.md). This architecture note summarizes the main runtime and platform boundaries.
+
+The repository root is a product collection and documentation entry. It is not required to be a Cargo package or root Cargo workspace. Framework packages should remain independently understandable, with a root workspace introduced only when shared build and release workflows require it.
+
 ## Runtime Boundary
 
-`duan-core` remains the hot runtime path. It keeps `World::step`, `Belief / Intent / Reality`, `Entity::tick`, `Domain::compute`, `Reaction::react`, storage, snapshots, scheduling, events, and command commit as Rust-first runtime behavior.
+The target core runtime crate is `duan-runtime`. The current implementation still lives in `packages/duan-core` with Cargo package name `duan`.
+
+`duan-runtime` remains the hot runtime path. It keeps `World::step`, `Belief / Intent / Reality`, `Entity::tick`, `Domain::compute`, `Reaction::react`, storage, snapshots, scheduling, events, and command commit as Rust-first runtime behavior.
 
 The platform layer adds package-facing APIs around the core:
 
 - Package registry.
+- Package item metadata collection from Rust annotations.
 - Component schema and decode.
 - Entity, domain, reaction, and observer factories.
 - Scenario manifest parsing and validation.
@@ -19,3 +26,13 @@ Package distribution is based on a private Cargo registry. DUAN does not need a 
 The editor can download `.crate` packages and read generated install caches derived from Rust package registration and schema APIs. Source packages do not hand-author `duan.toml` or `schemas/` as facts; those files are cache artifacts for inspection, validation, and delivery packaging.
 
 Generated runners statically link selected Cargo packages. Runtime behavior remains compiled Rust.
+
+## Authoring Surface
+
+The intended package authoring surface is macro-assisted Rust, not a scenario or package DSL. Data items such as components and events use derive macros. Behavior items such as entities, domains, reactions, and observers keep explicit Rust trait impls and use attributes only for item ids, read/write sets, event bindings, and package metadata.
+
+Package authors should not maintain a hand-written item list for every package. Annotated items are collected into the current Cargo package metadata, while explicit builder APIs remain available for advanced or generated code.
+
+## Package Naming
+
+Framework crate names should follow the role-based naming system in [DUAN Package Naming](package-naming.md). In particular, the core runtime should also use a role suffix (`duan-runtime`) instead of being the only unsuffixed implementation crate. A short `duan` facade can be introduced later if the user-facing import needs to stay minimal.
