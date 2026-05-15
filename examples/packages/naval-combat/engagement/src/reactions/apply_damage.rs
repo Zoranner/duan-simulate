@@ -1,14 +1,12 @@
 use duan::{Reaction, World};
+use duan_macros::reaction;
 use example_naval_core::Health;
 
 use crate::HitResolved;
 
 pub struct ApplyDamage;
 
-impl ApplyDamage {
-    pub const ITEM_ID: &str = concat!(env!("CARGO_PKG_NAME"), "/apply-damage");
-}
-
+#[reaction(id = "apply-damage", label = "Apply Damage", event = HitResolved)]
 impl Reaction<HitResolved> for ApplyDamage {
     fn react(&mut self, event: &HitResolved, world: &mut World) {
         if let Some(health) = world.inspect_mut::<Health>(event.target_id) {

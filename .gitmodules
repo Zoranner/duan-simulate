@@ -22,3 +22,6 @@
 [submodule "packages/duan-build"]
 	path = packages/duan-build
 	url = ../duan-build.git
+[submodule "packages/duan-macros"]
+	path = packages/duan-macros
+	url = ../duan-macros.git

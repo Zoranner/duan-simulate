@@ -1,17 +1,9 @@
-use duan::{EntityId, Event};
+use duan::EntityId;
+use duan_macros::Event;
 
-#[derive(Debug)]
+#[derive(Event, Debug)]
+#[event(id = "hit-resolved", label = "Hit Resolved")]
 pub struct HitResolved {
     pub target_id: EntityId,
     pub damage: f64,
-}
-
-impl HitResolved {
-    pub const ITEM_ID: &str = concat!(env!("CARGO_PKG_NAME"), "/hit-resolved");
-}
-
-impl Event for HitResolved {
-    fn event_name(&self) -> &'static str {
-        Self::ITEM_ID
-    }
 }

@@ -1,18 +1,17 @@
 use duan::{Domain, DomainContext};
+use duan_macros::domain;
 
 use crate::{Heading, Position2, Velocity2};
 
 pub struct MotionDomain;
 
-impl MotionDomain {
-    pub const ITEM_ID: &str = concat!(env!("CARGO_PKG_NAME"), "/motion");
-}
-
+#[domain(
+    id = "motion",
+    label = "Motion",
+    writes(Position2, Velocity2),
+    reads(Heading)
+)]
 impl Domain for MotionDomain {
-    type Writes = duan::component_set!(Position2, Velocity2);
-    type Reads = duan::component_set!(Heading);
-    type After = duan::domain_set!();
-
     fn compute(&mut self, ctx: &mut DomainContext<Self>, delta_time: f64) {
         let headings: Vec<_> = ctx
             .each::<Heading>()

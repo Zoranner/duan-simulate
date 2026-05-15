@@ -1,4 +1,5 @@
 use duan::{Domain, DomainContext};
+use duan_macros::domain;
 use example_freefall_physics::{Collider, Position2, StaticBody, Velocity2};
 
 pub struct GravityField {
@@ -6,8 +7,6 @@ pub struct GravityField {
 }
 
 impl GravityField {
-    pub const ITEM_ID: &str = concat!(env!("CARGO_PKG_NAME"), "/field");
-
     pub fn earth() -> Self {
         Self { acceleration: 9.8 }
     }
@@ -19,11 +18,13 @@ impl Default for GravityField {
     }
 }
 
+#[domain(
+    id = "field",
+    label = "Gravity Field",
+    writes(Position2, Velocity2),
+    reads(Collider, StaticBody)
+)]
 impl Domain for GravityField {
-    type Writes = duan::component_set!(Position2, Velocity2);
-    type Reads = duan::component_set!(Collider, StaticBody);
-    type After = duan::domain_set!();
-
     fn compute(&mut self, ctx: &mut DomainContext<Self>, delta_time: f64) {
         let ground_restitution = ctx
             .entities::<StaticBody>()

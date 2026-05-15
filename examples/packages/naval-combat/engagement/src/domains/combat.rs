@@ -1,4 +1,5 @@
 use duan::{Domain, DomainContext};
+use duan_macros::domain;
 use example_naval_core::{Faction, Health, Radar};
 use example_naval_motion::Position2;
 
@@ -6,15 +7,13 @@ use crate::{FireRequested, Weapon};
 
 pub struct CombatDomain;
 
-impl CombatDomain {
-    pub const ITEM_ID: &str = concat!(env!("CARGO_PKG_NAME"), "/combat");
-}
-
+#[domain(
+    id = "combat",
+    label = "Combat",
+    writes(Weapon),
+    reads(Position2, Faction, Health, Radar)
+)]
 impl Domain for CombatDomain {
-    type Writes = duan::component_set!(Weapon);
-    type Reads = duan::component_set!(Position2, Faction, Health, Radar);
-    type After = duan::domain_set!();
-
     fn compute(&mut self, ctx: &mut DomainContext<Self>, delta_time: f64) {
         let weapon_ids: Vec<_> = ctx.each_mut::<Weapon>().map(|(id, _)| id).collect();
 

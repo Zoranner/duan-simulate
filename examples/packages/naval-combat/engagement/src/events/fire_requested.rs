@@ -1,6 +1,8 @@
-use duan::{EntityId, Event};
+use duan::EntityId;
+use duan_macros::Event;
 
-#[derive(Debug)]
+#[derive(Event, Debug)]
+#[event(id = "fire-requested", label = "Fire Requested")]
 pub struct FireRequested {
     pub shooter_id: EntityId,
     pub target_id: EntityId,
@@ -10,14 +12,4 @@ pub struct FireRequested {
     pub dir_y: f64,
     pub missile_speed: f64,
     pub damage: f64,
-}
-
-impl FireRequested {
-    pub const ITEM_ID: &str = concat!(env!("CARGO_PKG_NAME"), "/fire-requested");
-}
-
-impl Event for FireRequested {
-    fn event_name(&self) -> &'static str {
-        Self::ITEM_ID
-    }
 }

@@ -1,33 +1,8 @@
-use duan_catalog::{
-    DisplayMetadata, FieldSchema, PrimitiveKind, PrimitiveValue, Range, Schema, Unit,
-};
+use duan_macros::Component;
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Component, Debug, Clone, Default, PartialEq)]
+#[component(id = "heading", kind = "intent", label = "Heading")]
 pub struct Heading {
+    #[field(label = "Heading", default = 0.0, range = -3.141592653589793..=3.141592653589793, unit = "rad", control = "angle", order = 1)]
     pub radians: f64,
 }
-
-impl Heading {
-    pub const ITEM_ID: &str = concat!(env!("CARGO_PKG_NAME"), "/heading");
-
-    pub fn schema() -> Schema {
-        Schema::new().field(
-            "radians",
-            FieldSchema::new(PrimitiveKind::Float)
-                .default(PrimitiveValue::Float(0.0))
-                .range(Range::new(
-                    Some(-std::f64::consts::PI),
-                    Some(std::f64::consts::PI),
-                ))
-                .unit(Unit::new("rad"))
-                .display(
-                    DisplayMetadata::new()
-                        .label("Heading")
-                        .order(1)
-                        .control("angle"),
-                ),
-        )
-    }
-}
-
-duan::intent!(Heading);
