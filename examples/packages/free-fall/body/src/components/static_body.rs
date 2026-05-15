@@ -1,4 +1,4 @@
-use duan_package::{DisplayMetadata, Schema};
+use duan_catalog::{DisplayMetadata, Schema};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StaticBody;
@@ -9,8 +9,8 @@ impl StaticBody {
     pub fn schema() -> Schema {
         Schema::new().field(
             "enabled",
-            duan_package::FieldSchema::new(duan_package::PrimitiveKind::Bool)
-                .default(duan_package::PrimitiveValue::Bool(true))
+            duan_catalog::FieldSchema::new(duan_catalog::PrimitiveKind::Bool)
+                .default(duan_catalog::PrimitiveValue::Bool(true))
                 .display(
                     DisplayMetadata::new()
                         .label("Static")

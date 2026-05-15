@@ -7,4 +7,4 @@ include = ["src/**", "README.md"]
 
 [dependencies]
 duan = { path = "../../../../packages/duan-core" }
-duan-package = { path = "../../../../packages/duan-package" }
+duan-catalog = { path = "../../../../packages/duan-catalog" }

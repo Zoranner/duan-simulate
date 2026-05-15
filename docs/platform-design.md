@@ -64,7 +64,7 @@ Item ids do not include mechanical type path segments such as `component`, `enti
 
 Rust source is the authoring source of truth.
 
-Package authors define components, entities, domains, events, reactions, observers, schema metadata, display metadata, and factories in `src/**`. Generated files such as `duan.toml`, `duan-package.toml`, `schemas/**`, and editor metadata caches are install, publish, validation, or delivery artifacts. They are not the hand-authored facts for normal packages.
+Package authors define components, entities, domains, events, reactions, observers, schema metadata, display metadata, and factories in `src/**`. Generated files such as `duan.toml`, `schemas/**`, and editor metadata caches are install, publish, validation, or delivery artifacts. They are not the hand-authored facts for normal packages.
 
 This matters because duplicate sources of truth make package authoring fragile. A user who adds a component in Rust should not also remember to add the same item to a separate manifest before the framework can see it.
 
@@ -275,7 +275,6 @@ The implementation should migrate in coherent, verifiable units:
 
 - Keep current runtime behavior stable while platform APIs mature around it.
 - Keep the repository root free of Cargo workspace assumptions until a shared build/release workflow is actually needed.
-- Rename `duan-package` to `duan-catalog` before it grows further.
 - Consolidate runner generation and build orchestration under `duan-build`.
 - Introduce `duan-exec` when execution has a real library boundary.
 - Rename the runtime package to `duan-runtime` once the outer platform dependency graph is ready.

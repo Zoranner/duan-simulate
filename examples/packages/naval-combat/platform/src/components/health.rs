@@ -1,4 +1,4 @@
-use duan_package::{DisplayMetadata, FieldSchema, PrimitiveKind, PrimitiveValue, Range, Schema};
+use duan_catalog::{DisplayMetadata, FieldSchema, PrimitiveKind, PrimitiveValue, Range, Schema};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Health {

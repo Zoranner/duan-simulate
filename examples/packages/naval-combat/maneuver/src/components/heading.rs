@@ -1,4 +1,4 @@
-use duan_package::{
+use duan_catalog::{
     DisplayMetadata, FieldSchema, PrimitiveKind, PrimitiveValue, Range, Schema, Unit,
 };
 

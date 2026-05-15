@@ -23,7 +23,7 @@ This document defines the target naming system. It is a design target and does n
 | `duan-macros` | not present | Proc macros for component/event derives and item metadata attributes. |
 | `duan` | not present | Thin user-facing facade crate. It can live under `packages/duan/` and re-export stable runtime, macro, and authoring APIs. |
 | `duan-author` | not present | Optional author-facing facade that re-exports macros and authoring traits when keeping them out of `duan-runtime` is cleaner. Use only if `duan` should stay smaller than the full authoring surface. |
-| `duan-catalog` | `duan-package` | Package item metadata, schemas, descriptors, generated cache readers, package item collection, and assembly-time registry. |
+| `duan-catalog` | `duan-catalog` | Package item metadata, schemas, descriptors, generated cache readers, package item collection, and assembly-time registry. |
 | `duan-scenario` | `duan-scenario` | Scenario manifest parser and structural validator. |
 | `duan-exec` | `duan-runner` | Scenario execution library. This name should only be used once the crate owns real execution, not just planned-only audit. |
 | `duan-build` | `duan-runner-generator` and current empty `packages/duan-build` | Generated runner creation, Cargo build orchestration, build cache keys, and delivery build support. |
@@ -53,7 +53,6 @@ duan-editor -> duan-catalog, duan-scenario, duan-build
 
 Rename in this order when implementation starts:
 
-- `duan-package` to `duan-catalog`: this is the clearest mismatch because the crate owns more than package file handling.
 - `duan-runner-generator` and the empty `packages/duan-build` concept into one `duan-build` crate.
 - `duan-runner` to `duan-exec` after it becomes a real execution library.
 - `duan` / `packages/duan-core` to `duan-runtime` after the outer platform dependency graph is stable enough to absorb the submodule rename.

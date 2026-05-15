@@ -1,4 +1,4 @@
-use duan_package::{ItemId, Package, PackageId};
+use duan_catalog::{ItemId, Package, PackageId};
 
 use crate::GravityField;
 

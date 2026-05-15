@@ -47,7 +47,7 @@ duan/
 ├── docs/
 ├── packages/
 │   ├── duan-core/
-│   ├── duan-package/
+│   ├── duan-catalog/
 │   ├── duan-scenario/
 │   ├── duan-runner-generator/
 │   ├── duan-cli/

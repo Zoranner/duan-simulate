@@ -1,9 +1,9 @@
 [submodule "packages/duan-core"]
 	path = packages/duan-core
 	url = ../duan-core.git
-[submodule "packages/duan-package"]
-	path = packages/duan-package
-	url = ../duan-package.git
+[submodule "packages/duan-catalog"]
+	path = packages/duan-catalog
+	url = ../duan-catalog.git
 [submodule "packages/duan-scenario"]
 	path = packages/duan-scenario
 	url = ../duan-scenario.git

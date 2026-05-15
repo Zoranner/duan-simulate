@@ -44,7 +44,7 @@ Changing component values or run parameters should not rebuild the runner. Chang
 
 ## Caches Are Artifacts
 
-Generated `duan.toml`, `duan-package.toml`, `schemas/**`, and editor metadata files are installation, validation, publishing, or delivery artifacts.
+Generated `duan.toml`, `schemas/**`, and editor metadata files are installation, validation, publishing, or delivery artifacts.
 
 They exist so tools can inspect packages without parsing arbitrary source. They are not the normal authoring source of truth and should not force users to maintain duplicate item lists.
 

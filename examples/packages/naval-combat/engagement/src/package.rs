@@ -1,4 +1,4 @@
-use duan_package::{ComponentDescriptor, ItemId, Package, PackageId, Schema};
+use duan_catalog::{ComponentDescriptor, ItemId, Package, PackageId, Schema};
 
 use crate::{ApplyDamage, CombatDomain, FireRequested, HitResolved, Weapon};
 
