@@ -6,7 +6,7 @@ The repository root is a product collection and documentation entry. It is not r
 
 ## Runtime Boundary
 
-The target core runtime crate is `duan-runtime`. The current implementation still lives in `packages/duan-core` with Cargo package name `duan`.
+The core runtime package is `duan-runtime`. The current implementation still lives in `packages/duan-core`; that directory has not been renamed yet. Code and macro expansion may still import the runtime crate as `duan` through dependency aliasing until a separate user-facing facade crate is introduced.
 
 `duan-runtime` remains the hot runtime path. It keeps `World::step`, `Belief / Intent / Reality`, `Entity::tick`, `Domain::compute`, `Reaction::react`, storage, snapshots, scheduling, events, and command commit as Rust-first runtime behavior.
 

@@ -70,7 +70,7 @@ duan/
 
 The repository root is a product and documentation collection. It does not need to be a Cargo package or a root Cargo workspace by default.
 
-`packages/duan-core` is the current runtime implementation and still has Cargo package name `duan`; it should become `duan-runtime` when naming is aligned. `packages/duan-macros` is the current proc-macro crate. A future separate `duan` facade package can live under `packages/duan/` as the user-facing Cargo entry point.
+`packages/duan-core` is the current runtime implementation directory, and its runtime package name is now `duan-runtime`. The directory has not been renamed yet. `packages/duan-macros` is the current proc-macro crate. A future separate `duan` facade package can live under `packages/duan/` as the user-facing Cargo entry point; that facade has not been introduced yet.
 
 Example simulation capabilities live under `examples/packages/` as ordinary Cargo packages. Scenario examples should converge on `examples/scenarios/<name>/scenario.duan` project directories, which can later hold package locks, assets, run outputs, and generated `.duan/**` caches.
 

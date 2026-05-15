@@ -20,7 +20,7 @@ The stable split is:
 
 ## Runtime Boundary
 
-The hot runtime crate target name is `duan-runtime`. The current implementation still lives at `packages/duan-core` with Cargo package name `duan`; this is a migration state, not the target naming model.
+The hot runtime package name is `duan-runtime`. The current implementation still lives at `packages/duan-core`; this directory name is a migration state, not the target naming model. Code and macro expansion may still import the runtime crate as `duan` through dependency aliasing while the separate facade crate has not been introduced.
 
 The runtime keeps these concepts as plain Rust:
 
@@ -37,7 +37,7 @@ Platform code may add package-facing assembly hooks around the runtime, but it m
 
 The current repository has these platform pieces in place:
 
-- `packages/duan-core` contains the runtime implementation, and its Cargo package name is still `duan`.
+- `packages/duan-core` contains the runtime implementation, and its package name is `duan-runtime`.
 - `packages/duan-macros` exists and examples use `duan_macros` derive and attribute macros.
 - Example package entry points currently return `duan_catalog::collect_package!()`.
 - `packages/duan-catalog` owns package metadata, descriptors, registry, factories, and package collection support.
@@ -49,7 +49,7 @@ The current repository has these platform pieces in place:
 These pieces are not closed as product flows yet:
 
 - the user-facing facade crate `duan` under `packages/duan/`;
-- systematic runtime crate renaming to `duan-runtime`;
+- a directory rename for `packages/duan-core` after the runtime package rename;
 - package installation from registries as an end-to-end editor or CLI workflow;
 - scenario-project lock files, installed package caches, build caches, and cache invalidation;
 - runner execution against a real assembled `World`;
@@ -308,7 +308,7 @@ The implementation should migrate in coherent, verifiable units:
 - Keep the repository root free of Cargo workspace assumptions until a shared build/release workflow is actually needed.
 - Continue consolidating runner generation and build orchestration under `duan-build`; the build-plan facade exists, but Cargo build orchestration and cache keys are still pending.
 - Introduce `duan-exec` when execution has a real library boundary.
-- Rename the runtime package to `duan-runtime` once the outer platform dependency graph is ready.
+- Keep the renamed runtime package stable while deciding when to rename the `packages/duan-core` directory.
 - Move flat example scenarios into scenario project directories before package installation and lock files become central.
 - Harden the existing `duan-macros` and automatic package collection after public metadata traits are stable.
 

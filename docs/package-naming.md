@@ -19,7 +19,7 @@ This document defines the target naming system. It is a design target and does n
 
 | Target package | Current package | Role |
 | --- | --- | --- |
-| `duan-runtime` | `duan` in `packages/duan-core` | Hot simulation runtime: world, storage, snapshot, entity, domain, event, reaction, scheduler, and command commit. |
+| `duan-runtime` | `duan-runtime` in `packages/duan-core` | Hot simulation runtime: world, storage, snapshot, entity, domain, event, reaction, scheduler, and command commit. |
 | `duan-macros` | `duan-macros` | Proc macros for component/event derives and item metadata attributes. |
 | `duan` | not present | Thin user-facing facade crate. It can live under `packages/duan/` and re-export stable runtime, macro, and authoring APIs. |
 | `duan-author` | not present | Optional author-facing facade that re-exports macros and authoring traits when keeping them out of `duan-runtime` is cleaner. Use only if `duan` should stay smaller than the full authoring surface. |
@@ -30,7 +30,7 @@ This document defines the target naming system. It is a design target and does n
 | `duan-cli` | `duan-cli` | Command line automation surface. Its binary can still be named `duan`. |
 | `duan-editor` | `duan-editor` | Visual authoring and inspection application. |
 
-`duan-runtime` replaces the current short implementation package name `duan` for consistency. The user-facing `duan` name should belong to a thin facade crate, not the runtime implementation. The repository root does not need to be that crate or a Cargo workspace.
+The runtime package name is now `duan-runtime`, while the source directory temporarily remains `packages/duan-core`. The user-facing `duan` name should belong to a thin facade crate later; that facade crate has not been introduced yet. The repository root does not need to be that crate or a Cargo workspace.
 
 ## Layering
 
@@ -57,7 +57,7 @@ Rename in this order when implementation starts:
 - Introduce the user-facing `duan` facade crate only after its re-export surface is clear; until then, examples should keep using `duan_catalog::collect_package!()` for package collection.
 - Continue moving runner generation and build orchestration behind `duan-build`; the crate now owns the build-plan facade, while `duan-runner-generator` still owns the low-level writer.
 - `duan-runner` to `duan-exec` after it becomes a real execution library.
-- `duan` / `packages/duan-core` to `duan-runtime` after the outer platform dependency graph is stable enough to absorb the submodule rename.
+- Keep the `duan-runtime` runtime package in `packages/duan-core` until the repository is ready for a separate directory rename.
 
 Do not rename all crates in one mechanical commit unless the workspace is already otherwise quiet. Each rename should include dependency updates, docs updates, and verification.
 
