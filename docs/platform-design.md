@@ -20,7 +20,7 @@ The stable split is:
 
 ## Runtime Boundary
 
-The hot runtime package name is `duan-runtime`. The current implementation still lives at `packages/duan-core`; this directory name is a migration state, not the target naming model. Code and macro expansion may still import the runtime crate as `duan` through dependency aliasing while the separate facade crate has not been introduced.
+The hot runtime package name is `duan-runtime`. The current implementation still lives at `packages/duan-core`; this directory name is a migration state, not the target naming model. User packages import the `duan` facade crate, while runtime internals remain in `duan-runtime`.
 
 The runtime keeps these concepts as plain Rust:
 
@@ -38,8 +38,9 @@ Platform code may add package-facing assembly hooks around the runtime, but it m
 The current repository has these platform pieces in place:
 
 - `packages/duan-core` contains the runtime implementation, and its package name is `duan-runtime`.
-- `packages/duan-macros` exists and examples use `duan_macros` derive and attribute macros.
-- Example package entry points currently return `duan_catalog::collect_package!()`.
+- `packages/duan` exists as the user-facing facade crate.
+- `packages/duan-macros` exists and examples import derive and attribute macros through `duan`.
+- Example package entry points currently return `duan::catalog::collect_package!()`.
 - `packages/duan-catalog` owns package metadata, descriptors, registry, factories, and package collection support.
 - `packages/duan-scenario` parses and validates scenario manifests.
 - `packages/duan-build` owns the current build-plan facade and writes generated runner projects through `packages/duan-runner-generator`.
@@ -48,9 +49,8 @@ The current repository has these platform pieces in place:
 
 These pieces are not closed as product flows yet:
 
-- the user-facing facade crate `duan` under `packages/duan/`;
-- a directory rename for `packages/duan-core` after the runtime package rename;
 - package installation from registries as an end-to-end editor or CLI workflow;
+- a directory rename for `packages/duan-core` after the runtime package rename;
 - scenario-project lock files, installed package caches, build caches, and cache invalidation;
 - runner execution against a real assembled `World`;
 - editor workflows for install, schema-backed editing, build/run, and output inspection;
@@ -105,15 +105,7 @@ The current package entry point used by examples is:
 
 ```rust
 pub fn package() -> Package {
-    duan_catalog::collect_package!()
-}
-```
-
-After the user-facing facade crate exists, the target API can become:
-
-```rust
-pub fn package() -> Package {
-    duan::collect_package()
+    duan::catalog::collect_package!()
 }
 ```
 
@@ -288,7 +280,8 @@ The target names are:
 
 - `duan-runtime`: hot runtime.
 - `duan-macros`: proc macros.
-- `duan-author`: optional author-facing facade.
+- `duan`: user-facing facade.
+- `duan-author`: optional author-facing facade if `duan` ever needs a smaller surface.
 - `duan-catalog`: package item metadata, schemas, collection, and registry.
 - `duan-scenario`: scenario manifest parser and validator.
 - `duan-build`: build-plan facade and generated runner creation, with Cargo build orchestration, cache keys, and delivery build support still pending.
@@ -296,7 +289,7 @@ The target names are:
 - `duan-cli`: command line automation.
 - `duan-editor`: visual authoring and inspection application.
 
-The user-facing `duan` Cargo package should be a thin facade crate when it is introduced. It can live under `packages/duan/` and re-export stable runtime, macro, and authoring APIs. The repository root does not need to be that package.
+The user-facing `duan` Cargo package is a thin facade crate under `packages/duan/`. It re-exports stable runtime, macro, and authoring APIs. The repository root does not need to be that package.
 
 Example packages use `example-*`, not `examples-*`.
 

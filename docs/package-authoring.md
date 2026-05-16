@@ -6,7 +6,7 @@ DUAN package authoring is Rust-first. A DUAN package is an ordinary Cargo packag
 
 Scenario manifests are not a DSL. They select package items and provide initial values. Algorithms, scheduling behavior, domain computation, reaction handling, spawning, event emission, and event reaction stay in Rust.
 
-This document describes the authoring surface for package authors. The example packages use this macro-assisted shape directly: metadata stays beside the Rust declaration, and package entry points collect the current Cargo package through `duan_catalog::collect_package!()`. The future user-facing facade crate `duan` is a target API, not current implementation.
+This document describes the authoring surface for package authors. The example packages use this macro-assisted shape directly through the `duan` facade: metadata stays beside the Rust declaration, macros are imported from `duan`, and package entry points collect the current Cargo package through `duan::catalog::collect_package!()`.
 
 ## Package Identity
 
@@ -35,7 +35,7 @@ Package authors should not maintain a central item list by hand. Each annotated 
 
 ```rust
 pub fn package() -> Package {
-    duan_catalog::collect_package!()
+    duan::catalog::collect_package!()
 }
 ```
 
@@ -198,15 +198,15 @@ pub struct Velocity2 {
 }
 
 pub fn package() -> Package {
-    duan_catalog::collect_package!()
+    duan::catalog::collect_package!()
 }
 ```
 
-After the facade crate exists, the target package boundary can be shortened to:
+The package boundary stays deliberately small:
 
 ```rust
 pub fn package() -> Package {
-    duan::collect_package()
+    duan::catalog::collect_package!()
 }
 ```
 
@@ -371,7 +371,7 @@ Author-side source packages stay under `examples/packages/**` or in normal Cargo
 To make the authoring surface above real, the framework needs these changes:
 
 - Macro crate: keep hardening the existing `duan-macros` crate for `component`, `field`, `event`, `entity`, `domain`, `reaction`, and `observer`.
-- Facade crate: introduce a user-facing `duan` crate before documenting `duan::collect_package()` as the current package entry point.
+- Facade crate: keep `duan` as the user-facing crate and keep package collection under `duan::catalog::collect_package!()`.
 - Public contracts: add stable metadata traits that macros implement, instead of having macros construct private descriptor internals directly.
 - Item collection: keep distributed package item collection for the current Cargo package so users do not maintain a package item list manually.
 - Explicit escape hatch: keep `Package::builder`, `ComponentDescriptor`, `EntityDescriptor`, and `RegistrationDescriptor` APIs for generated code and advanced users.

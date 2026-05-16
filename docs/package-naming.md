@@ -21,7 +21,7 @@ This document defines the target naming system. It is a design target and does n
 | --- | --- | --- |
 | `duan-runtime` | `duan-runtime` in `packages/duan-core` | Hot simulation runtime: world, storage, snapshot, entity, domain, event, reaction, scheduler, and command commit. |
 | `duan-macros` | `duan-macros` | Proc macros for component/event derives and item metadata attributes. |
-| `duan` | not present | Thin user-facing facade crate. It can live under `packages/duan/` and re-export stable runtime, macro, and authoring APIs. |
+| `duan` | `duan` in `packages/duan` | Thin user-facing facade crate that re-exports stable runtime, macro, and authoring APIs. |
 | `duan-author` | not present | Optional author-facing facade that re-exports macros and authoring traits when keeping them out of `duan-runtime` is cleaner. Use only if `duan` should stay smaller than the full authoring surface. |
 | `duan-catalog` | `duan-catalog` | Package item metadata, schemas, descriptors, generated cache readers, package item collection, and assembly-time registry. |
 | `duan-scenario` | `duan-scenario` | Scenario manifest parser and structural validator. |
@@ -30,7 +30,7 @@ This document defines the target naming system. It is a design target and does n
 | `duan-cli` | `duan-cli` | Command line automation surface. Its binary can still be named `duan`. |
 | `duan-editor` | `duan-editor` | Visual authoring and inspection application. |
 
-The runtime package name is now `duan-runtime`, while the source directory temporarily remains `packages/duan-core`. The user-facing `duan` name should belong to a thin facade crate later; that facade crate has not been introduced yet. The repository root does not need to be that crate or a Cargo workspace.
+The runtime package name is now `duan-runtime`, while the source directory temporarily remains `packages/duan-core`. The user-facing `duan` name belongs to the thin facade crate in `packages/duan`. The repository root does not need to be that crate or a Cargo workspace.
 
 ## Layering
 
@@ -54,7 +54,7 @@ The current macros emit catalog-facing descriptors and package collection hooks,
 Rename in this order when implementation starts:
 
 - Keep `duan-macros` as the current proc-macro crate and harden diagnostics and generated metadata contracts.
-- Introduce the user-facing `duan` facade crate only after its re-export surface is clear; until then, examples should keep using `duan_catalog::collect_package!()` for package collection.
+- Keep the user-facing `duan` facade as the package author entry point; examples should use `duan::catalog::collect_package!()` for package collection.
 - Continue moving runner generation and build orchestration behind `duan-build`; the crate now owns the build-plan facade, while `duan-runner-generator` still owns the low-level writer.
 - `duan-runner` to `duan-exec` after it becomes a real execution library.
 - Keep the `duan-runtime` runtime package in `packages/duan-core` until the repository is ready for a separate directory rename.

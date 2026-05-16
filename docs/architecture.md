@@ -6,7 +6,7 @@ The repository root is a product collection and documentation entry. It is not r
 
 ## Runtime Boundary
 
-The core runtime package is `duan-runtime`. The current implementation still lives in `packages/duan-core`; that directory has not been renamed yet. Code and macro expansion may still import the runtime crate as `duan` through dependency aliasing until a separate user-facing facade crate is introduced.
+The core runtime package is `duan-runtime`. The current implementation still lives in `packages/duan-core`; that directory has not been renamed yet. User packages import the `duan` facade crate, which re-exports runtime APIs, authoring macros, and catalog APIs while keeping `duan-runtime` as the hot runtime package.
 
 `duan-runtime` remains the hot runtime path. It keeps `World::step`, `Belief / Intent / Reality`, `Entity::tick`, `Domain::compute`, `Reaction::react`, storage, snapshots, scheduling, events, and command commit as Rust-first runtime behavior.
 
@@ -19,7 +19,7 @@ The platform layer adds package-facing APIs around the core:
 - Scenario manifest parsing and validation.
 - Generated runner creation.
 
-Current status: `packages/duan-macros` exists, examples use `duan_macros`, and package entry points currently call `duan_catalog::collect_package!()`. The user-facing facade crate `duan` does not exist yet as a separate package, so `duan::collect_package()` is still a target API, not current usage.
+Current status: `packages/duan` exists as the user-facing facade. Examples import macros through `duan::{Component, Event, domain, entity, reaction, ...}` and collect package metadata through `duan::catalog::collect_package!()`. `packages/duan-macros` and `packages/duan-catalog` remain internal framework packages used by the facade and generated code.
 
 ## Distribution
 
@@ -37,4 +37,4 @@ Package authors should not maintain a hand-written item list for every package. 
 
 ## Package Naming
 
-Framework crate names should follow the role-based naming system in [DUAN Package Naming](package-naming.md). In particular, the core runtime should also use a role suffix (`duan-runtime`) instead of being the only unsuffixed implementation crate. A short `duan` facade can be introduced later if the user-facing import needs to stay minimal.
+Framework crate names should follow the role-based naming system in [DUAN Package Naming](package-naming.md). In particular, the core runtime uses the role suffix `duan-runtime`, while the short `duan` name belongs to the user-facing facade.
