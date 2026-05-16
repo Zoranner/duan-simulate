@@ -11,7 +11,7 @@ DUAN does not turn simulation logic into a DSL. Business behavior stays in Rust 
 Runtime users write normal Rust:
 
 ```rust
-use duan::prelude::*;
+use duan::{ComponentBundle, Entity};
 
 #[derive(Clone, Default)]
 struct Position {
@@ -46,7 +46,7 @@ Start with:
 duan/
 ├── docs/
 ├── packages/
-│   ├── duan-core/
+│   ├── duan-runtime/
 │   ├── duan/
 │   ├── duan-macros/
 │   ├── duan-catalog/
@@ -72,7 +72,9 @@ The repository root is a product and documentation collection. It does not need 
 
 Use `scripts/verify-rust.ps1` for repository-level Rust verification across the framework crates and example packages. The script keeps the root free of Cargo workspace assumptions while still running the review-covered package matrix.
 
-`packages/duan` is the user-facing Cargo entry point. It re-exports the runtime, authoring macros, and catalog APIs. `packages/duan-core` is the current runtime implementation directory, and its runtime package name is `duan-runtime`. The directory has not been renamed yet. `packages/duan-macros` and `packages/duan-catalog` remain internal framework packages behind the facade.
+`packages/duan` is the user-facing Cargo entry point. It re-exports the runtime, authoring macros, and catalog APIs. `packages/duan-runtime` contains the runtime implementation and its Cargo package name is `duan-runtime`. `packages/duan-macros` and `packages/duan-catalog` remain internal framework packages behind the facade.
+
+The name boundary is deliberate: `duan` is the Rust facade crate, `duan-cli` is the CLI Cargo package, and the installed command exposed by that package is the `duan` binary.
 
 Example simulation capabilities live under `examples/packages/` as ordinary Cargo packages. Scenario examples should converge on `examples/scenarios/<name>/scenario.duan` project directories, which can later hold package locks, assets, run outputs, and generated `.duan/**` caches.
 

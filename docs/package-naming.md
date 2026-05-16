@@ -19,18 +19,18 @@ This document defines the target naming system. It is a design target and does n
 
 | Target package | Current package | Role |
 | --- | --- | --- |
-| `duan-runtime` | `duan-runtime` in `packages/duan-core` | Hot simulation runtime: world, storage, snapshot, entity, domain, event, reaction, scheduler, and command commit. |
+| `duan-runtime` | `duan-runtime` in `packages/duan-runtime` | Hot simulation runtime: world, storage, snapshot, entity, domain, event, reaction, scheduler, and command commit. |
 | `duan-macros` | `duan-macros` | Proc macros for component/event derives and item metadata attributes. |
-| `duan` | `duan` in `packages/duan` | Thin user-facing facade crate that re-exports stable runtime, macro, and authoring APIs. |
+| `duan` | `duan` in `packages/duan` | Thin user-facing Rust facade crate that re-exports stable runtime, macro, and authoring APIs. |
 | `duan-author` | not present | Optional author-facing facade that re-exports macros and authoring traits when keeping them out of `duan-runtime` is cleaner. Use only if `duan` should stay smaller than the full authoring surface. |
 | `duan-catalog` | `duan-catalog` | Package item metadata, schemas, descriptors, generated cache readers, package item collection, and assembly-time registry. |
 | `duan-scenario` | `duan-scenario` | Scenario manifest parser and structural validator. |
 | `duan-exec` | `duan-runner` | Scenario execution library. Current `duan-runner` has planned-only preflight plus factory-backed execution for generated runners; use the target name once the execution library boundary is ready to rename. |
 | `duan-build` | `duan-build` | Generated runner creation, Cargo build orchestration, build cache keys, and delivery build support. Current `duan-build` owns the build-plan facade and generated runner writer; cache keys and delivery build support are not closed yet. |
-| `duan-cli` | `duan-cli` | Command line automation surface. Its binary can still be named `duan`. |
+| `duan-cli` | `duan-cli` | CLI Cargo package for command line automation. Its binary command is named `duan`. |
 | `duan-editor` | `duan-editor` | Visual authoring and inspection application. |
 
-The runtime package name is now `duan-runtime`, while the source directory temporarily remains `packages/duan-core`. The user-facing `duan` name belongs to the thin facade crate in `packages/duan`. The repository root does not need to be that crate or a Cargo workspace.
+The runtime package name is `duan-runtime`, and the source directory is `packages/duan-runtime`. The user-facing `duan` name belongs to the thin Rust facade crate in `packages/duan`. `duan-cli` is the CLI package name, and `duan` is also the CLI binary command name exposed by that package. The repository root does not need to be the facade crate or a Cargo workspace.
 
 ## Layering
 
@@ -54,10 +54,10 @@ The current macros emit catalog-facing descriptors and package collection hooks,
 Rename in this order when implementation starts:
 
 - Keep `duan-macros` as the current proc-macro crate and harden diagnostics and generated metadata contracts.
-- Keep the user-facing `duan` facade as the package author entry point; examples should use `duan::catalog::collect_package!()` for package collection.
+- Keep the user-facing `duan` facade as the package author entry point; examples should use explicit `duan::{...}` imports for traits, derives, and attributes, and `duan::catalog::collect_package!()` for package collection.
 - Keep runner generation and build orchestration behind `duan-build`; the crate owns the build-plan facade and generated runner writer.
 - `duan-runner` to `duan-exec` after it becomes a real execution library.
-- Keep the `duan-runtime` runtime package in `packages/duan-core` until the repository is ready for a separate directory rename.
+- Keep `packages/duan-runtime` as the runtime implementation directory.
 
 Do not rename all crates in one mechanical commit unless the workspace is already otherwise quiet. Each rename should include dependency updates, docs updates, and verification.
 

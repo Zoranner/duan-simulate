@@ -2,7 +2,7 @@
 
 This document is the long-term design source for the DUAN platform layer. It consolidates the current package, scenario, macro authoring, crate naming, runner, editor, and delivery decisions. It separates implemented state from target state; target APIs below are not implementation claims.
 
-Older design notes under `packages/duan-core/docs/**` remain useful historical context, but they may still describe dotted item ids, hand-written package manifests, and old crate names. When those notes conflict with this document and the outer `docs/**` files, this document is authoritative for platform design.
+Older design notes under `packages/duan-runtime/docs/**` remain useful historical context, but they may still describe dotted item ids, hand-written package manifests, and old crate names. When those notes conflict with this document and the outer `docs/**` files, this document is authoritative for platform design.
 
 The repository root is a product and documentation collection. It does not need to be a Cargo package or a root Cargo workspace by default. Individual framework packages own their own Cargo boundaries; a root workspace can be introduced later only when multi-crate build, test, or release workflows justify it.
 
@@ -20,7 +20,7 @@ The stable split is:
 
 ## Runtime Boundary
 
-The hot runtime package name is `duan-runtime`. The current implementation still lives at `packages/duan-core`; this directory name is a migration state, not the target naming model. User packages import the `duan` facade crate, while runtime internals remain in `duan-runtime`.
+The hot runtime package name is `duan-runtime`, and its implementation lives at `packages/duan-runtime`. User packages import the `duan` facade crate, while runtime internals remain in `duan-runtime`.
 
 The runtime keeps these concepts as plain Rust:
 
@@ -37,7 +37,7 @@ Platform code may add package-facing assembly hooks around the runtime, but it m
 
 The current repository has these platform pieces in place:
 
-- `packages/duan-core` contains the runtime implementation, and its package name is `duan-runtime`.
+- `packages/duan-runtime` contains the runtime implementation, and its package name is `duan-runtime`.
 - `packages/duan` exists as the user-facing facade crate.
 - `packages/duan-macros` exists and examples import derive and attribute macros through `duan`.
 - Example package entry points currently return `duan::catalog::collect_package!()`.
@@ -45,12 +45,12 @@ The current repository has these platform pieces in place:
 - `packages/duan-scenario` parses and validates scenario manifests.
 - `packages/duan-build` owns the current build-plan facade and generated runner project writer.
 - `packages/duan-runner` owns the current runner execution API. `run()` still provides planned-only preflight, while generated runners call `run_with_factories()` to assemble and step a runtime `World`.
-- `packages/duan-cli` has scenario validation, runner generation/build, package inspection, generated runner execution, and a basic delivery copy command.
+- `packages/duan-cli` has scenario validation, runner generation/build, package inspection, generated runner execution, and a basic delivery copy command. It is the CLI Cargo package; the installed binary command is named `duan`.
 
 These pieces are not closed as product flows yet:
 
 - package installation from registries as an end-to-end editor or CLI workflow;
-- a directory rename for `packages/duan-core` after the runtime package rename;
+- continued hardening of the renamed `packages/duan-runtime` runtime boundary;
 - scenario-project lock files, installed package caches, build caches, and cache invalidation;
 - package-install-driven runner execution as a closed end-to-end workflow;
 - editor workflows for install, schema-backed editing, build/run, and output inspection;
@@ -301,7 +301,7 @@ The implementation should migrate in coherent, verifiable units:
 - Keep the repository root free of Cargo workspace assumptions until a shared build/release workflow is actually needed.
 - Continue consolidating runner generation and build orchestration under `duan-build`; the build-plan facade and runner project writer exist, but cache keys and delivery build hardening are still pending.
 - Introduce `duan-exec` when execution has a real library boundary.
-- Keep the renamed runtime package stable while deciding when to rename the `packages/duan-core` directory.
+- Keep the renamed runtime package and `packages/duan-runtime` directory stable.
 - Move flat example scenarios into scenario project directories before package installation and lock files become central.
 - Harden the existing `duan-macros`, `CatalogItem`, and automatic package collection behavior across tests, generated runners, Windows builds, release builds, and linker dead-code elimination.
 

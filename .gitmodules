@@ -1,6 +1,6 @@
-[submodule "packages/duan-core"]
-	path = packages/duan-core
-	url = ../duan-core.git
+[submodule "packages/duan-runtime"]
+	path = packages/duan-runtime
+	url = ../duan-runtime.git
 [submodule "packages/duan-catalog"]
 	path = packages/duan-catalog
 	url = ../duan-catalog.git

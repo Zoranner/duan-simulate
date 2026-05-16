@@ -8,7 +8,7 @@ $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 
 $packages = @(
     @{ Name = "duan"; Path = "packages/duan"; TestArgs = @("test", "--all-targets", "--all-features"); Doc = $true },
-    @{ Name = "duan-runtime"; Path = "packages/duan-core"; TestArgs = @("test", "--lib", "--tests", "--all-features"); Doc = $true },
+    @{ Name = "duan-runtime"; Path = "packages/duan-runtime"; TestArgs = @("test", "--lib", "--tests", "--all-features"); Doc = $true },
     @{ Name = "duan-catalog"; Path = "packages/duan-catalog"; TestArgs = @("test", "--all-targets", "--all-features"); Doc = $true },
     @{ Name = "duan-scenario"; Path = "packages/duan-scenario"; TestArgs = @("test", "--all-targets", "--all-features"); Doc = $true },
     @{ Name = "duan-runner"; Path = "packages/duan-runner"; TestArgs = @("test", "--all-targets", "--all-features"); Doc = $true },

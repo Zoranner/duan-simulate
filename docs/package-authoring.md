@@ -6,7 +6,7 @@ DUAN package authoring is Rust-first. A DUAN package is an ordinary Cargo packag
 
 Scenario manifests are not a DSL. They select package items and provide initial values. Algorithms, scheduling behavior, domain computation, reaction handling, spawning, event emission, and event reaction stay in Rust.
 
-This document describes the authoring surface for package authors. The example packages use this macro-assisted shape directly through the `duan` facade: metadata stays beside the Rust declaration, macros are imported from `duan`, and package entry points collect the current Cargo package through `duan::catalog::collect_package!()`.
+This document describes the authoring surface for package authors. The example packages use this macro-assisted shape directly through the `duan` facade: metadata stays beside the Rust declaration, authoring APIs are imported explicitly from `duan`, and package entry points collect the current Cargo package through `duan::catalog::collect_package!()`.
 
 ## Package Identity
 
@@ -34,10 +34,14 @@ Item ids do not include type segments such as `component`, `entity`, `domain`, `
 Package authors should not maintain a central item list by hand. Each annotated item registers itself with the package metadata collector. The package entry point only collects the current Cargo package:
 
 ```rust
+use duan::{Component, ComponentBundle, Domain, Entity, Package, component, domain, entity};
+
 pub fn package() -> Package {
     duan::catalog::collect_package!()
 }
 ```
+
+Prefer explicit `duan::{...}` imports for traits, derives, and attribute macros. Root-path macro calls such as `duan::catalog::collect_package!()` are also recommended when the path is part of the boundary being documented. Do not use a wildcard prelude import in package-authoring examples.
 
 The package boundary still exists. Cargo package name, version, dependencies, and generated install cache all remain package-scoped. Users should not separately list events, reactions, domains, and entities in `package.rs`; annotated items are collected from the package. What disappears is the manual registry chain that is easy to forget:
 
