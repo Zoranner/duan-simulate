@@ -31,7 +31,6 @@ entities:
         damage: 25.0
         missile_speed: 80.0
         fire_cooldown: 1.5
-
   - id: red_01
     type: example-naval-fleet/ship
     components:
@@ -45,3 +44,7 @@ entities:
         damage: 25.0
         missile_speed: 80.0
         fire_cooldown: 1.5
+
+run:
+  delta_time: 0.1
+  max_time: 5.0
