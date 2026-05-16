@@ -52,7 +52,7 @@ They exist so tools can inspect packages without parsing arbitrary source. They 
 
 The repository root is a product and documentation collection. It does not need to be a Cargo package or a root Cargo workspace by default.
 
-The user-facing Cargo crate can be a thin `duan` facade package under `packages/duan/`. The runtime implementation should be `duan-runtime`, not the only unsuffixed framework crate.
+The user-facing Cargo crate is the thin `duan` facade package under `packages/duan/`. The runtime implementation is `duan-runtime`, not the only unsuffixed framework crate.
 
 ## Platform Must Not Pollute Runtime
 
