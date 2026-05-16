@@ -1,6 +1,4 @@
-use duan::Component;
-
-#[derive(Component, Debug, Clone, PartialEq, Eq)]
+#[derive(duan::Component, Debug, Clone, PartialEq, Eq)]
 #[component(id = "static-body", kind = "reality", label = "Static Body")]
 pub struct StaticBody {
     #[field(label = "Static", default = true, control = "checkbox", order = 1)]

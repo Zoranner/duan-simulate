@@ -4,15 +4,20 @@ mod package;
 pub use domains::GravityField;
 pub use package::package;
 
-pub fn register_factories(
-    registry: duan::catalog::FactoryRegistry,
-) -> duan::catalog::PackageResult<duan::catalog::FactoryRegistry> {
+use std::collections::BTreeMap;
+
+use duan::{
+    catalog::{DomainFactory, FactoryRegistry, PackageResult, Value},
+    WorldBuilder,
+};
+
+pub fn register_factories(registry: FactoryRegistry) -> PackageResult<FactoryRegistry> {
     registry.with_domain(GravityFieldFactory)
 }
 
 struct GravityFieldFactory;
 
-impl duan::catalog::DomainFactory for GravityFieldFactory {
+impl DomainFactory for GravityFieldFactory {
     fn item_id(&self) -> &'static str {
         "example-freefall-gravity/earth"
     }
@@ -23,9 +28,9 @@ impl duan::catalog::DomainFactory for GravityFieldFactory {
 
     fn install(
         &self,
-        builder: duan::WorldBuilder,
-        _options: &std::collections::BTreeMap<String, duan::catalog::Value>,
-    ) -> duan::catalog::PackageResult<duan::WorldBuilder> {
+        builder: WorldBuilder,
+        _options: &BTreeMap<String, Value>,
+    ) -> PackageResult<WorldBuilder> {
         Ok(builder.domain(GravityField::earth()))
     }
 }

@@ -1,4 +1,4 @@
-use duan::{entity, Entity};
+use duan::Entity;
 use example_freefall_physics::{Collider, Position2, StaticBody};
 
 pub struct Ground;
@@ -13,7 +13,7 @@ impl Ground {
     }
 }
 
-#[entity(
+#[duan::entity(
     id = "ground",
     label = "Ground",
     components(Position2, StaticBody, Collider)

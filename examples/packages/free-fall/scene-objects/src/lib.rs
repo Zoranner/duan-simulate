@@ -4,9 +4,14 @@ mod package;
 pub use entities::{Ball, Ground};
 pub use package::package;
 
-pub fn register_factories(
-    registry: duan::catalog::FactoryRegistry,
-) -> duan::catalog::PackageResult<duan::catalog::FactoryRegistry> {
+use std::collections::BTreeMap;
+
+use duan::{
+    catalog::{EntityFactory, FactoryRegistry, PackageError, PackageResult, Value},
+    World,
+};
+
+pub fn register_factories(registry: FactoryRegistry) -> PackageResult<FactoryRegistry> {
     registry
         .with_entity(BallFactory)
         .and_then(|registry| registry.with_entity(GroundFactory))
@@ -14,7 +19,7 @@ pub fn register_factories(
 
 struct BallFactory;
 
-impl duan::catalog::EntityFactory for BallFactory {
+impl EntityFactory for BallFactory {
     fn item_id(&self) -> &'static str {
         Ball::ITEM_ID
     }
@@ -23,11 +28,7 @@ impl duan::catalog::EntityFactory for BallFactory {
         "free-fall ball".to_owned()
     }
 
-    fn spawn(
-        &self,
-        world: &mut duan::World,
-        components: &std::collections::BTreeMap<String, duan::catalog::Value>,
-    ) -> duan::catalog::PackageResult<()> {
+    fn spawn(&self, world: &mut World, components: &BTreeMap<String, Value>) -> PackageResult<()> {
         let position = position_from_components(components, "example-freefall-physics/position-2")?
             .unwrap_or_else(|| example_freefall_physics::Position2::new(0.0, 10.0));
         let velocity = velocity_from_components(components, "example-freefall-physics/velocity-2")?
@@ -39,7 +40,7 @@ impl duan::catalog::EntityFactory for BallFactory {
 
 struct GroundFactory;
 
-impl duan::catalog::EntityFactory for GroundFactory {
+impl EntityFactory for GroundFactory {
     fn item_id(&self) -> &'static str {
         Ground::ITEM_ID
     }
@@ -48,11 +49,7 @@ impl duan::catalog::EntityFactory for GroundFactory {
         "free-fall ground".to_owned()
     }
 
-    fn spawn(
-        &self,
-        world: &mut duan::World,
-        components: &std::collections::BTreeMap<String, duan::catalog::Value>,
-    ) -> duan::catalog::PackageResult<()> {
+    fn spawn(&self, world: &mut World, components: &BTreeMap<String, Value>) -> PackageResult<()> {
         let position = position_from_components(components, "example-freefall-physics/position-2")?
             .unwrap_or_else(|| example_freefall_physics::Position2::new(0.0, 0.0));
         let static_body = example_freefall_physics::StaticBody::enabled();
@@ -64,9 +61,9 @@ impl duan::catalog::EntityFactory for GroundFactory {
 }
 
 fn position_from_components(
-    components: &std::collections::BTreeMap<String, duan::catalog::Value>,
+    components: &BTreeMap<String, Value>,
     id: &str,
-) -> duan::catalog::PackageResult<Option<example_freefall_physics::Position2>> {
+) -> PackageResult<Option<example_freefall_physics::Position2>> {
     let Some(value) = components.get(id) else {
         return Ok(None);
     };
@@ -77,9 +74,9 @@ fn position_from_components(
 }
 
 fn velocity_from_components(
-    components: &std::collections::BTreeMap<String, duan::catalog::Value>,
+    components: &BTreeMap<String, Value>,
     id: &str,
-) -> duan::catalog::PackageResult<Option<example_freefall_physics::Velocity2>> {
+) -> PackageResult<Option<example_freefall_physics::Velocity2>> {
     let Some(value) = components.get(id) else {
         return Ok(None);
     };
@@ -90,9 +87,9 @@ fn velocity_from_components(
 }
 
 fn collider_from_components(
-    components: &std::collections::BTreeMap<String, duan::catalog::Value>,
+    components: &BTreeMap<String, Value>,
     id: &str,
-) -> duan::catalog::PackageResult<Option<example_freefall_physics::Collider>> {
+) -> PackageResult<Option<example_freefall_physics::Collider>> {
     let Some(value) = components.get(id) else {
         return Ok(None);
     };
@@ -102,12 +99,12 @@ fn collider_from_components(
     )?)))
 }
 
-fn f64_field(value: &duan::catalog::Value, field: &str) -> duan::catalog::PackageResult<f64> {
+fn f64_field(value: &Value, field: &str) -> PackageResult<f64> {
     value
         .as_mapping()
-        .and_then(|mapping| mapping.get(duan::catalog::Value::from(field)))
-        .and_then(duan::catalog::Value::as_f64)
-        .ok_or_else(|| duan::catalog::PackageError::InvalidScenarioValue {
+        .and_then(|mapping| mapping.get(Value::from(field)))
+        .and_then(Value::as_f64)
+        .ok_or_else(|| PackageError::InvalidScenarioValue {
             location: field.to_owned(),
             expected: "number",
         })

@@ -1,6 +1,4 @@
-use duan::Component;
-
-#[derive(Component, Debug, Clone, PartialEq)]
+#[derive(duan::Component, Debug, Clone, PartialEq)]
 #[component(id = "collider", kind = "reality", label = "Collider")]
 pub struct Collider {
     #[field(label = "Restitution", default = 0.8, range = 0.0..=1.0, unit = "ratio", control = "slider", order = 1)]

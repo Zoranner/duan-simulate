@@ -1,6 +1,4 @@
-use duan::Component;
-
-#[derive(Component, Debug, Clone, PartialEq, Eq)]
+#[derive(duan::Component, Debug, Clone, PartialEq, Eq)]
 #[component(id = "faction", kind = "reality", label = "Faction")]
 pub struct Faction {
     #[field(label = "Team", default = 0, range = 0.0..=1.0, control = "segmented", order = 1)]

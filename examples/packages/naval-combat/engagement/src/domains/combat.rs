@@ -1,10 +1,10 @@
-use duan::{domain, reaction, Domain, DomainContext, EntityId, Event, Reaction, World};
+use duan::{Domain, DomainContext, EntityId, Reaction, World};
 use example_naval_core::{Faction, Health, Radar};
 use example_naval_motion::Position2;
 
 use crate::Weapon;
 
-#[derive(Event, Debug)]
+#[derive(duan::Event, Debug)]
 #[event(id = "fire-requested", label = "Fire Requested")]
 pub struct FireRequested {
     pub shooter_id: EntityId,
@@ -17,7 +17,7 @@ pub struct FireRequested {
     pub damage: f64,
 }
 
-#[derive(Event, Debug)]
+#[derive(duan::Event, Debug)]
 #[event(id = "hit-resolved", label = "Hit Resolved")]
 pub struct HitResolved {
     pub target_id: EntityId,
@@ -26,7 +26,7 @@ pub struct HitResolved {
 
 pub struct CombatDomain;
 
-#[domain(
+#[duan::domain(
     id = "combat",
     label = "Combat",
     writes(Weapon),
@@ -134,7 +134,7 @@ impl Domain for CombatDomain {
 
 pub struct ApplyDamage;
 
-#[reaction(id = "apply-damage", label = "Apply Damage", event = HitResolved)]
+#[duan::reaction(id = "apply-damage", label = "Apply Damage", event = HitResolved)]
 impl Reaction<HitResolved> for ApplyDamage {
     fn react(&mut self, event: &HitResolved, world: &mut World) {
         if let Some(health) = world.inspect_mut::<Health>(event.target_id) {

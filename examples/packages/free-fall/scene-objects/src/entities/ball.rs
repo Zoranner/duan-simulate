@@ -1,4 +1,4 @@
-use duan::{entity, Entity};
+use duan::Entity;
 use example_freefall_physics::{Position2, Velocity2};
 
 pub struct Ball;
@@ -9,5 +9,5 @@ impl Ball {
     }
 }
 
-#[entity(id = "ball", label = "Ball", components(Position2, Velocity2))]
+#[duan::entity(id = "ball", label = "Ball", components(Position2, Velocity2))]
 impl Entity for Ball {}

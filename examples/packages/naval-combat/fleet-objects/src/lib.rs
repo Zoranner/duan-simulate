@@ -4,15 +4,20 @@ mod package;
 pub use entities::Ship;
 pub use package::package;
 
-pub fn register_factories(
-    registry: duan::catalog::FactoryRegistry,
-) -> duan::catalog::PackageResult<duan::catalog::FactoryRegistry> {
+use std::collections::BTreeMap;
+
+use duan::{
+    catalog::{EntityFactory, FactoryRegistry, PackageError, PackageResult, Value},
+    World,
+};
+
+pub fn register_factories(registry: FactoryRegistry) -> PackageResult<FactoryRegistry> {
     registry.with_entity(ShipFactory)
 }
 
 struct ShipFactory;
 
-impl duan::catalog::EntityFactory for ShipFactory {
+impl EntityFactory for ShipFactory {
     fn item_id(&self) -> &'static str {
         Ship::ITEM_ID
     }
@@ -21,11 +26,7 @@ impl duan::catalog::EntityFactory for ShipFactory {
         "naval ship".to_owned()
     }
 
-    fn spawn(
-        &self,
-        world: &mut duan::World,
-        components: &std::collections::BTreeMap<String, duan::catalog::Value>,
-    ) -> duan::catalog::PackageResult<()> {
+    fn spawn(&self, world: &mut World, components: &BTreeMap<String, Value>) -> PackageResult<()> {
         let faction = faction_from_components(components, "example-naval-core/faction")?
             .unwrap_or_else(example_naval_core::Faction::red);
         let position = position_from_components(components, "example-naval-motion/position-2")?
@@ -47,9 +48,9 @@ impl duan::catalog::EntityFactory for ShipFactory {
 }
 
 fn faction_from_components(
-    components: &std::collections::BTreeMap<String, duan::catalog::Value>,
+    components: &BTreeMap<String, Value>,
     id: &str,
-) -> duan::catalog::PackageResult<Option<example_naval_core::Faction>> {
+) -> PackageResult<Option<example_naval_core::Faction>> {
     let Some(value) = components.get(id) else {
         return Ok(None);
     };
@@ -59,9 +60,9 @@ fn faction_from_components(
 }
 
 fn health_from_components(
-    components: &std::collections::BTreeMap<String, duan::catalog::Value>,
+    components: &BTreeMap<String, Value>,
     id: &str,
-) -> duan::catalog::PackageResult<Option<example_naval_core::Health>> {
+) -> PackageResult<Option<example_naval_core::Health>> {
     let Some(value) = components.get(id) else {
         return Ok(None);
     };
@@ -72,9 +73,9 @@ fn health_from_components(
 }
 
 fn radar_from_components(
-    components: &std::collections::BTreeMap<String, duan::catalog::Value>,
+    components: &BTreeMap<String, Value>,
     id: &str,
-) -> duan::catalog::PackageResult<Option<example_naval_core::Radar>> {
+) -> PackageResult<Option<example_naval_core::Radar>> {
     let Some(value) = components.get(id) else {
         return Ok(None);
     };
@@ -84,9 +85,9 @@ fn radar_from_components(
 }
 
 fn position_from_components(
-    components: &std::collections::BTreeMap<String, duan::catalog::Value>,
+    components: &BTreeMap<String, Value>,
     id: &str,
-) -> duan::catalog::PackageResult<Option<example_naval_motion::Position2>> {
+) -> PackageResult<Option<example_naval_motion::Position2>> {
     let Some(value) = components.get(id) else {
         return Ok(None);
     };
@@ -97,9 +98,9 @@ fn position_from_components(
 }
 
 fn velocity_from_components(
-    components: &std::collections::BTreeMap<String, duan::catalog::Value>,
+    components: &BTreeMap<String, Value>,
     id: &str,
-) -> duan::catalog::PackageResult<Option<example_naval_motion::Velocity2>> {
+) -> PackageResult<Option<example_naval_motion::Velocity2>> {
     let Some(value) = components.get(id) else {
         return Ok(None);
     };
@@ -110,9 +111,9 @@ fn velocity_from_components(
 }
 
 fn weapon_from_components(
-    components: &std::collections::BTreeMap<String, duan::catalog::Value>,
+    components: &BTreeMap<String, Value>,
     id: &str,
-) -> duan::catalog::PackageResult<Option<example_naval_combat::Weapon>> {
+) -> PackageResult<Option<example_naval_combat::Weapon>> {
     let Some(value) = components.get(id) else {
         return Ok(None);
     };
@@ -124,24 +125,24 @@ fn weapon_from_components(
     )))
 }
 
-fn f64_field(value: &duan::catalog::Value, field: &str) -> duan::catalog::PackageResult<f64> {
+fn f64_field(value: &Value, field: &str) -> PackageResult<f64> {
     value
         .as_mapping()
-        .and_then(|mapping| mapping.get(duan::catalog::Value::from(field)))
-        .and_then(duan::catalog::Value::as_f64)
-        .ok_or_else(|| duan::catalog::PackageError::InvalidScenarioValue {
+        .and_then(|mapping| mapping.get(Value::from(field)))
+        .and_then(Value::as_f64)
+        .ok_or_else(|| PackageError::InvalidScenarioValue {
             location: field.to_owned(),
             expected: "number",
         })
 }
 
-fn u8_field(value: &duan::catalog::Value, field: &str) -> duan::catalog::PackageResult<u8> {
+fn u8_field(value: &Value, field: &str) -> PackageResult<u8> {
     value
         .as_mapping()
-        .and_then(|mapping| mapping.get(duan::catalog::Value::from(field)))
-        .and_then(duan::catalog::Value::as_u64)
+        .and_then(|mapping| mapping.get(Value::from(field)))
+        .and_then(Value::as_u64)
         .and_then(|value| u8::try_from(value).ok())
-        .ok_or_else(|| duan::catalog::PackageError::InvalidScenarioValue {
+        .ok_or_else(|| PackageError::InvalidScenarioValue {
             location: field.to_owned(),
             expected: "u8",
         })

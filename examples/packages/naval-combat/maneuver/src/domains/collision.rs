@@ -1,10 +1,10 @@
-use duan::{domain, Domain, DomainContext};
+use duan::{Domain, DomainContext};
 
 use crate::{MotionDomain, Position2};
 
 pub struct CollisionDomain;
 
-#[domain(
+#[duan::domain(
     id = "collision",
     label = "Collision",
     reads(Position2),

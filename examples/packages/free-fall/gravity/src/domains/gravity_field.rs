@@ -1,4 +1,4 @@
-use duan::{domain, Domain, DomainContext};
+use duan::{Domain, DomainContext};
 use example_freefall_physics::{Collider, Position2, StaticBody, Velocity2};
 
 pub struct GravityField {
@@ -17,7 +17,7 @@ impl Default for GravityField {
     }
 }
 
-#[domain(
+#[duan::domain(
     id = "field",
     label = "Gravity Field",
     writes(Position2, Velocity2),

@@ -6,9 +6,14 @@ pub use components::Weapon;
 pub use domains::{ApplyDamage, CombatDomain, FireRequested, HitResolved};
 pub use package::package;
 
-pub fn register_factories(
-    registry: duan::catalog::FactoryRegistry,
-) -> duan::catalog::PackageResult<duan::catalog::FactoryRegistry> {
+use std::collections::BTreeMap;
+
+use duan::{
+    catalog::{DomainFactory, FactoryRegistry, PackageResult, ReactionFactory, Value},
+    WorldBuilder,
+};
+
+pub fn register_factories(registry: FactoryRegistry) -> PackageResult<FactoryRegistry> {
     registry
         .with_domain(CombatDomainFactory)
         .and_then(|registry| registry.with_reaction(ApplyDamageFactory))
@@ -16,7 +21,7 @@ pub fn register_factories(
 
 struct CombatDomainFactory;
 
-impl duan::catalog::DomainFactory for CombatDomainFactory {
+impl DomainFactory for CombatDomainFactory {
     fn item_id(&self) -> &'static str {
         CombatDomain::ITEM_ID
     }
@@ -27,16 +32,16 @@ impl duan::catalog::DomainFactory for CombatDomainFactory {
 
     fn install(
         &self,
-        builder: duan::WorldBuilder,
-        _options: &std::collections::BTreeMap<String, duan::catalog::Value>,
-    ) -> duan::catalog::PackageResult<duan::WorldBuilder> {
+        builder: WorldBuilder,
+        _options: &BTreeMap<String, Value>,
+    ) -> PackageResult<WorldBuilder> {
         Ok(builder.domain(CombatDomain))
     }
 }
 
 struct ApplyDamageFactory;
 
-impl duan::catalog::ReactionFactory for ApplyDamageFactory {
+impl ReactionFactory for ApplyDamageFactory {
     fn item_id(&self) -> &'static str {
         ApplyDamage::ITEM_ID
     }
@@ -47,9 +52,9 @@ impl duan::catalog::ReactionFactory for ApplyDamageFactory {
 
     fn install(
         &self,
-        builder: duan::WorldBuilder,
-        _options: &std::collections::BTreeMap<String, duan::catalog::Value>,
-    ) -> duan::catalog::PackageResult<duan::WorldBuilder> {
+        builder: WorldBuilder,
+        _options: &BTreeMap<String, Value>,
+    ) -> PackageResult<WorldBuilder> {
         Ok(builder.on::<HitResolved>(ApplyDamage))
     }
 }

@@ -1,4 +1,4 @@
-use duan::{entity, Entity};
+use duan::Entity;
 use example_naval_combat::Weapon;
 use example_naval_core::{Faction, Health, Radar};
 use example_naval_motion::{Position2, Velocity2};
@@ -18,7 +18,7 @@ impl Ship {
     }
 }
 
-#[entity(
+#[duan::entity(
     id = "ship",
     label = "Ship",
     components(Faction, Position2, Velocity2, Health, Radar, Weapon)

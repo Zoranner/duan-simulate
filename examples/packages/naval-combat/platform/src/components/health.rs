@@ -1,6 +1,4 @@
-use duan::Component;
-
-#[derive(Component, Debug, Clone, PartialEq)]
+#[derive(duan::Component, Debug, Clone, PartialEq)]
 #[component(id = "health", kind = "reality", label = "Health")]
 pub struct Health {
     #[field(label = "Current", default = 100.0, range = 0.0..=10000.0, control = "number", order = 1)]

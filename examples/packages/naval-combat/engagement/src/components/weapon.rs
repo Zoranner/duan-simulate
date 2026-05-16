@@ -1,6 +1,4 @@
-use duan::Component;
-
-#[derive(Component, Debug, Clone, PartialEq)]
+#[derive(duan::Component, Debug, Clone, PartialEq)]
 #[component(id = "weapon", kind = "reality", label = "Weapon")]
 pub struct Weapon {
     #[field(label = "Range", default = 180.0, range = 0.0..=10000.0, unit = "m", control = "number", order = 1)]
