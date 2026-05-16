@@ -1,4 +1,4 @@
-use duan_macros::Component;
+use duan::Component;
 
 #[derive(Component, Debug, Clone, PartialEq)]
 #[component(id = "radar", kind = "reality", label = "Radar")]

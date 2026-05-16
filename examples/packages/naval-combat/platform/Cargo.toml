@@ -6,6 +6,4 @@ publish = false
 include = ["src/**", "README.md"]
 
 [dependencies]
-duan = { package = "duan-runtime", path = "../../../../packages/duan-core" }
-duan-catalog = { path = "../../../../packages/duan-catalog" }
-duan-macros = { path = "../../../../packages/duan-macros" }
+duan = { path = "../../../../packages/duan" }

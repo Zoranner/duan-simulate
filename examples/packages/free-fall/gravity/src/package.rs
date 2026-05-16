@@ -1,5 +1,5 @@
-use duan_catalog::Package;
+use duan::catalog::Package;
 
 pub fn package() -> Package {
-    duan_catalog::collect_package!()
+    duan::catalog::collect_package!()
 }

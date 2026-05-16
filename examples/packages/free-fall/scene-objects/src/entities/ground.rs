@@ -1,5 +1,4 @@
-use duan::Entity;
-use duan_macros::entity;
+use duan::{entity, Entity};
 use example_freefall_physics::{Collider, Position2, StaticBody};
 
 pub struct Ground;

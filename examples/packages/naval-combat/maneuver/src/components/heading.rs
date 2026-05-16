@@ -1,4 +1,4 @@
-use duan_macros::Component;
+use duan::Component;
 
 #[derive(Component, Debug, Clone, Default, PartialEq)]
 #[component(id = "heading", kind = "intent", label = "Heading")]

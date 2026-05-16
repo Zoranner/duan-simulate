@@ -1,5 +1,4 @@
-use duan::{Domain, DomainContext};
-use duan_macros::domain;
+use duan::{domain, Domain, DomainContext};
 use example_freefall_physics::{Collider, Position2, StaticBody, Velocity2};
 
 pub struct GravityField {

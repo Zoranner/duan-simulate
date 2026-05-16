@@ -1,5 +1,4 @@
-use duan::{Domain, DomainContext};
-use duan_macros::domain;
+use duan::{domain, Domain, DomainContext};
 
 use crate::{Heading, Position2, Velocity2};
 

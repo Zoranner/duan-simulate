@@ -1,5 +1,4 @@
-use duan::Entity;
-use duan_macros::entity;
+use duan::{entity, Entity};
 use example_naval_combat::Weapon;
 use example_naval_core::{Faction, Health, Radar};
 use example_naval_motion::{Position2, Velocity2};

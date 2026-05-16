@@ -1,4 +1,4 @@
-use duan_macros::Component;
+use duan::Component;
 
 #[derive(Component, Debug, Clone, PartialEq, Eq)]
 #[component(id = "static-body", kind = "reality", label = "Static Body")]

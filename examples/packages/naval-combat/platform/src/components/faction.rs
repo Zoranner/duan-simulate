@@ -1,4 +1,4 @@
-use duan_macros::Component;
+use duan::Component;
 
 #[derive(Component, Debug, Clone, PartialEq, Eq)]
 #[component(id = "faction", kind = "reality", label = "Faction")]

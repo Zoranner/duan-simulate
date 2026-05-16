@@ -1,5 +1,4 @@
-use duan::{Domain, DomainContext, EntityId, Reaction, World};
-use duan_macros::{domain, reaction, Event};
+use duan::{domain, reaction, Domain, DomainContext, EntityId, Event, Reaction, World};
 use example_naval_core::{Faction, Health, Radar};
 use example_naval_motion::Position2;
 
