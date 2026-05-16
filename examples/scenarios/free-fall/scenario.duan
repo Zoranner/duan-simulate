@@ -4,11 +4,11 @@ scenario:
 
 packages:
   - id: example-freefall-physics
-    version: 0.1.0
+    path: ../../packages/free-fall/body
   - id: example-freefall-gravity
-    version: 0.1.0
+    path: ../../packages/free-fall/gravity
   - id: example-freefall-objects
-    version: 0.1.0
+    path: ../../packages/free-fall/scene-objects
 
 domains:
   - type: example-freefall-gravity/field

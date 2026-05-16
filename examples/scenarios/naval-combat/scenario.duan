@@ -4,13 +4,13 @@ scenario:
 
 packages:
   - id: example-naval-core
-    version: 0.1.0
+    path: ../../packages/naval-combat/platform
   - id: example-naval-motion
-    version: 0.1.0
+    path: ../../packages/naval-combat/maneuver
   - id: example-naval-combat
-    version: 0.1.0
+    path: ../../packages/naval-combat/engagement
   - id: example-naval-fleet
-    version: 0.1.0
+    path: ../../packages/naval-combat/fleet-objects
 
 domains:
   - type: example-naval-motion/motion

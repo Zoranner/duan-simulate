@@ -41,7 +41,7 @@ The same shape applies to product projects outside this repository.
 
 Author-side source packages live under `examples/packages/**` in this repository or in normal Cargo package repositories.
 
-Scenario projects should not vendor source packages by default. Local source overrides are a development feature, usually expressed through runner generation configuration or Cargo patching, not by placing source crates in the scenario project.
+Scenario projects should not vendor source packages by default. Local source packages are referenced from `packages[].path` in `scenario.duan`, and that path is relative to the scenario file directory. A package entry with `path` does not need `version`; registry packages still use `version`. Do not place source crates inside the scenario project just to make them available.
 
 ## Manifest Boundary
 
