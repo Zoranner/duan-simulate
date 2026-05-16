@@ -25,8 +25,8 @@ This document defines the target naming system. It is a design target and does n
 | `duan-author` | not present | Optional author-facing facade that re-exports macros and authoring traits when keeping them out of `duan-runtime` is cleaner. Use only if `duan` should stay smaller than the full authoring surface. |
 | `duan-catalog` | `duan-catalog` | Package item metadata, schemas, descriptors, generated cache readers, package item collection, and assembly-time registry. |
 | `duan-scenario` | `duan-scenario` | Scenario manifest parser and structural validator. |
-| `duan-exec` | `duan-runner` | Scenario execution library. Current `duan-runner` is still `PlannedOnly`; this target name should only be used once the crate owns real runtime execution. |
-| `duan-build` | `duan-build` plus `duan-runner-generator` | Generated runner creation, Cargo build orchestration, build cache keys, and delivery build support. Current `duan-build` owns the build-plan facade and delegates runner writing to `duan-runner-generator`; Cargo build orchestration and cache keys are not closed yet. |
+| `duan-exec` | `duan-runner` | Scenario execution library. Current `duan-runner` has planned-only preflight plus factory-backed execution for generated runners; use the target name once the execution library boundary is ready to rename. |
+| `duan-build` | `duan-build` | Generated runner creation, Cargo build orchestration, build cache keys, and delivery build support. Current `duan-build` owns the build-plan facade and generated runner writer; cache keys and delivery build support are not closed yet. |
 | `duan-cli` | `duan-cli` | Command line automation surface. Its binary can still be named `duan`. |
 | `duan-editor` | `duan-editor` | Visual authoring and inspection application. |
 
@@ -55,7 +55,7 @@ Rename in this order when implementation starts:
 
 - Keep `duan-macros` as the current proc-macro crate and harden diagnostics and generated metadata contracts.
 - Keep the user-facing `duan` facade as the package author entry point; examples should use `duan::catalog::collect_package!()` for package collection.
-- Continue moving runner generation and build orchestration behind `duan-build`; the crate now owns the build-plan facade, while `duan-runner-generator` still owns the low-level writer.
+- Keep runner generation and build orchestration behind `duan-build`; the crate owns the build-plan facade and generated runner writer.
 - `duan-runner` to `duan-exec` after it becomes a real execution library.
 - Keep the `duan-runtime` runtime package in `packages/duan-core` until the repository is ready for a separate directory rename.
 

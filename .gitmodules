@@ -7,9 +7,6 @@
 [submodule "packages/duan-scenario"]
 	path = packages/duan-scenario
 	url = ../duan-scenario.git
-[submodule "packages/duan-runner-generator"]
-	path = packages/duan-runner-generator
-	url = ../duan-runner-generator.git
 [submodule "packages/duan-runner"]
 	path = packages/duan-runner
 	url = ../duan-runner.git

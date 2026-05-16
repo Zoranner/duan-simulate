@@ -52,7 +52,6 @@ duan/
 │   ├── duan-catalog/
 │   ├── duan-scenario/
 │   ├── duan-runner/
-│   ├── duan-runner-generator/
 │   ├── duan-build/
 │   ├── duan-cli/
 │   └── duan-editor/

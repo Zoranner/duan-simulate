@@ -27,7 +27,7 @@ Package distribution is based on a private Cargo registry. DUAN does not need a 
 
 The target editor flow downloads `.crate` packages and reads generated install caches derived from Rust package registration and schema APIs. Source packages do not hand-author `duan.toml` or `schemas/` as facts; those files are cache artifacts for inspection, validation, and delivery packaging. This install/cache/lock/editor flow is not closed in the current implementation.
 
-Generated runners statically link selected Cargo packages. Current runner execution is still planned-only: `duan-runner` builds an assembly plan and returns `RunStatus::PlannedOnly` rather than executing an assembled `World`. Runtime behavior should remain compiled Rust when the execution library is completed.
+Generated runners statically link selected Cargo packages. `duan-runner` still exposes planned-only preflight through `run()`, and generated runners use `run_with_factories()` to assemble package factories and step a runtime `World`. Runtime behavior remains compiled Rust.
 
 ## Authoring Surface
 

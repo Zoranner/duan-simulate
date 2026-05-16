@@ -43,16 +43,16 @@ The current repository has these platform pieces in place:
 - Example package entry points currently return `duan::catalog::collect_package!()`.
 - `packages/duan-catalog` owns package metadata, descriptors, registry, factories, and package collection support.
 - `packages/duan-scenario` parses and validates scenario manifests.
-- `packages/duan-build` owns the current build-plan facade and writes generated runner projects through `packages/duan-runner-generator`.
-- `packages/duan-runner` is still planned-only execution: `run()` returns `RunStatus::PlannedOnly` and does not drive the runtime world.
-- `packages/duan-cli` has scenario validation, runner generation/build, package inspection, and a basic delivery copy command; `duan run` is not implemented.
+- `packages/duan-build` owns the current build-plan facade and generated runner project writer.
+- `packages/duan-runner` owns the current runner execution API. `run()` still provides planned-only preflight, while generated runners call `run_with_factories()` to assemble and step a runtime `World`.
+- `packages/duan-cli` has scenario validation, runner generation/build, package inspection, generated runner execution, and a basic delivery copy command.
 
 These pieces are not closed as product flows yet:
 
 - package installation from registries as an end-to-end editor or CLI workflow;
 - a directory rename for `packages/duan-core` after the runtime package rename;
 - scenario-project lock files, installed package caches, build caches, and cache invalidation;
-- runner execution against a real assembled `World`;
+- package-install-driven runner execution as a closed end-to-end workflow;
 - editor workflows for install, schema-backed editing, build/run, and output inspection;
 - delivery packaging with schemas, license material, reproducible locks, and validated runner outputs.
 
@@ -192,7 +192,7 @@ Installed package caches should live under `.duan/packages/`, not under a top-le
 
 ## Generated Runner
 
-Generated runners are thin Rust crates created from a scenario project and its package lock state. Current tooling can generate a runner project, but execution still goes through `duan-runner` planned-only reporting rather than a real assembled runtime world.
+Generated runners are thin Rust crates created from a scenario project and its package lock state. Current tooling can generate a runner project, build it with Cargo, and execute it through `duan-runner` when the selected packages provide factories.
 
 Runner generation owns:
 
@@ -299,7 +299,7 @@ The implementation should migrate in coherent, verifiable units:
 
 - Keep current runtime behavior stable while platform APIs mature around it.
 - Keep the repository root free of Cargo workspace assumptions until a shared build/release workflow is actually needed.
-- Continue consolidating runner generation and build orchestration under `duan-build`; the build-plan facade exists, but Cargo build orchestration and cache keys are still pending.
+- Continue consolidating runner generation and build orchestration under `duan-build`; the build-plan facade and runner project writer exist, but cache keys and delivery build hardening are still pending.
 - Introduce `duan-exec` when execution has a real library boundary.
 - Keep the renamed runtime package stable while deciding when to rename the `packages/duan-core` directory.
 - Move flat example scenarios into scenario project directories before package installation and lock files become central.

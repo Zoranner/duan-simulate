@@ -34,7 +34,7 @@ Goal: make the outer platform repository boundaries explicit without changing `d
 Owned files:
 - `packages/duan-package/**`
 - `packages/duan-scenario/**`
-- `packages/duan-runner-generator/**`
+- `packages/duan-build/**`
 - `packages/duan-cli/**`
 - optional package-local `Cargo.toml` files
 - `docs/architecture.md`
@@ -67,7 +67,7 @@ Owned files:
 Tasks:
 
 - [ ] Rename `duan-package` to `duan-catalog`.
-- [ ] Merge `duan-runner-generator` and the empty `duan-build` concept into `duan-build`.
+- [x] Merge the generated runner writer into `duan-build`.
 - [ ] Rename `duan-runner` to `duan-exec` when it owns real execution semantics.
 - [ ] Rename the core runtime package to `duan-runtime`; add a small `packages/duan` facade for the user-facing `duan` crate when the public surface is stable.
 - [ ] Rename example packages from `examples-*` to `example-*` according to `docs/package-naming.md`.
@@ -84,7 +84,7 @@ Owned files:
 - `docs/package-authoring.md`
 - `packages/duan-scenario/tests/scenario_manifest.rs`
 - `packages/duan-cli/tests/cli_smoke.rs`
-- `packages/duan-runner-generator/tests/generate_runner.rs`
+- `packages/duan-build/tests/generated_runner.rs`
 - `examples/scenarios/**`
 
 Tasks:
@@ -179,19 +179,18 @@ Tasks:
 - [ ] Make unsupported component overrides explicit: allow, warn, or error based on entity schema.
 - [ ] Add tests with a tiny fake package and fake scenario.
 
-### Phase 5: Runner Generator
+### Phase 5: Runner Generation
 
 Goal: generate a thin Rust runner crate that statically links selected DUAN packages and runs a scenario.
 
 Owned files:
-- `packages/duan-runner-generator/src/lib.rs`
-- `packages/duan-runner-generator/src/model.rs`
-- `packages/duan-runner-generator/src/writer.rs`
-- `packages/duan-runner-generator/tests/generate_runner.rs`
+- `packages/duan-build/src/lib.rs`
+- `packages/duan-build/src/runner_project.rs`
+- `packages/duan-build/tests/generated_runner.rs`
 
 Tasks:
 
-- [ ] Generate `Cargo.toml` with registry dependencies, `duan`, `duan-package`, `duan-scenario`, and scenario package crates.
+- [ ] Generate `Cargo.toml` with registry dependencies, `duan`, `duan-runner`, `duan-scenario`, and scenario package crates.
 - [ ] Generate `.cargo/config.toml` with deployment-specific private registry URL supplied by configuration.
 - [ ] Generate `src/main.rs` that loads scenario, installs package functions, and calls the runner path.
 - [ ] Use deterministic file output so generated runners are stable under repeated generation.
@@ -299,7 +298,7 @@ Run these in parallel because their write sets are disjoint:
 - Worker A: Phase 0 repository boundary and package-local crate setup.
 - Worker B: Phase 1 `duan-package` id/schema/registry types.
 - Worker C: Phase 2 `duan-scenario` manifest model and parser.
-- Worker D: Phase 5 `duan-runner-generator` deterministic writer model.
+- Worker D: Phase 5 `duan-build` deterministic runner writer model.
 
 Do not dispatch Phase 3 until the main session reviews `duan-core` status and decides how to handle its existing `.claude/**` deletions.
 
