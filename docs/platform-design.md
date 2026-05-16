@@ -303,7 +303,7 @@ The implementation should migrate in coherent, verifiable units:
 - Introduce `duan-exec` when execution has a real library boundary.
 - Keep the renamed runtime package stable while deciding when to rename the `packages/duan-core` directory.
 - Move flat example scenarios into scenario project directories before package installation and lock files become central.
-- Harden the existing `duan-macros` and automatic package collection after public metadata traits are stable.
+- Harden the existing `duan-macros`, `CatalogItem`, and automatic package collection behavior across tests, generated runners, Windows builds, release builds, and linker dead-code elimination.
 
 ## Design Rules
 
