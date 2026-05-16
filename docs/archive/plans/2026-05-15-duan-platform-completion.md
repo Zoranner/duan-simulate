@@ -1,6 +1,8 @@
 # DUAN Platform Completion Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Stale archive note:** This file is historical context, not the current execution plan. Current authority is `docs/platform-design.md`, `docs/package-naming.md`, current Cargo package metadata, and current repository scripts. Some paths and unchecked tasks below reflect the migration state on 2026-05-15, including old `duan-package` naming.
+>
+> Historical worker note: the original plan expected task-by-task execution with agentic workers and checkbox tracking. Do not treat the remaining checkboxes or old paths in this archive as current instructions without revalidating them against the live repository.
 
 **Goal:** Complete the DUAN visual world authoring platform design in staged, verifiable increments.
 
